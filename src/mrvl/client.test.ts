@@ -1,0 +1,40 @@
+import { describe, expect, it } from "vitest";
+
+import { mrvlFixture } from "../../test/fixtures";
+import { createMrvlClient, MrvlHttpError, MrvlResponseError } from "./client";
+
+function respondWith(body: unknown, status = 200) {
+  const calls: RequestInit[] = [];
+  const fetchImpl: typeof fetch = async (_input, init) => {
+    calls.push(init ?? {});
+    return new Response(JSON.stringify(body), { status });
+  };
+  return { fetchImpl, calls };
+}
+
+describe("createMrvlClient", () => {
+  it("posts a Convex query and unwraps the envelope", async () => {
+    const { fetchImpl, calls } = respondWith(mrvlFixture("live.json"));
+    const matches = await createMrvlClient({ fetch: fetchImpl }).listMatches("live", 20);
+    expect(matches[0]?.teamOneName).toBe("Liquid Citadel");
+    expect(JSON.parse(String(calls[0]?.body))).toEqual({
+      path: "matches:listSummary",
+      args: { status: "live", limit: 20 },
+      format: "json",
+    });
+  });
+
+  it("surfaces a Convex error envelope as a typed error", async () => {
+    const { fetchImpl } = respondWith({ status: "error", errorMessage: "Server Error" });
+    await expect(createMrvlClient({ fetch: fetchImpl }).matchPage("x")).rejects.toBeInstanceOf(
+      MrvlResponseError,
+    );
+  });
+
+  it("surfaces HTTP failures as a typed error", async () => {
+    const { fetchImpl } = respondWith({}, 502);
+    await expect(createMrvlClient({ fetch: fetchImpl }).matchPage("x")).rejects.toBeInstanceOf(
+      MrvlHttpError,
+    );
+  });
+});

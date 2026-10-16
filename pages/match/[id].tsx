@@ -1,5 +1,5 @@
 import { Link } from "@void/react";
-import { BarChart3, ExternalLink, Play } from "lucide-react";
+import { ExternalLink, Play } from "lucide-react";
 
 import { StatusBar, type StatusBarStatus } from "@/components/charts/status-bar";
 import { Card } from "@/components/motion/card";
@@ -7,11 +7,13 @@ import { NotFoundGlitch } from "@/components/motion/not-found";
 import { matchState, type MatchState } from "@/domain/matchState";
 import type { IgniteEvent, MapResult, Match, Snapshot, Team } from "@/domain/model";
 import { eventSlug } from "@/domain/scope";
+import type { MatchStats, PlayerStats } from "@/domain/stats";
 import { cn } from "@/lib/utils";
 import { AppShell } from "@/ui/AppShell";
 import { EventIcon } from "@/ui/EventRow";
 import { MatchCard } from "@/ui/MatchCard";
 import { useSpoilersHidden } from "@/ui/spoilers";
+import { StatsPanel, useMatchStats } from "@/ui/StatsPanel";
 import { LiveDot } from "@/ui/StatusLabel";
 import { TeamLogo } from "@/ui/TeamMark";
 import { formatCountdown, formatDate, formatTime, useHydrated } from "@/ui/time";
@@ -19,7 +21,7 @@ import { useLiveSnapshot, type Connection } from "@/ui/useLiveSnapshot";
 
 import type { Props } from "./[id].server";
 
-export default function MatchPage({ snapshot: initial, matchId }: Props) {
+export default function MatchPage({ snapshot: initial, matchId, stats }: Props) {
   const { snapshot, connection, now } = useLiveSnapshot(initial, { match: matchId });
   const match = snapshot.matches.find((m) => m.id === matchId);
   if (!match) {
@@ -35,7 +37,15 @@ export default function MatchPage({ snapshot: initial, matchId }: Props) {
       </AppShell>
     );
   }
-  return <MatchDetail match={match} snapshot={snapshot} connection={connection} now={now} />;
+  return (
+    <MatchDetail
+      match={match}
+      snapshot={snapshot}
+      connection={connection}
+      now={now}
+      initialStats={stats}
+    />
+  );
 }
 
 function involves(match: Match, team: Team | null): boolean {
@@ -113,11 +123,13 @@ function MapCard({
   match,
   snapshot,
   current,
+  mvp,
 }: {
   map: MapResult;
   match: Match;
   snapshot: Snapshot;
   current: boolean;
+  mvp: PlayerStats | undefined;
 }) {
   const hidden = useSpoilersHidden();
   const winner = map.winner === 0 ? null : map.winner === 1 ? match.team1 : match.team2;
@@ -133,6 +145,12 @@ function MapCard({
       <div>
         <div className="text-xs text-muted-foreground uppercase">Map {map.index}</div>
         <div className="mt-1 font-medium">{map.map || (current ? "Picking…" : "TBD")}</div>
+        {mvp && !hidden && (
+          <div className="mt-1 text-xs text-muted-foreground">
+            MVP <span className="font-medium text-foreground">{mvp.name}</span>
+            {mvp.hero && <span> · {mvp.hero.name}</span>}
+          </div>
+        )}
       </div>
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         {current ? (
@@ -201,12 +219,15 @@ function MatchDetail({
   snapshot,
   connection,
   now,
+  initialStats,
 }: {
   match: Match;
   snapshot: Snapshot;
   connection: Connection;
   now: number;
+  initialStats: MatchStats | null;
 }) {
+  const stats = useMatchStats(match.id, initialStats, snapshot.servedAt);
   const hydrated = useHydrated();
   const hidden = useSpoilersHidden();
   const event: IgniteEvent | undefined = snapshot.events.find((e) => e.id === match.eventId);
@@ -335,20 +356,16 @@ function MatchDetail({
                 match={match}
                 snapshot={snapshot}
                 current={i === currentIndex}
+                mvp={stats?.maps
+                  .find((m) => m.index === i)
+                  ?.teams.flatMap((team) => team.players)
+                  .find((p) => p.isMvp)}
               />
             ))}
           </div>
         </section>
 
-        <section aria-labelledby="stats-heading" className="rounded-xl border border-dashed p-5">
-          <h2 id="stats-heading" className="flex items-center gap-2 font-semibold">
-            <BarChart3 className="size-4 text-primary" aria-hidden /> Player stats
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            MVP, SVP, heroes and per-player stats for each map will appear here once a stats source
-            is connected.
-          </p>
-        </section>
+        <StatsPanel match={match} stats={stats} snapshot={snapshot} />
 
         <div className="grid gap-8 lg:grid-cols-2">
           {(match.team1 || match.team2) && (

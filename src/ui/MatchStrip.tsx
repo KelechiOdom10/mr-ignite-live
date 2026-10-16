@@ -4,7 +4,7 @@ import { matchState } from "@/domain/matchState";
 import type { Match, Snapshot } from "@/domain/model";
 import { cn } from "@/lib/utils";
 
-import { REGION_EDGE, regionKey } from "./region";
+import { RegionTag } from "./RegionTag";
 import { useSpoilersHidden } from "./spoilers";
 import { StatusLabel } from "./StatusLabel";
 import { TeamLogo } from "./TeamMark";
@@ -50,11 +50,13 @@ function Chip({ match, snapshot, now }: { match: Match; snapshot: Snapshot; now:
     <Link
       href={`/match/${match.id}`}
       className={cn(
-        "flex w-44 shrink-0 snap-start flex-col gap-1.5 rounded-lg border border-r-[3px] bg-card px-3 py-2 transition-colors hover:bg-accent",
-        REGION_EDGE[regionKey(event?.region)],
+        "flex w-44 shrink-0 snap-start flex-col gap-1.5 rounded-lg border bg-card px-3 py-2 transition-colors hover:bg-accent",
       )}
     >
-      <StatusLabel match={match} state={state} now={now} className="text-[0.7rem]" />
+      <div className="flex items-center justify-between gap-2">
+        <StatusLabel match={match} state={state} now={now} className="text-[0.7rem]" />
+        <RegionTag event={event} />
+      </div>
       {row(1)}
       {row(2)}
     </Link>

@@ -14,20 +14,22 @@ Live Marvel Rivals Ignite scores, brackets and results. A cron pulls Liquipedia 
 
 ## Architecture
 
-| Folder                                                  | Owns                                                                 | May import                    |
-| ------------------------------------------------------- | -------------------------------------------------------------------- | ----------------------------- |
-| `src/domain/`                                           | Zod schemas (the single source of every type), `matchState`, scoping | `zod` only                    |
-| `src/liquipedia/`                                       | API client, wikitext parser, team templates                          | `domain`                      |
-| `src/store/`                                            | Sync planning (pure, `plan.ts`) and KV I/O (`snapshot.ts`)           | `domain`, `liquipedia`        |
-| `src/sync.ts`, `crons/`, `routes/`, `pages/*.server.ts` | Runtime shell                                                        | everything                    |
-| `src/ui/`, `pages/*.tsx`                                | React views                                                          | `domain`, `components`, `lib` |
-| `src/components/`, `src/lib/`                           | beUI, copied verbatim from https://beui.dev/r                        | —                             |
+| Folder                                                  | Owns                                                                          | May import                    |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------- | ----------------------------- |
+| `src/domain/`                                           | Zod schemas (the single source of every type), `matchState`, scoping          | `zod` only                    |
+| `src/liquipedia/`                                       | API client, wikitext parser, team templates                                   | `domain`                      |
+| `src/mrvl/`                                             | mrvl.net Convex client and Liquipedia↔mrvl linking (stats, early map results) | `domain`                      |
+| `src/store/`                                            | Sync planning (pure, `plan.ts`) and KV I/O (`snapshot.ts`)                    | `domain`, `liquipedia`        |
+| `src/sync.ts`, `crons/`, `routes/`, `pages/*.server.ts` | Runtime shell                                                                 | everything                    |
+| `src/ui/`, `pages/*.tsx`                                | React views                                                                   | `domain`, `components`, `lib` |
+| `src/components/`, `src/lib/`                           | beUI, copied verbatim from https://beui.dev/r                                 | —                             |
 
 Rules:
 
 - Parse at the edge, trust inside: Liquipedia responses, KV values and the client's `/api/snapshot` fetch all go through Zod. No `as` casts on external data.
 - Liquipedia's API terms: identifying User-Agent, gzip, at most one request per 2s, and only refetch pages whose revision changed. The client enforces the gap; `planSync` enforces the diff.
 - Don't edit `src/components/` or `src/lib/`; re-pull from beUI instead. They're held to plain `strict` (`tsconfig.vendor.json`); app code also gets `noUncheckedIndexedAccess`.
+- mrvl is a courtesy source: keep its request volume where `src/store/stats.ts` caps it, and never let its failure break the Liquipedia sync. Liquipedia map results always win over mrvl overrides.
 - Bump `STORED_SNAPSHOT_VERSION` when the stored shape changes; an old value then fails the schema and is rebuilt.
 - Every match surface (cards, strip chips, bracket slots, search results) links to `/match/:id`. Reuse `MatchCard` rather than drawing a new match tile.
 - Respect Hide spoilers (`useSpoilersHidden`) anywhere a score, winner or result toast appears.

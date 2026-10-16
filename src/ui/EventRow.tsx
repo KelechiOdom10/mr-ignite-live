@@ -5,7 +5,7 @@ import type { IgniteEvent, Match } from "@/domain/model";
 import { eventSlug } from "@/domain/scope";
 import { cn } from "@/lib/utils";
 
-import { REGION_EDGE, REGION_SHORT, REGION_TEXT, regionKey } from "./region";
+import { REGION_SHORT, REGION_TEXT, regionKey } from "./region";
 import { LiveDot } from "./StatusLabel";
 import { formatShortRange } from "./time";
 
@@ -53,8 +53,7 @@ export function EventRow({
     <Link
       href={`/event/${eventSlug(event.id)}`}
       className={cn(
-        "flex items-center gap-3 rounded-xl border border-r-[3px] bg-card px-3 py-3 transition-colors hover:bg-accent",
-        REGION_EDGE[region],
+        "flex items-center gap-3 rounded-xl border bg-card px-3 py-3 transition-colors hover:bg-accent",
         live && "border-live/40",
       )}
     >

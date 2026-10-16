@@ -5,7 +5,7 @@ import { matchState, type MatchState } from "@/domain/matchState";
 import type { IgniteEvent, Match, Snapshot, Team } from "@/domain/model";
 import { cn } from "@/lib/utils";
 
-import { REGION_EDGE, regionKey } from "./region";
+import { RegionTag } from "./RegionTag";
 import { useSpoilersHidden } from "./spoilers";
 import { StatusLabel } from "./StatusLabel";
 import { TeamLogo } from "./TeamMark";
@@ -81,13 +81,11 @@ export function MatchCard({
   const state = matchState(match, now);
   const spoilersHidden = useSpoilersHidden();
   const showScore = state.status !== "upcoming" && !spoilersHidden;
-  const region = regionKey(event?.region);
   return (
     <Card
       interactive
       className={cn(
-        "gap-0 rounded-xl border-r-[3px] bg-card py-0",
-        REGION_EDGE[region],
+        "gap-0 rounded-xl bg-card py-0",
         state.status === "live" && "bg-live/[0.04]",
         className,
       )}
@@ -128,6 +126,7 @@ export function MatchCard({
             />
           )}
           <span className="truncate">{match.round}</span>
+          {footer === "event" && <RegionTag event={event} className="ml-auto" />}
         </div>
       )}
     </Card>

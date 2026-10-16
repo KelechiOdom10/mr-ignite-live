@@ -66,12 +66,17 @@ export const PageDataSchema = z.object({
 });
 export type PageData = z.infer<typeof PageDataSchema>;
 
-export const STORED_SNAPSHOT_VERSION = 4;
+export const MapOverrideSchema = MapResultSchema.omit({ vod: true });
+export type MapOverride = z.infer<typeof MapOverrideSchema>;
+
+export const STORED_SNAPSHOT_VERSION = 5;
 
 export const StoredSnapshotSchema = z.object({
   version: z.literal(STORED_SNAPSHOT_VERSION),
   pages: z.record(z.string(), PageDataSchema),
   teams: z.record(z.string(), TeamInfoSchema),
+  /** Map results seen on mrvl before Liquipedia records them, keyed by match id. */
+  mapOverrides: z.record(z.string(), z.array(MapOverrideSchema)),
   builtAt: z.iso.datetime(),
 });
 export type StoredSnapshot = z.infer<typeof StoredSnapshotSchema>;

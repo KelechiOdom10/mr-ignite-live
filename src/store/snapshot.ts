@@ -13,6 +13,10 @@ const TITLES_KEY = "titles:v1";
 const TITLES_TTL_SECONDS = 30 * 60;
 const PAGE_PREFIX = "MR Ignite/2026";
 
+export async function writeStored(stored: StoredSnapshot): Promise<void> {
+  await kv.put(SNAPSHOT_KEY, StoredSnapshotSchema.parse(stored));
+}
+
 export async function readStored(): Promise<StoredSnapshot | null> {
   const raw = await kv.get<unknown>(SNAPSHOT_KEY);
   if (raw === null) return null;

@@ -3,6 +3,7 @@ import { defineHandler, defineHead, type InferProps } from "void";
 
 import { scopeSnapshot } from "@/domain/scope";
 
+import { readStats } from "../../src/store/stats";
 import { currentSnapshot } from "../../src/sync";
 
 export type Props = InferProps<typeof loader>;
@@ -15,6 +16,7 @@ export const loader = defineHandler(async (c) => {
   return {
     matchId: match.id,
     eventId: match.eventId,
+    stats: await readStats(match.id),
     snapshot: scopeSnapshot(full, { kind: "match", matchId: match.id }, Date.now()),
   };
 });

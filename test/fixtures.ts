@@ -3,9 +3,17 @@ import { fileURLToPath } from "node:url";
 
 import { z } from "zod";
 
-export function liquipediaFixture(name: string): unknown {
-  const path = fileURLToPath(new URL(`./fixtures/liquipedia/${name}`, import.meta.url));
+function fixture(dir: string, name: string): unknown {
+  const path = fileURLToPath(new URL(`./fixtures/${dir}/${name}`, import.meta.url));
   return JSON.parse(readFileSync(path, "utf8"));
+}
+
+export function liquipediaFixture(name: string): unknown {
+  return fixture("liquipedia", name);
+}
+
+export function mrvlFixture(name: string): unknown {
+  return fixture("mrvl", name);
 }
 
 const ContentsSchema = z.object({

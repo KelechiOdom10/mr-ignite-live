@@ -1,5 +1,7 @@
 import {
   type IgniteEvent,
+  type MapOverride,
+  type MapResult,
   type Match,
   type PageData,
   type Snapshot,
@@ -14,6 +16,7 @@ export function emptyStored(): StoredSnapshot {
     version: STORED_SNAPSHOT_VERSION,
     pages: {},
     teams: {},
+    mapOverrides: {},
     builtAt: new Date(0).toISOString(),
   };
 }
@@ -58,6 +61,16 @@ export function teamsMissingInfo(
   return [...names].filter((name) => !known[name]);
 }
 
+export function mergeMapOverrides(maps: MapResult[], overrides: MapOverride[]): MapResult[] {
+  const byIndex = new Map(maps.map((m) => [m.index, m]));
+  for (const o of overrides) {
+    const existing = byIndex.get(o.index);
+    if (existing && existing.winner !== 0) continue;
+    byIndex.set(o.index, { ...o, map: existing?.map || o.map, vod: existing?.vod ?? null });
+  }
+  return [...byIndex.values()].sort((a, b) => a.index - b.index);
+}
+
 export function toSnapshot(stored: StoredSnapshot, servedAt: Date): Snapshot {
   const events: IgniteEvent[] = [];
   const matches: Match[] = [];
@@ -71,8 +84,10 @@ export function toSnapshot(stored: StoredSnapshot, servedAt: Date): Snapshot {
       liquipediaUpdatedAt = page.updatedAt;
     }
     for (const m of page.matches) {
+      const overrides = stored.mapOverrides[m.id];
       matches.push({
         ...m,
+        maps: overrides ? mergeMapOverrides(m.maps, overrides) : m.maps,
         eventId: eventIdFor(title),
         team1: withShort(m.team1),
         team2: withShort(m.team2),

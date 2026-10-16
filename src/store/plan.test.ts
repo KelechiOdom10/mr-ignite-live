@@ -3,7 +3,14 @@ import { describe, expect, it } from "vitest";
 import type { PageData, StoredSnapshot } from "@/domain/model";
 
 import { aMatch } from "../../test/builders";
-import { applyPages, emptyStored, planSync, teamsMissingInfo, toSnapshot } from "./plan";
+import {
+  applyPages,
+  emptyStored,
+  mergeMapOverrides,
+  planSync,
+  teamsMissingInfo,
+  toSnapshot,
+} from "./plan";
 
 function aPage(revid: number, overrides: Partial<PageData> = {}): PageData {
   return { revid, updatedAt: "2026-10-16T00:00:00Z", event: null, matches: [], ...overrides };
@@ -68,5 +75,25 @@ describe("toSnapshot", () => {
     expect(snapshot.matches[0]?.team2?.short).toBe("SWAMP");
     expect(snapshot.matches[0]?.eventId).toBe("MR Ignite/2026/Stage 2/Americas");
     expect(snapshot.liquipediaUpdatedAt).toBe("2026-10-16T23:00:00Z");
+  });
+});
+
+describe("mergeMapOverrides", () => {
+  it("fills maps Liquipedia hasn't recorded yet without overwriting ones it has", () => {
+    // mrvl showed TLC 2–0 while Liquipedia still had 1–0.
+    const merged = mergeMapOverrides(
+      [
+        { index: 1, map: "Birnin T'Challa", score1: 2, score2: 0, winner: 1, vod: "v1" },
+        { index: 2, map: "", score1: null, score2: null, winner: 0, vod: null },
+      ],
+      [
+        { index: 1, map: "Birnin T'Challa", score1: 9, score2: 9, winner: 2 },
+        { index: 2, map: "Midtown", score1: 3, score2: 1, winner: 1 },
+      ],
+    );
+    expect(merged.map((m) => [m.index, m.winner, m.score1, m.vod])).toEqual([
+      [1, 1, 2, "v1"],
+      [2, 1, 3, null],
+    ]);
   });
 });

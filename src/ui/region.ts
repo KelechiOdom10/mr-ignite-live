@@ -28,14 +28,6 @@ export const REGION_SHORT: Record<RegionKey, string> = {
 };
 
 // Full class names so Tailwind's scanner sees each one.
-export const REGION_EDGE: Record<RegionKey, string> = {
-  americas: "border-r-region-americas",
-  emea: "border-r-region-emea",
-  china: "border-r-region-china",
-  pacific: "border-r-region-pacific",
-  global: "border-r-region-global",
-};
-
 export const REGION_TEXT: Record<RegionKey, string> = {
   americas: "text-region-americas",
   emea: "text-region-emea",
