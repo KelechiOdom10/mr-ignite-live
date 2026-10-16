@@ -19,5 +19,5 @@
     "isolatedModules": true,
     "noImplicitOverride": true
   },
-  "include": ["src", "pages", "routes", "crons", "test"]
+  "include": ["src", "pages", "routes", "crons", "middleware", "test"]
 }

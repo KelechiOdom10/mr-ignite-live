@@ -1,13 +1,21 @@
+import { useShared } from "@void/react";
 import { useSyncExternalStore } from "react";
 
 import { Switch } from "@/components/motion/switch";
 
-const KEY = "ignite-live:hide-spoilers";
+import { SPOILER_COOKIE, spoilerCookie, spoilersHiddenIn } from "./spoilerCookie";
+
+const STORAGE_KEY = "ignite-live:hide-spoilers";
 const listeners = new Set<() => void>();
 
+function hasCookie(): boolean {
+  return document.cookie.split(";").some((pair) => pair.trim().startsWith(`${SPOILER_COOKIE}=`));
+}
+
 function subscribe(listener: () => void) {
+  if (!hasCookie() && read()) document.cookie = spoilerCookie(true);
   listeners.add(listener);
-  const onStorage = (e: StorageEvent) => e.key === KEY && listener();
+  const onStorage = (e: StorageEvent) => e.key === STORAGE_KEY && listener();
   window.addEventListener("storage", onStorage);
   return () => {
     listeners.delete(listener);
@@ -16,16 +24,19 @@ function subscribe(listener: () => void) {
 }
 
 function read(): boolean {
-  return window.localStorage.getItem(KEY) === "1";
+  if (hasCookie()) return spoilersHiddenIn(document.cookie);
+  return window.localStorage.getItem(STORAGE_KEY) === "1";
 }
 
 function write(hidden: boolean) {
-  window.localStorage.setItem(KEY, hidden ? "1" : "0");
+  document.cookie = spoilerCookie(hidden);
+  window.localStorage.setItem(STORAGE_KEY, hidden ? "1" : "0");
   for (const l of listeners) l();
 }
 
 export function useSpoilersHidden(): boolean {
-  return useSyncExternalStore(subscribe, read, () => false);
+  const { spoilersHidden } = useShared();
+  return useSyncExternalStore(subscribe, read, () => spoilersHidden);
 }
 
 export function SpoilerToggle({ compact = false }: { compact?: boolean }) {
