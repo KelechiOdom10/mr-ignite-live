@@ -25,9 +25,9 @@
   --border-strong: rgb(255 255 255 / 0.16);
   --input: rgb(255 255 255 / 0.08);
   --ring: oklch(85% 0.15 90 / 0.6);
-  --region-americas: oklch(63% 0.18 262);
+  --region-americas: oklch(69% 0.16 262);
   --region-emea: oklch(74% 0.15 58);
-  --region-china: oklch(62% 0.2 25);
+  --region-china: oklch(68% 0.19 25);
   --region-pacific: oklch(74% 0.12 190);
   --region-global: oklch(84% 0.14 90);
   color-scheme: dark;
