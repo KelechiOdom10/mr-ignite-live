@@ -8,15 +8,33 @@
     "dist/**",
     "node_modules/**"
   ],
-  "categories": { "correctness": "error", "suspicious": "warn" },
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error"
+  },
   "rules": {
-    "no-console": ["error", { "allow": ["warn", "error"] }],
+    "no-console": [
+      "error",
+      {
+        "allow": ["info", "warn", "error"]
+      }
+    ],
     "typescript/no-explicit-any": "error",
     "typescript/no-non-null-assertion": "warn",
     "react/react-in-jsx-scope": "off",
     "no-unused-vars": [
       "error",
-      { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_", "ignoreRestSiblings": true }
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "ignoreRestSiblings": true
+      }
+    ],
+    "import/no-unassigned-import": [
+      "error",
+      {
+        "allow": ["**/*.css"]
+      }
     ]
   }
 }

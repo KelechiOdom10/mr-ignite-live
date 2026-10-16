@@ -6,8 +6,13 @@
     "dev": "vite --port 5180",
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit -p .",
-    "deploy": "void deploy"
+    "deploy": "void deploy",
+    "fmt": "oxfmt .",
+    "fmt:check": "oxfmt --check .",
+    "lint": "oxlint --deny-warnings",
+    "typecheck": "bun scripts/typecheck.ts",
+    "test": "vitest run",
+    "check": "bun run fmt:check && bun run lint && bun run typecheck && bun run test"
   },
   "dependencies": {
     "@floating-ui/dom": "^1.8.0",
@@ -34,5 +39,6 @@
     "vite": "^8.0.10",
     "vitest": "^5.0.5",
     "void": "^1.1.11"
-  }
+  },
+  "packageManager": "bun@1.4.2"
 }
