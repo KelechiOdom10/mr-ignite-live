@@ -7,8 +7,8 @@ import { MatchStatsSchema, type MatchStats } from "@/domain/stats";
 import { findMrvlMatch, toMapOverrides, toMatchStats } from "@/mrvl/align";
 import type { MrvlClient } from "@/mrvl/client";
 
-const STATS_PREFIX = "stats:v1:";
-const INDEX_KEY = "stats-index:v1";
+const STATS_PREFIX = "stats:v2:";
+const INDEX_KEY = "stats-index:v2";
 const RECENT_LIMIT = 40;
 const LIVE_LIMIT = 20;
 const MAX_PAGES_PER_SYNC = 6;

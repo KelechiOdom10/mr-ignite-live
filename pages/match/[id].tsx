@@ -4,6 +4,7 @@ import { ExternalLink, Play } from "lucide-react";
 import { StatusBar, type StatusBarStatus } from "@/components/charts/status-bar";
 import { Card } from "@/components/motion/card";
 import { NotFoundGlitch } from "@/components/motion/not-found";
+import { mapInfo } from "@/domain/maps";
 import { matchState, type MatchState } from "@/domain/matchState";
 import type { IgniteEvent, MapResult, Match, Snapshot, Team } from "@/domain/model";
 import { eventSlug } from "@/domain/scope";
@@ -11,9 +12,10 @@ import type { MatchStats, PlayerStats } from "@/domain/stats";
 import { cn } from "@/lib/utils";
 import { AppShell } from "@/ui/AppShell";
 import { EventIcon } from "@/ui/EventRow";
+import { proxiedImage } from "@/ui/images";
 import { MatchCard } from "@/ui/MatchCard";
 import { useSpoilersHidden } from "@/ui/spoilers";
-import { StatsPanel, useMatchStats } from "@/ui/StatsPanel";
+import { HeroPortrait, StatsPanel, useMatchStats } from "@/ui/StatsPanel";
 import { LiveDot } from "@/ui/StatusLabel";
 import { TeamLogo } from "@/ui/TeamMark";
 import { formatCountdown, formatDate, formatTime, useHydrated } from "@/ui/time";
@@ -135,24 +137,46 @@ function MapCard({
   const winner = map.winner === 0 ? null : map.winner === 1 ? match.team1 : match.team2;
   const winnerScore = map.winner === 1 ? map.score1 : map.score2;
   const loserScore = map.winner === 1 ? map.score2 : map.score1;
+  const info = map.map ? mapInfo(map.map) : null;
+  const art = proxiedImage(info?.imageUrl);
   return (
     <div
       className={cn(
-        "flex min-h-32 flex-col justify-between rounded-xl border bg-card p-4",
-        current && "border-live/50 bg-live/[0.05]",
+        "relative flex min-h-36 flex-col justify-between overflow-hidden rounded-xl border bg-card p-4",
+        current && "border-live/50",
       )}
     >
-      <div>
-        <div className="text-xs text-muted-foreground uppercase">Map {map.index}</div>
+      {art && (
+        <>
+          <img
+            src={art}
+            alt=""
+            loading="lazy"
+            className="absolute inset-0 size-full object-cover opacity-40"
+          />
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-gradient-to-t from-card via-card/70 to-card/20"
+          />
+        </>
+      )}
+      <div className="relative">
+        <div className="text-xs text-muted-foreground uppercase">
+          Map {map.index}
+          {info && <span className="normal-case"> · {info.mode}</span>}
+        </div>
         <div className="mt-1 font-medium">{map.map || (current ? "Picking…" : "TBD")}</div>
         {mvp && !hidden && (
-          <div className="mt-1 text-xs text-muted-foreground">
-            MVP <span className="font-medium text-foreground">{mvp.name}</span>
-            {mvp.hero && <span> · {mvp.hero.name}</span>}
+          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+            {mvp.hero && <HeroPortrait hero={mvp.hero} size={22} />}
+            <span>
+              MVP <span className="font-medium text-foreground">{mvp.name}</span>
+              {mvp.hero && <span> · {mvp.hero.name}</span>}
+            </span>
           </div>
         )}
       </div>
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+      <div className="relative mt-3 flex flex-wrap items-center justify-between gap-2">
         {current ? (
           <span className="inline-flex items-center gap-1.5 text-xs font-medium text-live">
             <LiveDot /> In progress

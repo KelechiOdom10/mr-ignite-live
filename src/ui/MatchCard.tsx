@@ -5,6 +5,7 @@ import { matchState, type MatchState } from "@/domain/matchState";
 import type { IgniteEvent, Match, Snapshot, Team } from "@/domain/model";
 import { cn } from "@/lib/utils";
 
+import { proxiedImage } from "./images";
 import { RegionTag } from "./RegionTag";
 import { useSpoilersHidden } from "./spoilers";
 import { StatusLabel } from "./StatusLabel";
@@ -120,7 +121,7 @@ export function MatchCard({
         >
           {footer === "event" && event?.iconUrl && (
             <img
-              src={`/api/logo?u=${encodeURIComponent(event.iconUrl)}`}
+              src={proxiedImage(event.iconUrl)}
               alt=""
               className="size-3.5 shrink-0 object-contain"
             />

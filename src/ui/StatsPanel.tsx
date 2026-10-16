@@ -13,6 +13,7 @@ import {
 } from "@/domain/stats";
 import { cn } from "@/lib/utils";
 
+import { proxiedImage } from "./images";
 import { useSpoilersHidden } from "./spoilers";
 import { TeamLogo } from "./TeamMark";
 
@@ -41,13 +42,39 @@ const ROLE_DOT: Record<string, string> = {
   Strategist: "bg-win",
 };
 
+export function HeroPortrait({
+  hero,
+  size = 24,
+  className,
+}: {
+  hero: Hero;
+  size?: number;
+  className?: string;
+}) {
+  const src = proxiedImage(hero.portraitUrl);
+  const box = { width: size, height: size };
+  return src ? (
+    <img
+      src={src}
+      alt=""
+      title={hero.name}
+      style={box}
+      loading="lazy"
+      className={cn("shrink-0 rounded-md bg-muted object-cover", className)}
+    />
+  ) : (
+    <span
+      title={hero.name}
+      style={box}
+      className={cn("shrink-0 rounded-md", ROLE_DOT[hero.role ?? ""] ?? "bg-muted", className)}
+    />
+  );
+}
+
 function HeroName({ hero }: { hero: Hero }) {
   return (
-    <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-      <span
-        aria-hidden
-        className={cn("size-1.5 rounded-full", ROLE_DOT[hero.role ?? ""] ?? "bg-muted-foreground")}
-      />
+    <span className="inline-flex items-center gap-2 whitespace-nowrap">
+      <HeroPortrait hero={hero} />
       {hero.name}
       {hero.role && <span className="sr-only"> ({hero.role})</span>}
     </span>
@@ -129,8 +156,12 @@ function StatsTable({
         <TeamLogo team={team} info={team ? snapshot.teams[team.name] : undefined} size={20} />
         <span className="font-medium">{team?.name ?? "TBD"}</span>
         {bans.length > 0 && (
-          <span className="text-xs text-muted-foreground">
-            Bans: {bans.map((h) => h.name).join(", ")}
+          <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+            Bans
+            <span className="sr-only">: {bans.map((h) => h.name).join(", ")}</span>
+            {bans.map((h) => (
+              <HeroPortrait key={h.id} hero={h} size={22} className="opacity-60 grayscale" />
+            ))}
           </span>
         )}
       </div>
@@ -187,11 +218,16 @@ function StatsTable({
                   </span>
                 </th>
                 <td className="px-3 py-2 text-muted-foreground">
-                  <span className="flex flex-wrap gap-x-3">
-                    {(combined ? p.heroes.slice(0, 3) : p.hero ? [p.hero] : []).map((h) => (
-                      <HeroName key={h.id} hero={h} />
-                    ))}
-                  </span>
+                  {combined ? (
+                    <span className="flex items-center gap-1">
+                      {p.heroes.slice(0, 4).map((h) => (
+                        <HeroPortrait key={h.id} hero={h} size={26} />
+                      ))}
+                      <span className="sr-only">{p.heroes.map((h) => h.name).join(", ")}</span>
+                    </span>
+                  ) : p.hero ? (
+                    <HeroName hero={p.hero} />
+                  ) : null}
                 </td>
                 <td className="px-2 py-2 text-right font-mono whitespace-nowrap tabular-nums">
                   {p.kills} / {p.deaths} / {p.assists}

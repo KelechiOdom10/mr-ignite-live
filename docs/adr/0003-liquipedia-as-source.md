@@ -6,7 +6,7 @@ Liquipedia editors update Ignite pages minutes after each map. Its MediaWiki API
 
 ## Decision
 
-Poll revision ids for all `MR Ignite/2026/*` pages each minute in one request, and fetch content only for pages that changed. Proxy team logos through `/api/logo` because Liquipedia blocks image hotlinks.
+Poll revision ids for all `MR Ignite/2026/*` pages each minute in one request, and fetch content only for pages that changed. Proxy team logos through `/api/image` because Liquipedia blocks image hotlinks.
 
 ## Consequences
 

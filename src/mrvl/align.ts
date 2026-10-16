@@ -96,8 +96,18 @@ function alignTeams(game: MrvlGame, match: Match): [MrvlScoreboardTeam, MrvlScor
   return [a, b];
 }
 
-function toHero(hero: { id: string; name: string; role?: string | null }): Hero {
-  return { id: hero.id, name: hero.name, role: hero.role ?? null };
+function toHero(hero: {
+  id: string;
+  name: string;
+  role?: string | null;
+  portraitUrl?: string | null;
+}): Hero {
+  return {
+    id: hero.id,
+    name: hero.name,
+    role: hero.role ?? null,
+    portraitUrl: hero.portraitUrl ?? null,
+  };
 }
 
 function toPlayer(p: MrvlScoreboardTeam["players"][number]): PlayerStats {

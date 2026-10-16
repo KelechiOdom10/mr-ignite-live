@@ -10,7 +10,7 @@ Live Marvel Rivals Ignite 2026 scores, brackets and results, built on [Void](htt
 4. Score changes show as toasts (map won, series won, match went live).
 5. The same cron links live and recent series to mrvl.net and stores MVP/SVP, heroes, bans and player stats per map (`stats:v1:<matchId>`). Map winners mrvl has before Liquipedia fill in early. See [ADR 4](docs/adr/0004-mrvl-for-player-stats.md).
 
-Liquipedia asks API users for an identifying User-Agent, gzip, and at most one request every 2 seconds; `src/data/liquipedia.ts` enforces that. Team logos are proxied through `/api/logo` because Liquipedia blocks hotlinking.
+Liquipedia asks API users for an identifying User-Agent, gzip, and at most one request every 2 seconds; `src/liquipedia/client.ts` enforces that. Team logos, event icons and mrvl hero/map art go through `/api/image` because Liquipedia blocks hotlinking.
 
 ## Run locally
 

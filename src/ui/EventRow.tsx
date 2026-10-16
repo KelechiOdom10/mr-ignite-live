@@ -5,6 +5,7 @@ import type { IgniteEvent, Match } from "@/domain/model";
 import { eventSlug } from "@/domain/scope";
 import { cn } from "@/lib/utils";
 
+import { proxiedImage } from "./images";
 import { REGION_SHORT, REGION_TEXT, regionKey } from "./region";
 import { LiveDot } from "./StatusLabel";
 import { formatShortRange } from "./time";
@@ -30,7 +31,7 @@ export function EventIcon({ event, size = 28 }: { event: IgniteEvent; size?: num
     );
   return (
     <img
-      src={`/api/logo?u=${encodeURIComponent(event.iconUrl)}`}
+      src={proxiedImage(event.iconUrl)}
       alt=""
       style={{ width: size, height: size }}
       className="shrink-0 object-contain"

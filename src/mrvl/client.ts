@@ -27,6 +27,7 @@ const HeroSchema = z.object({
   id: z.string(),
   name: z.string(),
   role: z.string().nullish(),
+  portraitUrl: z.string().nullish(),
 });
 
 const PlayerStatsNumbersSchema = z.object({

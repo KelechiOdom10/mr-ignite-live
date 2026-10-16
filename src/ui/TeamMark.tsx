@@ -1,9 +1,10 @@
 import type { Team, TeamInfo } from "@/domain/model";
 import { cn } from "@/lib/utils";
 
+import { proxiedImage } from "./images";
+
 export function logoUrl(info: TeamInfo | undefined): string | undefined {
-  const upstream = info?.logoDark ?? info?.logoLight;
-  return upstream ? `/api/logo?u=${encodeURIComponent(upstream)}` : undefined;
+  return proxiedImage(info?.logoDark ?? info?.logoLight);
 }
 
 export function TeamLogo({

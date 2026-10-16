@@ -4,6 +4,7 @@ export const HeroSchema = z.object({
   id: z.string(),
   name: z.string(),
   role: z.string().nullable(),
+  portraitUrl: z.string().nullable(),
 });
 export type Hero = z.infer<typeof HeroSchema>;
 

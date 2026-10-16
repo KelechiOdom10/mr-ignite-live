@@ -11,5 +11,5 @@ Read stats from mrvl's Convex queries (`matches:listSummary`, `matches:getPageDa
 ## Consequences
 
 - Stats and faster map results depend on an unofficial hobby backend that can change or disappear; failures are logged and scores fall back to Liquipedia alone.
-- Out of courtesy, the owner should be asked (mrvl Discord) before this runs publicly.
+- The app is for personal, local use, so it also shows mrvl's hero portraits and map art (through `/api/image`, cached a week). Ask the owner (mrvl Discord) before running it publicly, and replace their images if they say no.
 - If replay IDs become available elsewhere, the stats model (`src/domain/stats.ts`) stays and only `src/mrvl/` is swapped for a NetEase client.
