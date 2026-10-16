@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/motion/tabs";
-import { matchState, type IgniteEvent, type Match } from "@/data/model";
+import { matchState } from "@/domain/matchState";
+import { type IgniteEvent, type Match } from "@/domain/model";
 import { AppShell } from "@/ui/AppShell";
 import { EventCard } from "@/ui/EventCard";
 import { LiveMatchCard, MatchRow } from "@/ui/MatchViews";
@@ -45,20 +46,18 @@ export default function HomePage({ snapshot: initial }: Props) {
   const events = useMemo(() => new Map(snapshot.events.map((e) => [e.id, e])), [snapshot.events]);
 
   const { live, upcoming, results } = useMemo(() => {
-    const live: Match[] = [];
-    const upcoming: Match[] = [];
-    const results: Match[] = [];
+    const byStatus: Record<"live" | "upcoming" | "finished", Match[]> = {
+      live: [],
+      upcoming: [],
+      finished: [],
+    };
     for (const m of snapshot.matches) {
-      if (!inRegion(events.get(m.eventId), region)) continue;
-      const s = matchState(m, now).status;
-      if (s === "live") live.push(m);
-      else if (s === "upcoming") upcoming.push(m);
-      else results.push(m);
+      if (inRegion(events.get(m.eventId), region)) byStatus[matchState(m, now).status].push(m);
     }
     return {
-      live,
-      upcoming: upcoming.filter((m) => m.startsAt).slice(0, 24),
-      results: results.reverse().slice(0, 30),
+      live: byStatus.live,
+      upcoming: byStatus.upcoming.filter((m) => m.startsAt).slice(0, 24),
+      results: byStatus.finished.reverse().slice(0, 30),
     };
   }, [snapshot.matches, events, region, now]);
 

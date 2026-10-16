@@ -1,8 +1,9 @@
 import { Link } from "@void/react";
 
 import { Card, CARD_TARGET_CLASS } from "@/components/motion/card";
-import { matchState, type IgniteEvent, type Match } from "@/data/model";
-import { eventSlug } from "@/data/scope";
+import { matchState } from "@/domain/matchState";
+import { type IgniteEvent, type Match } from "@/domain/model";
+import { eventSlug } from "@/domain/scope";
 
 import { LiveDot } from "./MatchViews";
 

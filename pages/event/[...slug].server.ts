@@ -1,7 +1,8 @@
 import { HTTPException } from "hono/http-exception";
 import { defineHandler, defineHead, type InferProps } from "void";
 
-import { eventIdFromSlug, scopeSnapshot } from "../../src/data/scope";
+import { eventIdFromSlug, scopeSnapshot } from "@/domain/scope";
+
 import { currentSnapshot } from "../../src/sync";
 
 export type Props = InferProps<typeof loader>;
@@ -11,7 +12,7 @@ export const loader = defineHandler(async (c) => {
   const full = await currentSnapshot();
   if (!full.events.some((e) => e.id === eventId))
     throw new HTTPException(404, { message: "Event not found" });
-  return { eventId, snapshot: scopeSnapshot(full, { kind: "event", eventId }) };
+  return { eventId, snapshot: scopeSnapshot(full, { kind: "event", eventId }, Date.now()) };
 });
 
 export const head = defineHead<Props>((_c, props) => ({

@@ -38,7 +38,8 @@ export function teamShortName(name: string): string {
     .trim()
     .split(/\s+/)
     .filter(Boolean);
-  if (words.length === 1) return words[0]!.slice(0, 5).toUpperCase();
+  const [only] = words;
+  if (words.length === 1 && only) return only.slice(0, 5).toUpperCase();
   return words
     .map((w) => w[0])
     .join("")

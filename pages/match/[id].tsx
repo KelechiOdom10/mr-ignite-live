@@ -2,21 +2,47 @@ import { Link } from "@void/react";
 import { BarChart3, ExternalLink } from "lucide-react";
 
 import { Card } from "@/components/motion/card";
-import { matchState } from "@/data/model";
-import { eventSlug } from "@/data/scope";
+import { matchState } from "@/domain/matchState";
+import type { Match, Snapshot } from "@/domain/model";
+import { eventSlug } from "@/domain/scope";
 import { AppShell } from "@/ui/AppShell";
 import { LiveMatchCard, MatchRow } from "@/ui/MatchViews";
 import { TeamLogo } from "@/ui/TeamMark";
 import { formatDay, formatTime, useHydrated } from "@/ui/time";
-import { useLiveSnapshot } from "@/ui/useLiveSnapshot";
+import { useLiveSnapshot, type Connection } from "@/ui/useLiveSnapshot";
 
 import type { Props } from "./[id].server";
 
-export default function MatchPage({ snapshot: initial, matchId }: Props) {
-  const match0 = initial.matches.find((m) => m.id === matchId)!;
-  const { snapshot, connection, now } = useLiveSnapshot(initial, match0.eventId);
+export default function MatchPage({ snapshot: initial, matchId, eventId }: Props) {
+  const { snapshot, connection, now } = useLiveSnapshot(initial, eventId);
+  const match = snapshot.matches.find((m) => m.id === matchId);
+  if (!match) {
+    return (
+      <AppShell snapshot={snapshot} connection={connection} now={now}>
+        <p className="text-muted-foreground">
+          This match is no longer listed on Liquipedia.{" "}
+          <Link href="/" className="underline hover:text-foreground">
+            Back to matches
+          </Link>
+        </p>
+      </AppShell>
+    );
+  }
+  return <MatchDetail match={match} snapshot={snapshot} connection={connection} now={now} />;
+}
+
+function MatchDetail({
+  match,
+  snapshot,
+  connection,
+  now,
+}: {
+  match: Match;
+  snapshot: Snapshot;
+  connection: Connection;
+  now: number;
+}) {
   const hydrated = useHydrated();
-  const match = snapshot.matches.find((m) => m.id === matchId) ?? match0;
   const event = snapshot.events.find((e) => e.id === match.eventId);
   const state = matchState(match, now);
   const pair = [match.team1?.name, match.team2?.name];

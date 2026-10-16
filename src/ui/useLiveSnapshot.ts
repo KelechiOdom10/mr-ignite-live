@@ -1,38 +1,43 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { connectLiveStream } from "void/live/client";
 
-import type { Snapshot } from "@/data/model";
+import { SnapshotSchema, type Snapshot } from "@/domain/model";
+
+import { useNow } from "./useNow";
 
 export type Connection = "connecting" | "live" | "polling";
 
 const POLL_MS = 45_000;
-const CLOCK_MS = 15_000;
 
 export function useLiveSnapshot(initial: Snapshot, eventId?: string) {
   const [snapshot, setSnapshot] = useState(initial);
+  const [previousInitial, setPreviousInitial] = useState(initial);
   const [connection, setConnection] = useState<Connection>("connecting");
-  const [now, setNow] = useState(() => Date.parse(initial.servedAt));
-  const seenInitial = useRef(initial);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const now = useNow(Date.parse(initial.servedAt));
 
-  if (seenInitial.current !== initial) {
-    seenInitial.current = initial;
+  if (initial !== previousInitial) {
+    setPreviousInitial(initial);
     setSnapshot(initial);
   }
 
   const refetch = useCallback(async () => {
     const query = eventId ? `?event=${encodeURIComponent(eventId)}` : "";
-    const res = await fetch(`/api/snapshot${query}`);
-    if (res.ok) setSnapshot((await res.json()) as Snapshot);
+    try {
+      const res = await fetch(`/api/snapshot${query}`);
+      if (!res.ok) throw new Error(`Snapshot request failed with HTTP ${res.status}`);
+      const parsed = SnapshotSchema.safeParse(await res.json());
+      if (!parsed.success) throw new Error("Snapshot response did not match the expected shape");
+      setSnapshot(parsed.data);
+      setRefreshError(null);
+    } catch (error) {
+      setRefreshError(error instanceof Error ? error.message : "Snapshot refresh failed");
+    }
   }, [eventId]);
 
   useEffect(() => {
-    setNow(Date.now());
-    const clock = setInterval(() => setNow(Date.now()), CLOCK_MS);
     const poll = setInterval(() => void refetch(), POLL_MS);
-    return () => {
-      clearInterval(clock);
-      clearInterval(poll);
-    };
+    return () => clearInterval(poll);
   }, [refetch]);
 
   useEffect(() => {
@@ -45,13 +50,17 @@ export function useLiveSnapshot(initial: Snapshot, eventId?: string) {
     });
     stream
       .subscribe({ id: "scores", topic: "scores", onEvent: () => void refetch() })
-      .then(() => !disposed && setConnection("live"))
-      .catch(() => !disposed && setConnection("polling"));
+      .then(() => {
+        if (!disposed) setConnection("live");
+      })
+      .catch(() => {
+        if (!disposed) setConnection("polling");
+      });
     return () => {
       disposed = true;
       stream.close();
     };
   }, [refetch]);
 
-  return { snapshot, connection, now, refetch };
+  return { snapshot, connection, now, refreshError, refetch };
 }

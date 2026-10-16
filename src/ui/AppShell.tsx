@@ -7,8 +7,8 @@ import {
   useAnimatedToastStack,
 } from "@/components/motion/animated-toast-stack";
 import { Marquee } from "@/components/motion/marquee";
-import type { Match, Snapshot } from "@/data/model";
-import { matchState } from "@/data/model";
+import { matchState } from "@/domain/matchState";
+import { type Match, type Snapshot } from "@/domain/model";
 
 import { formatRelative, useHydrated } from "./time";
 import type { Connection } from "./useLiveSnapshot";
@@ -31,8 +31,8 @@ function useScoreToasts(snapshot: Snapshot, now: number) {
     if (!prev) return;
     for (const match of snapshot.matches) {
       const before = prev.get(match.id);
-      const after = next.get(match.id)!;
-      if (!before) continue;
+      const after = next.get(match.id);
+      if (!before || !after) continue;
       const score = `${teamLabel(match, 1)} ${after.wins1}–${after.wins2} ${teamLabel(match, 2)}`;
       if (after.winner && !before.winner) {
         showToast({
@@ -41,9 +41,10 @@ function useScoreToasts(snapshot: Snapshot, now: number) {
           status: "success",
         });
       } else if (after.playedMaps.length > before.playedMaps.length) {
-        const map = after.playedMaps[after.playedMaps.length - 1]!;
+        const map = after.playedMaps.at(-1);
+        if (!map || map.winner === 0) continue;
         showToast({
-          title: `${teamLabel(match, map.winner as 1 | 2)} take ${map.map || `Map ${map.index}`}`,
+          title: `${teamLabel(match, map.winner)} take ${map.map || `Map ${map.index}`}`,
           description: score,
           status: "info",
         });

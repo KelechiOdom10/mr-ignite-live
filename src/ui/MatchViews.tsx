@@ -3,8 +3,9 @@ import { Play } from "lucide-react";
 
 import { Card } from "@/components/motion/card";
 import { NumberTicker } from "@/components/motion/number-ticker";
-import type { IgniteEvent, Match, MatchState, Snapshot } from "@/data/model";
-import { matchState } from "@/data/model";
+import { type MatchState } from "@/domain/matchState";
+import { matchState } from "@/domain/matchState";
+import { type IgniteEvent, type Match, type Snapshot } from "@/domain/model";
 import { cn } from "@/lib/utils";
 
 import { TeamLogo } from "./TeamMark";

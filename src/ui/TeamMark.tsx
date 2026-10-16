@@ -1,5 +1,5 @@
-import type { Team, TeamInfo } from "@/data/model";
-import { teamHue } from "@/data/teams";
+import { type Team, type TeamInfo } from "@/domain/model";
+import { teamHue } from "@/domain/teams";
 import { cn } from "@/lib/utils";
 
 export function logoUrl(info: TeamInfo | undefined): string | undefined {

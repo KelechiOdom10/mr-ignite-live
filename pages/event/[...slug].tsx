@@ -1,6 +1,7 @@
 import { KnockoutBracket, type Round } from "@/components/motion/knockout-bracket";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/motion/tabs";
-import { matchState, type Match, type Snapshot } from "@/data/model";
+import { matchState } from "@/domain/matchState";
+import { type Match, type Snapshot } from "@/domain/model";
 import { AppShell } from "@/ui/AppShell";
 import { MatchRow } from "@/ui/MatchViews";
 import { logoUrl } from "@/ui/TeamMark";
@@ -55,7 +56,7 @@ function toBracketRounds(
 function isHalving(rounds: [string, Match[]][]): boolean {
   return (
     rounds.length > 1 &&
-    rounds.every(([, ms], i) => i === 0 || ms.length * 2 === rounds[i - 1]![1].length)
+    rounds.every(([, ms], i) => i === 0 || ms.length * 2 === rounds[i - 1]?.[1].length)
   );
 }
 
