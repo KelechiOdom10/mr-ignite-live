@@ -7,27 +7,12 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "types": [
-      "void/env",
-      "vite/client"
-    ],
+    "types": ["void/env", "vite/client"],
     "jsx": "react-jsx",
     "paths": {
-      "void/routes": [
-        "./.void/routes.d.ts"
-      ],
-      "@/*": [
-        "./src/*"
-      ]
+      "void/routes": ["./.void/routes.d.ts"],
+      "@/*": ["./src/*"]
     }
   },
-  "include": [
-    "src",
-    "pages",
-    "routes",
-    "middleware",
-    "crons",
-    "queues",
-    "db"
-  ]
+  "include": ["src", "pages", "routes", "middleware", "crons", "queues", "db"]
 }

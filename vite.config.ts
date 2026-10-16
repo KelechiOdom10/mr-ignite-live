@@ -1,8 +1,9 @@
 import { fileURLToPath } from "node:url";
-import { defineConfig } from "vite";
+
 import tailwindcss from "@tailwindcss/vite";
-import { voidPlugin } from "void";
 import { voidReact } from "@void/react/plugin";
+import { defineConfig } from "vite";
+import { voidPlugin } from "void";
 
 export default defineConfig({
   resolve: {

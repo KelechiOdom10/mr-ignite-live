@@ -94,7 +94,8 @@ export function matchState(match: Match, now: number = Date.now()): MatchState {
   const started = playedMaps.length > 0 || (!Number.isNaN(start) && start <= now);
   const bothTeams = match.team1 !== null && match.team2 !== null;
   // Old series Liquipedia never completed (missing map results) shouldn't sit in "Live" forever.
-  if (!Number.isNaN(start) && now - start > LIVE_WINDOW_MS && bothTeams) return { status: "finished", wins1, wins2, winner, playedMaps };
+  if (!Number.isNaN(start) && now - start > LIVE_WINDOW_MS && bothTeams)
+    return { status: "finished", wins1, wins2, winner, playedMaps };
   const status: MatchStatus = started && bothTeams ? "live" : "upcoming";
   return { status, wins1, wins2, winner, playedMaps };
 }

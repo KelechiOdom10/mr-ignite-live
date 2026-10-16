@@ -1,6 +1,6 @@
 import type { IgniteEvent, MapResult, Match, Team, TeamInfo } from "./model";
-import { findTemplates, parseTemplateAt, stripMarkup, type Template } from "./wikitext";
 import { teamShortName } from "./teams";
+import { findTemplates, parseTemplateAt, stripMarkup, type Template } from "./wikitext";
 
 const API = "https://liquipedia.net/marvelrivals/api.php";
 const WIKI = "https://liquipedia.net/marvelrivals/";
@@ -196,28 +196,48 @@ export async function fetchTeamInfo(names: string[]): Promise<Record<string, Tea
     batch.forEach((name, j) => {
       const chunk = chunks[j] ?? "";
       out[name] = {
-        short: /team-template-text[^>]*>\[\[[^|\]]*\|([^\]]+)\]\]/.exec(chunk)?.[1] ?? teamShortName(name),
+        short:
+          /team-template-text[^>]*>\[\[[^|\]]*\|([^\]]+)\]\]/.exec(chunk)?.[1] ??
+          teamShortName(name),
         logoDark: /\[\[File:([^|\]]+darkmode[^|\]]*)/.exec(chunk)?.[1] ?? null,
-        logoLight: /\[\[File:([^|\]]+lightmode[^|\]]*)/.exec(chunk)?.[1] ?? /\[\[File:([^|\]]+)/.exec(chunk)?.[1] ?? null,
+        logoLight:
+          /\[\[File:([^|\]]+lightmode[^|\]]*)/.exec(chunk)?.[1] ??
+          /\[\[File:([^|\]]+)/.exec(chunk)?.[1] ??
+          null,
       };
     });
   }
-  const files = [...new Set(Object.values(out).flatMap((t) => [t.logoDark, t.logoLight]).filter((f): f is string => !!f))];
+  const files = [
+    ...new Set(
+      Object.values(out)
+        .flatMap((t) => [t.logoDark, t.logoLight])
+        .filter((f): f is string => !!f),
+    ),
+  ];
   const urls = new Map<string, string>();
   for (let i = 0; i < files.length; i += 50) {
-    const body = await api<{ query: { pages: { title: string; imageinfo?: { thumburl?: string; url: string }[] }[]; normalized?: { from: string; to: string }[] } }>({
+    const body = await api<{
+      query: {
+        pages: { title: string; imageinfo?: { thumburl?: string; url: string }[] }[];
+        normalized?: { from: string; to: string }[];
+      };
+    }>({
       action: "query",
       prop: "imageinfo",
       iiprop: "url",
       iiurlwidth: "96",
-      titles: files.slice(i, i + 50).map((f) => `File:${f}`).join("|"),
+      titles: files
+        .slice(i, i + 50)
+        .map((f) => `File:${f}`)
+        .join("|"),
     });
     for (const p of body.query.pages) {
       const info = p.imageinfo?.[0];
       if (info) urls.set(p.title.replace(/^File:/, ""), info.thumburl ?? info.url);
     }
   }
-  const resolve = (f: string | null) => (f ? (urls.get(f) ?? urls.get(f.replace(/_/g, " ")) ?? null) : null);
+  const resolve = (f: string | null) =>
+    f ? (urls.get(f) ?? urls.get(f.replace(/_/g, " ")) ?? null) : null;
   for (const info of Object.values(out)) {
     info.logoDark = resolve(info.logoDark);
     info.logoLight = resolve(info.logoLight);

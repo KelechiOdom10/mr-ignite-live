@@ -1,6 +1,7 @@
 import { defineHandler, defineHead, type InferProps } from "void";
-import { currentSnapshot } from "../src/sync";
+
 import { scopeSnapshot } from "../src/data/scope";
+import { currentSnapshot } from "../src/sync";
 
 export type Props = InferProps<typeof loader>;
 

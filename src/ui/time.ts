@@ -3,11 +3,17 @@ import { useSyncExternalStore } from "react";
 const subscribeNoop = () => () => {};
 
 export function useHydrated(): boolean {
-  return useSyncExternalStore(subscribeNoop, () => true, () => false);
+  return useSyncExternalStore(
+    subscribeNoop,
+    () => true,
+    () => false,
+  );
 }
 
 export function formatTime(iso: string): string {
-  return new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(new Date(iso));
+  return new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(
+    new Date(iso),
+  );
 }
 
 export function formatDay(iso: string, now: number): string {
@@ -16,7 +22,11 @@ export function formatDay(iso: string, now: number): string {
   if (day(d.getTime()) === day(now)) return "Today";
   if (day(d.getTime()) === day(now + 86_400_000)) return "Tomorrow";
   if (day(d.getTime()) === day(now - 86_400_000)) return "Yesterday";
-  return new Intl.DateTimeFormat(undefined, { weekday: "long", month: "short", day: "numeric" }).format(d);
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  }).format(d);
 }
 
 export function formatRelative(iso: string, now: number): string {
@@ -29,7 +39,12 @@ export function formatRelative(iso: string, now: number): string {
   return rtf.format(Math.round(diff / 86_400_000), "day");
 }
 
-export function groupByDay<T>(items: T[], at: (item: T) => string | null, now: number, hydrated: boolean): [string, T[]][] {
+export function groupByDay<T>(
+  items: T[],
+  at: (item: T) => string | null,
+  now: number,
+  hydrated: boolean,
+): [string, T[]][] {
   if (!hydrated) return items.length ? [["", items]] : [];
   const groups = new Map<string, T[]>();
   for (const item of items) {

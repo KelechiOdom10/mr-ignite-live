@@ -1,7 +1,8 @@
 import { HTTPException } from "hono/http-exception";
 import { defineHandler, defineHead, type InferProps } from "void";
-import { currentSnapshot } from "../../src/sync";
+
 import { eventIdFromSlug, scopeSnapshot } from "../../src/data/scope";
+import { currentSnapshot } from "../../src/sync";
 
 export type Props = InferProps<typeof loader>;
 

@@ -1,6 +1,15 @@
 import { kv } from "void/kv";
+
+import {
+  eventIdFor,
+  fetchContents,
+  fetchRevisions,
+  fetchTeamInfo,
+  listPages,
+  parseEventInfo,
+  parsePageMatches,
+} from "./liquipedia";
 import type { IgniteEvent, Match, PageData, Snapshot, StoredSnapshot } from "./model";
-import { eventIdFor, fetchContents, fetchRevisions, fetchTeamInfo, listPages, parseEventInfo, parsePageMatches } from "./liquipedia";
 
 const KEY = "snapshot:v2";
 const TITLE_LIST_KEY = "titles:v1";
@@ -21,7 +30,9 @@ export async function syncFromLiquipedia(): Promise<{ changed: boolean; stored: 
   const prev = (await readStored()) ?? { pages: {}, teams: {}, builtAt: new Date(0).toISOString() };
   const titles = await pageTitles();
   const revisions = await fetchRevisions(titles);
-  const changedTitles = [...revisions].filter(([title, rev]) => prev.pages[title]?.revid !== rev.revid).map(([title]) => title);
+  const changedTitles = [...revisions]
+    .filter(([title, rev]) => prev.pages[title]?.revid !== rev.revid)
+    .map(([title]) => title);
   const removed = Object.keys(prev.pages).filter((t) => !revisions.has(t));
   if (changedTitles.length === 0 && removed.length === 0) return { changed: false, stored: prev };
 
@@ -38,7 +49,9 @@ export async function syncFromLiquipedia(): Promise<{ changed: boolean; stored: 
     };
   }
 
-  const teamNames = new Set(Object.values(pages).flatMap((p) => p.matches.flatMap((m) => [m.team1?.name, m.team2?.name])));
+  const teamNames = new Set(
+    Object.values(pages).flatMap((p) => p.matches.flatMap((m) => [m.team1?.name, m.team2?.name])),
+  );
   const missing = [...teamNames].filter((n): n is string => !!n && !prev.teams[n]);
   const teams = missing.length ? { ...prev.teams, ...(await fetchTeamInfo(missing)) } : prev.teams;
 
@@ -56,8 +69,14 @@ export function toSnapshot(stored: StoredSnapshot): Snapshot {
     if (page.event) events.push(page.event);
     if (!latest || page.updatedAt > latest) latest = page.updatedAt;
     for (const m of page.matches) {
-      const withShort = (team: Match["team1"]) => (team ? { ...team, short: stored.teams[team.name]?.short ?? team.short } : null);
-      matches.push({ ...m, eventId: eventIdFor(title), team1: withShort(m.team1), team2: withShort(m.team2) });
+      const withShort = (team: Match["team1"]) =>
+        team ? { ...team, short: stored.teams[team.name]?.short ?? team.short } : null;
+      matches.push({
+        ...m,
+        eventId: eventIdFor(title),
+        team1: withShort(m.team1),
+        team2: withShort(m.team2),
+      });
     }
   }
   const eventIds = new Set(events.map((e) => e.id));
@@ -65,7 +84,9 @@ export function toSnapshot(stored: StoredSnapshot): Snapshot {
     builtAt: stored.builtAt,
     servedAt: new Date().toISOString(),
     liquipediaUpdatedAt: latest,
-    events: events.filter((e) => eventIds.has(e.id)).sort((a, b) => (b.startDate ?? "").localeCompare(a.startDate ?? "")),
+    events: events
+      .filter((e) => eventIds.has(e.id))
+      .sort((a, b) => (b.startDate ?? "").localeCompare(a.startDate ?? "")),
     matches: matches.sort((a, b) => (a.startsAt ?? "").localeCompare(b.startsAt ?? "")),
     teams: stored.teams,
   };

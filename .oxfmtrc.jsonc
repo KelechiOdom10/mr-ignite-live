@@ -1,0 +1,21 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 100,
+  "tabWidth": 2,
+  "useTabs": false,
+  "semi": true,
+  "singleQuote": false,
+  "trailingComma": "all",
+  "arrowParens": "always",
+  "endOfLine": "lf",
+  "experimentalSortPackageJson": true,
+  "experimentalSortImports": { "ignoreCase": true, "newlinesBetween": true, "order": "asc" },
+  // beUI components are copied verbatim from the registry so they can be re-pulled cleanly.
+  "ignorePatterns": [
+    "src/components/motion/**",
+    "src/lib/**",
+    "test/fixtures/**",
+    ".void/**",
+    "dist/**",
+  ],
+}

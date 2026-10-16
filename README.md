@@ -28,10 +28,10 @@ bunx void deploy                      # first time: choose Cloudflare or a Void 
 
 ## Layout
 
-| Path | What |
-| --- | --- |
-| `src/data/liquipedia.ts` | Liquipedia API client and wikitext → match parser |
-| `src/data/store.ts` | KV snapshot sync |
-| `src/data/model.ts` | Types and `matchState` (live / upcoming / finished) |
-| `crons/`, `routes/`, `pages/` | Void cron, API routes, SSR pages |
-| `src/components/motion/` | beUI components (copied from the registry) |
+| Path                          | What                                                |
+| ----------------------------- | --------------------------------------------------- |
+| `src/data/liquipedia.ts`      | Liquipedia API client and wikitext → match parser   |
+| `src/data/store.ts`           | KV snapshot sync                                    |
+| `src/data/model.ts`           | Types and `matchState` (live / upcoming / finished) |
+| `crons/`, `routes/`, `pages/` | Void cron, API routes, SSR pages                    |
+| `src/components/motion/`      | beUI components (copied from the registry)          |

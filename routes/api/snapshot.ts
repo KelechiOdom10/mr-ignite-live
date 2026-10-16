@@ -1,6 +1,7 @@
 import { defineHandler } from "void";
-import { currentSnapshot } from "../../src/sync";
+
 import { scopeFromQuery, scopeSnapshot } from "../../src/data/scope";
+import { currentSnapshot } from "../../src/sync";
 
 export const GET = defineHandler(async (c) => {
   c.header("Cache-Control", "no-store");

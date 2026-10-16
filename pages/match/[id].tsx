@@ -1,5 +1,6 @@
 import { Link } from "@void/react";
 import { BarChart3, ExternalLink } from "lucide-react";
+
 import { Card } from "@/components/motion/card";
 import { matchState } from "@/data/model";
 import { eventSlug } from "@/data/scope";
@@ -8,6 +9,7 @@ import { LiveMatchCard, MatchRow } from "@/ui/MatchViews";
 import { TeamLogo } from "@/ui/TeamMark";
 import { formatDay, formatTime, useHydrated } from "@/ui/time";
 import { useLiveSnapshot } from "@/ui/useLiveSnapshot";
+
 import type { Props } from "./[id].server";
 
 export default function MatchPage({ snapshot: initial, matchId }: Props) {

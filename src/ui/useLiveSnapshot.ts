@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { connectLiveStream } from "void/live/client";
+
 import type { Snapshot } from "@/data/model";
 
 export type Connection = "connecting" | "live" | "polling";

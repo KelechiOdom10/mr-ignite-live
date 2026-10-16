@@ -1,6 +1,6 @@
-import { live, SCORES_TOPIC } from "./live";
-import { readStored, syncFromLiquipedia, toSnapshot } from "./data/store";
 import type { Snapshot } from "./data/model";
+import { readStored, syncFromLiquipedia, toSnapshot } from "./data/store";
+import { live, SCORES_TOPIC } from "./live";
 
 const DEV_SYNC_INTERVAL_MS = 60_000;
 let inFlight: Promise<Snapshot> | null = null;
@@ -11,7 +11,12 @@ export async function sync(): Promise<Snapshot> {
     try {
       const { changed, stored } = await syncFromLiquipedia();
       const snapshot = toSnapshot(stored);
-      if (changed) await live.publish(SCORES_TOPIC, { builtAt: snapshot.builtAt }, { type: "updated", eventId: snapshot.builtAt });
+      if (changed)
+        await live.publish(
+          SCORES_TOPIC,
+          { builtAt: snapshot.builtAt },
+          { type: "updated", eventId: snapshot.builtAt },
+        );
       return snapshot;
     } finally {
       inFlight = null;

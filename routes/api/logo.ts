@@ -13,7 +13,9 @@ export const GET = defineHandler(async (c) => {
   const cached = await cache?.match(cacheKey);
   if (cached) return cached;
 
-  const upstream = await fetch(url, { headers: { "User-Agent": "MRIgniteLive/0.1 (personal live score tracker)" } });
+  const upstream = await fetch(url, {
+    headers: { "User-Agent": "MRIgniteLive/0.1 (personal live score tracker)" },
+  });
   if (!upstream.ok) return c.text("Logo unavailable", 502);
   const res = new Response(upstream.body, {
     headers: {

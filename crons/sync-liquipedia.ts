@@ -1,4 +1,5 @@
 import { defineScheduled } from "void";
+
 import { sync } from "../src/sync";
 
 export const cron = "* * * * *";

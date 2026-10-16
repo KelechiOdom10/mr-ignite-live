@@ -2,10 +2,11 @@ import { KnockoutBracket, type Round } from "@/components/motion/knockout-bracke
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/motion/tabs";
 import { matchState, type Match, type Snapshot } from "@/data/model";
 import { AppShell } from "@/ui/AppShell";
-import { logoUrl } from "@/ui/TeamMark";
 import { MatchRow } from "@/ui/MatchViews";
+import { logoUrl } from "@/ui/TeamMark";
 import { formatDay, groupByDay, useHydrated } from "@/ui/time";
 import { useLiveSnapshot } from "@/ui/useLiveSnapshot";
+
 import type { Props } from "./[...slug].server";
 
 function bracketKey(id: string): [number, number] {
@@ -35,9 +36,7 @@ function toBracketRounds(
     matches: matches.map((m) => {
       const s = matchState(m, now);
       const side = (team: Match["team1"], score: number) => ({
-        team: team
-          ? { name: team.short, logo: logoUrl(snapshot.teams[team.name]) }
-          : null,
+        team: team ? { name: team.short, logo: logoUrl(snapshot.teams[team.name]) } : null,
         score: s.status === "upcoming" ? null : score,
       });
       return {
