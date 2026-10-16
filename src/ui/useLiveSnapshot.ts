@@ -45,7 +45,12 @@ export function useLiveSnapshot(initial: Snapshot, scope: LiveScope = {}) {
 
   useEffect(() => {
     const poll = setInterval(() => void refetch(), POLL_MS);
-    return () => clearInterval(poll);
+    const onVisible = () => document.visibilityState === "visible" && void refetch();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(poll);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [refetch]);
 
   useEffect(() => {
