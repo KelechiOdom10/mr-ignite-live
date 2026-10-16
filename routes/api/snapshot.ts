@@ -9,7 +9,11 @@ export const GET = defineHandler(async (c) => {
   const snapshot = await currentSnapshot();
   return scopeSnapshot(
     snapshot,
-    scopeFromQuery({ event: c.req.query("event"), match: c.req.query("match") }),
+    scopeFromQuery({
+      event: c.req.query("event"),
+      match: c.req.query("match"),
+      view: c.req.query("view"),
+    }),
     Date.now(),
   );
 });

@@ -5,7 +5,7 @@ import { useLiveSnapshot } from "@/ui/useLiveSnapshot";
 import type { Props } from "./events.server";
 
 export default function EventsPage({ snapshot: initial }: Props) {
-  const { snapshot, connection, now } = useLiveSnapshot(initial);
+  const { snapshot, connection, now } = useLiveSnapshot(initial, { view: "events" });
   const byStage = new Map<string, typeof snapshot.events>();
   for (const e of snapshot.events) byStage.set(e.stage, [...(byStage.get(e.stage) ?? []), e]);
   return (

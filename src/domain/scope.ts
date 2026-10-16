@@ -2,9 +2,11 @@ import { matchState } from "./matchState";
 import type { Match, Snapshot } from "./model";
 
 const RECENT_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+const EVENTS_LIST_MATCH_WINDOW_MS = 2 * 24 * 60 * 60 * 1000;
 
 export type SnapshotScope =
   | { kind: "recent" }
+  | { kind: "events" }
   | { kind: "event"; eventId: string }
   | { kind: "match"; matchId: string };
 
@@ -13,6 +15,15 @@ function involvesTeam(match: Match, names: ReadonlySet<string>): boolean {
 }
 
 export function scopeSnapshot(snapshot: Snapshot, scope: SnapshotScope, now: number): Snapshot {
+  if (scope.kind === "events") {
+    return {
+      ...snapshot,
+      servedAt: new Date(now).toISOString(),
+      matches: snapshot.matches.filter(
+        (m) => m.startsAt && Date.parse(m.startsAt) > now - EVENTS_LIST_MATCH_WINDOW_MS,
+      ),
+    };
+  }
   const isRecent = (eventId: string) => {
     const event = snapshot.events.find((e) => e.id === eventId);
     const end = event?.endDate ? Date.parse(event.endDate) : Number.NaN;
@@ -36,7 +47,7 @@ export function scopeSnapshot(snapshot: Snapshot, scope: SnapshotScope, now: num
   return {
     ...snapshot,
     servedAt: new Date(now).toISOString(),
-    events: snapshot.events.filter((e) => eventIds.has(e.id)),
+    events: snapshot.events.filter((e) => eventIds.has(e.id) || e.id === focusEventId),
     matches,
   };
 }
@@ -45,7 +56,12 @@ export function matchesOfEvent(snapshot: Snapshot, eventId: string): Match[] {
   return snapshot.matches.filter((m) => m.eventId === eventId);
 }
 
-export function scopeFromQuery(query: { event?: string; match?: string }): SnapshotScope {
+export function scopeFromQuery(query: {
+  event?: string;
+  match?: string;
+  view?: string;
+}): SnapshotScope {
+  if (query.view === "events") return { kind: "events" };
   if (query.match) return { kind: "match", matchId: query.match };
   if (query.event) return { kind: "event", eventId: query.event };
   return { kind: "recent" };
@@ -55,6 +71,10 @@ export function eventSlug(eventId: string): string {
   return eventId.replace(/ /g, "_");
 }
 
-export function eventIdFromSlug(slug: string): string {
-  return decodeURIComponent(slug).replace(/_/g, " ");
+export function eventIdFromSlug(slug: string): string | null {
+  try {
+    return decodeURIComponent(slug).replace(/_/g, " ");
+  } catch {
+    return null;
+  }
 }

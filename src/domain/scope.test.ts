@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { aMatch } from "../../test/builders";
 import type { IgniteEvent, Snapshot } from "./model";
-import { eventIdFromSlug, eventSlug, matchesOfEvent, scopeSnapshot } from "./scope";
+import { eventIdFromSlug, eventSlug, matchesOfEvent, scopeFromQuery, scopeSnapshot } from "./scope";
 
 const NOW = Date.parse("2026-10-17T00:00:00.000Z");
 
@@ -74,6 +74,24 @@ describe("scopeSnapshot", () => {
     expect(scoped.matches.map((m) => m.id).sort()).toEqual(["a", "b"]);
   });
 
+  it("keeps the requested event on its page before its bracket has any matches", () => {
+    // Announced stages showed "Event not found" because events without matches were dropped.
+    const announced = anEvent("announced", null);
+    const scoped = scopeSnapshot(
+      aSnapshot([announced, old], []),
+      { kind: "event", eventId: "announced" },
+      NOW,
+    );
+    expect(scoped.events.map((e) => e.id)).toEqual(["announced"]);
+  });
+
+  it("keeps every event, however old, for the events list, with only near-term matches", () => {
+    // The events page lost long-finished stages on its first live refresh.
+    const scoped = scopeSnapshot(snapshot, { kind: "events" }, NOW);
+    expect(scoped.events.map((e) => e.id)).toEqual(["current", "old"]);
+    expect(scoped.matches.map((m) => m.id)).toEqual(["a"]);
+  });
+
   it("stamps the time it was scoped so the client hydrates with the server's clock", () => {
     expect(scopeSnapshot(snapshot, { kind: "recent" }, NOW).servedAt).toBe(
       new Date(NOW).toISOString(),
@@ -91,10 +109,21 @@ describe("matchesOfEvent", () => {
   });
 });
 
+describe("scopeFromQuery", () => {
+  it("reads the events-list view so its refreshes keep every event", () => {
+    expect(scopeFromQuery({ view: "events" })).toEqual({ kind: "events" });
+  });
+});
+
 describe("event slugs", () => {
   it("round-trips a Liquipedia title through a URL path", () => {
     const id = "MR Ignite/2026/Stage 2/Pacific/Asia";
     expect(eventSlug(id)).toBe("MR_Ignite/2026/Stage_2/Pacific/Asia");
     expect(eventIdFromSlug(eventSlug(id))).toBe(id);
+  });
+
+  it("returns null for a malformed escape instead of throwing", () => {
+    // /event/%E0%A4%A threw URIError and answered 500 instead of 404.
+    expect(eventIdFromSlug("%E0%A4%A")).toBeNull();
   });
 });

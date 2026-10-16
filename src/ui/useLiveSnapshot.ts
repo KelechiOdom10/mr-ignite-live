@@ -10,10 +10,10 @@ export type Connection = "connecting" | "live" | "polling";
 
 const POLL_MS = 45_000;
 
-export type LiveScope = { event?: string; match?: string };
+export type LiveScope = { event?: string; match?: string; view?: "events" };
 
 export function useLiveSnapshot(initial: Snapshot, scope: LiveScope = {}) {
-  const { event: eventId, match: matchId } = scope;
+  const { event: eventId, match: matchId, view } = scope;
   const [snapshot, setSnapshot] = useState(initial);
   const [previousInitial, setPreviousInitial] = useState(initial);
   const [connection, setConnection] = useState<Connection>("connecting");
@@ -29,6 +29,7 @@ export function useLiveSnapshot(initial: Snapshot, scope: LiveScope = {}) {
     const params = new URLSearchParams();
     if (eventId) params.set("event", eventId);
     if (matchId) params.set("match", matchId);
+    if (view) params.set("view", view);
     const query = params.size > 0 ? `?${params}` : "";
     try {
       const res = await fetch(`/api/snapshot${query}`);
@@ -40,7 +41,7 @@ export function useLiveSnapshot(initial: Snapshot, scope: LiveScope = {}) {
     } catch (error) {
       setRefreshError(error instanceof Error ? error.message : "Snapshot refresh failed");
     }
-  }, [eventId, matchId]);
+  }, [eventId, matchId, view]);
 
   useEffect(() => {
     const poll = setInterval(() => void refetch(), POLL_MS);
