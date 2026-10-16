@@ -3,6 +3,7 @@ import { connectLiveStream } from "void/live/client";
 
 import { SnapshotSchema, type Snapshot } from "@/domain/model";
 
+import { newerSnapshot } from "./newerSnapshot";
 import { useNow } from "./useNow";
 
 export type Connection = "connecting" | "live" | "polling";
@@ -34,7 +35,7 @@ export function useLiveSnapshot(initial: Snapshot, scope: LiveScope = {}) {
       if (!res.ok) throw new Error(`Snapshot request failed with HTTP ${res.status}`);
       const parsed = SnapshotSchema.safeParse(await res.json());
       if (!parsed.success) throw new Error("Snapshot response did not match the expected shape");
-      setSnapshot(parsed.data);
+      setSnapshot((current) => newerSnapshot(current, parsed.data));
       setRefreshError(null);
     } catch (error) {
       setRefreshError(error instanceof Error ? error.message : "Snapshot refresh failed");
