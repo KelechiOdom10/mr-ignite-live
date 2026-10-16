@@ -135,6 +135,7 @@ function MapCard({
   mvp: PlayerStats | undefined;
 }) {
   const hidden = useSpoilersHidden();
+  if (hidden) return <HiddenMapCard index={map.index} />;
   const winner = map.winner === 0 ? null : map.winner === 1 ? match.team1 : match.team2;
   const winnerScore = map.winner === 1 ? map.score1 : map.score2;
   const loserScore = map.winner === 1 ? map.score2 : map.score1;
@@ -167,7 +168,7 @@ function MapCard({
           {info && <span className="normal-case"> · {info.mode}</span>}
         </div>
         <div className="mt-1 font-medium">{map.map || (current ? "Picking…" : "TBD")}</div>
-        {mvp && !hidden && (
+        {mvp && (
           <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
             {mvp.hero && <HeroPortrait hero={mvp.hero} size={22} />}
             <span className="min-w-0 truncate font-medium text-foreground" title={mvp.hero?.name}>
@@ -183,7 +184,7 @@ function MapCard({
           <span className="inline-flex items-center gap-1.5 text-xs font-medium text-live">
             <LiveDot /> In progress
           </span>
-        ) : winner && !hidden ? (
+        ) : winner ? (
           <span className="inline-flex min-w-0 items-center gap-2 rounded-md bg-win/10 px-2 py-1 text-xs font-medium text-win">
             <TeamLogo team={winner} info={snapshot.teams[winner.name]} size={16} />
             <span className="truncate">{winner.short}</span>
@@ -192,7 +193,7 @@ function MapCard({
             </span>
           </span>
         ) : (
-          <span className="text-xs text-muted-foreground">{winner ? "Played" : "Not played"}</span>
+          <span className="text-xs text-muted-foreground">Not played</span>
         )}
         {map.vod && (
           <a
@@ -206,6 +207,15 @@ function MapCard({
           </a>
         )}
       </div>
+    </div>
+  );
+}
+
+function HiddenMapCard({ index }: { index: number }) {
+  return (
+    <div className="flex min-h-36 flex-col justify-between rounded-xl border bg-card p-4">
+      <div className="text-xs text-muted-foreground uppercase">Map {index}</div>
+      <div className="text-xs text-muted-foreground">Result hidden</div>
     </div>
   );
 }
@@ -320,6 +330,17 @@ function MatchDetail({
             </h2>
             {vods.length === 0 ? (
               <p className="text-sm text-muted-foreground">Not yet available.</p>
+            ) : hidden && vods[0] ? (
+              <a
+                href={vods[0].vod ?? undefined}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-10 items-center gap-2 rounded-lg border px-4 text-sm hover:bg-accent"
+              >
+                Watch from map {vods[0].index}
+                <ExternalLink className="size-3.5" aria-hidden />
+                <span className="sr-only">(opens in a new tab)</span>
+              </a>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {vods.map((m) => (
