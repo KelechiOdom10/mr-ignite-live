@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 
-const COPIED_FROM_BEUI = /^src\/(components\/motion|lib)\//;
+const COPIED_FROM_BEUI = /^src\/(components|lib)\//;
 
 function tsc(project: string): string {
   const run = spawnSync("bunx", ["tsc", "--noEmit", "--pretty", "false", "-p", project], {

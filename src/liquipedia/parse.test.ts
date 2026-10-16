@@ -78,6 +78,7 @@ describe("parseEventInfo", () => {
       endDate: "2026-10-18",
       prizePoolUsd: 200000,
       liquipediaUrl: "https://liquipedia.net/marvelrivals/MR_Ignite/2026/Stage_2/Americas",
+      iconFile: "MRIG Americas allmode.png",
     });
   });
 

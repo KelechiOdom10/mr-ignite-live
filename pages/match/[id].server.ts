@@ -15,7 +15,7 @@ export const loader = defineHandler(async (c) => {
   return {
     matchId: match.id,
     eventId: match.eventId,
-    snapshot: scopeSnapshot(full, { kind: "event", eventId: match.eventId }, Date.now()),
+    snapshot: scopeSnapshot(full, { kind: "match", matchId: match.id }, Date.now()),
   };
 });
 

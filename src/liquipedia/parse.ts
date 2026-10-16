@@ -122,6 +122,8 @@ export function parseEventInfo(title: string, text: string, updatedAt: string): 
     prizePoolUsd: parseNumber(info.prizepoolusd?.replace(/,/g, "")),
     liquipediaUrl: WIKI + title.replace(/ /g, "_"),
     updatedAt,
+    iconFile: stripMarkup(info.icon ?? info.image ?? "") || null,
+    iconUrl: null,
   };
 }
 

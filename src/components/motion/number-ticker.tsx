@@ -1,5 +1,4 @@
 "use client";
-// beui.dev/components/motion/number
 
 import { animate, motion, useInView, useReducedMotion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";

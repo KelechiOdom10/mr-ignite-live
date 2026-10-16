@@ -1,15 +1,19 @@
-import { Link } from "@void/react";
-import { useEffect, useRef, type ReactNode } from "react";
+import { Link, useRouter } from "@void/react";
+import { CalendarDays, Search, Trophy, Zap } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
-import { AnimatedBadge } from "@/components/motion/animated-badge";
 import {
   AnimatedToastStack,
   useAnimatedToastStack,
 } from "@/components/motion/animated-toast-stack";
-import { Marquee } from "@/components/motion/marquee";
-import { matchState } from "@/domain/matchState";
-import { type Match, type Snapshot } from "@/domain/model";
+import { matchState, type MatchState } from "@/domain/matchState";
+import type { Match, Snapshot } from "@/domain/model";
+import { cn } from "@/lib/utils";
 
+import { LiveIsland } from "./LiveIsland";
+import { MatchStrip } from "./MatchStrip";
+import { SearchPalette } from "./SearchPalette";
+import { SpoilerToggle, useSpoilersHidden } from "./spoilers";
 import { formatRelative, useHydrated } from "./time";
 import type { Connection } from "./useLiveSnapshot";
 
@@ -18,11 +22,12 @@ function teamLabel(match: Match, side: 1 | 2) {
 }
 
 function useScoreToasts(snapshot: Snapshot, now: number) {
+  const hidden = useSpoilersHidden();
   const { toasts, showToast, dismissToast } = useAnimatedToastStack({
     defaultDuration: 7000,
     limit: 4,
   });
-  const previous = useRef<Map<string, ReturnType<typeof matchState>> | null>(null);
+  const previous = useRef<Map<string, MatchState> | null>(null);
 
   useEffect(() => {
     const next = new Map(snapshot.matches.map((m) => [m.id, matchState(m, now)]));
@@ -33,8 +38,17 @@ function useScoreToasts(snapshot: Snapshot, now: number) {
       const before = prev.get(match.id);
       const after = next.get(match.id);
       if (!before || !after) continue;
+      const pairing = `${teamLabel(match, 1)} vs ${teamLabel(match, 2)}`;
       const score = `${teamLabel(match, 1)} ${after.wins1}–${after.wins2} ${teamLabel(match, 2)}`;
-      if (after.winner && !before.winner) {
+      if (after.status === "live" && before.status === "upcoming") {
+        showToast({
+          title: "Match is live",
+          description: `${pairing} · ${match.round}`,
+          status: "loading",
+        });
+      } else if (hidden && after.playedMaps.length > before.playedMaps.length) {
+        showToast({ title: "Score update", description: pairing, status: "info" });
+      } else if (after.winner !== 0 && before.winner === 0) {
         showToast({
           title: `${teamLabel(match, after.winner)} win the series`,
           description: score,
@@ -48,20 +62,14 @@ function useScoreToasts(snapshot: Snapshot, now: number) {
           description: score,
           status: "info",
         });
-      } else if (after.status === "live" && before.status === "upcoming") {
-        showToast({
-          title: "Match is live",
-          description: `${teamLabel(match, 1)} vs ${teamLabel(match, 2)} · ${match.round}`,
-          status: "loading",
-        });
       }
     }
-  }, [snapshot, now, showToast]);
+  }, [snapshot, now, showToast, hidden]);
 
   return { toasts, dismissToast };
 }
 
-function SyncBadge({
+function SyncStatus({
   snapshot,
   connection,
   now,
@@ -72,54 +80,36 @@ function SyncBadge({
 }) {
   const hydrated = useHydrated();
   const updated =
-    snapshot.liquipediaUpdatedAt && hydrated
-      ? `Liquipedia ${formatRelative(snapshot.liquipediaUpdatedAt, now)}`
-      : "Liquipedia";
+    hydrated && snapshot.liquipediaUpdatedAt
+      ? formatRelative(snapshot.liquipediaUpdatedAt, now)
+      : null;
   return (
-    <AnimatedBadge
-      status={
-        connection === "live" ? "success" : connection === "connecting" ? "loading" : "warning"
-      }
-      size="sm"
-      contentKey={`${connection}-${updated}`}
-    >
-      {connection === "polling" ? `Polling · ${updated}` : updated}
-    </AnimatedBadge>
+    <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+      <span
+        aria-hidden
+        className={cn(
+          "size-1.5 rounded-full",
+          connection === "live"
+            ? "bg-win"
+            : connection === "polling"
+              ? "bg-region-emea"
+              : "bg-muted-foreground",
+        )}
+      />
+      {connection === "live"
+        ? "Live updates on"
+        : connection === "polling"
+          ? "Checking every 45s"
+          : "Connecting"}
+      {updated && <span>· Liquipedia updated {updated}</span>}
+    </span>
   );
 }
 
-function ResultsTicker({ snapshot, now }: { snapshot: Snapshot; now: number }) {
-  const recent = snapshot.matches
-    .map((m) => ({ m, s: matchState(m, now) }))
-    .filter(({ s }) => s.status !== "upcoming" && s.playedMaps.length > 0)
-    .slice(-14)
-    .reverse();
-  if (recent.length === 0) return null;
-  return (
-    <div className="border-b bg-black/30">
-      <Marquee speed={40} gap="2.5rem" className="mx-auto max-w-7xl py-2">
-        {recent.map(({ m, s }) => (
-          <Link
-            key={m.id}
-            href={`/match/${m.id}`}
-            className="flex items-center gap-2 whitespace-nowrap text-xs"
-          >
-            {s.status === "live" && <span className="live-dot size-1.5 rounded-full bg-live" />}
-            <span className={s.winner === 1 ? "font-semibold text-win" : "text-muted-foreground"}>
-              {teamLabel(m, 1)}
-            </span>
-            <span className="font-display text-sm font-bold tabular-nums">
-              {s.wins1}–{s.wins2}
-            </span>
-            <span className={s.winner === 2 ? "font-semibold text-win" : "text-muted-foreground"}>
-              {teamLabel(m, 2)}
-            </span>
-          </Link>
-        ))}
-      </Marquee>
-    </div>
-  );
-}
+const NAV = [
+  { href: "/", label: "Matches", icon: CalendarDays },
+  { href: "/events", label: "Events", icon: Trophy },
+] as const;
 
 export function AppShell({
   snapshot,
@@ -133,43 +123,103 @@ export function AppShell({
   children: ReactNode;
 }) {
   const { toasts, dismissToast } = useScoreToasts(snapshot, now);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const router = useRouter();
+  const path = router.path;
+
   return (
-    <div className="min-h-dvh">
-      <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-xl">
-        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="-skew-x-12 rounded-sm bg-primary px-2 py-0.5 font-display text-lg font-extrabold uppercase italic tracking-tight text-primary-foreground">
-              Ignite
-            </span>
-            <span className="font-display text-lg font-bold uppercase tracking-wide">Live</span>
-          </Link>
-          <nav className="flex items-center gap-4 text-sm text-muted-foreground">
-            <Link href="/" className="hover:text-foreground">
-              Matches
+    <div className="flex min-h-dvh flex-col">
+      <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur-xl">
+        <div className="mx-auto grid h-14 max-w-7xl grid-cols-[1fr_auto] items-center md:grid-cols-[1fr_auto_1fr] gap-3 px-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-6">
+            <Link href="/" className="flex items-center gap-2 font-semibold">
+              <Zap className="size-5 fill-primary text-primary" aria-hidden />
+              <span>Ignite Live</span>
             </Link>
-            <Link href="/events" className="hover:text-foreground">
-              Events
-            </Link>
-            <span className="max-sm:hidden">
-              <SyncBadge snapshot={snapshot} connection={connection} now={now} />
-            </span>
-          </nav>
+            <nav aria-label="Main" className="hidden items-center gap-1 sm:flex">
+              {NAV.map(({ href, label, icon: Icon }) => {
+                const active =
+                  href === "/"
+                    ? path === "/" || path.startsWith("/match")
+                    : path.startsWith(href.slice(0, -1));
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    aria-current={active ? "page" : undefined}
+                    className={cn(
+                      "inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
+                      active && "text-foreground",
+                    )}
+                  >
+                    <Icon className="size-4" aria-hidden />
+                    {label}
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+          <div className="hidden justify-center md:flex">
+            <LiveIsland snapshot={snapshot} now={now} />
+          </div>
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              className="inline-flex h-9 items-center gap-2 rounded-md border px-3 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              <Search className="size-4" aria-hidden />
+              <span className="hidden lg:inline">Search</span>
+              <kbd className="hidden rounded bg-muted px-1.5 font-mono text-[0.7rem] lg:inline">
+                ⌘K
+              </kbd>
+              <span className="sr-only lg:hidden">Search</span>
+            </button>
+            <div className="hidden sm:block">
+              <SpoilerToggle />
+            </div>
+          </div>
         </div>
       </header>
-      <ResultsTicker snapshot={snapshot} now={now} />
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">{children}</main>
-      <footer className="mx-auto max-w-7xl px-4 pb-10 text-xs text-muted-foreground sm:px-6">
-        Match data from{" "}
-        <a
-          className="underline hover:text-foreground"
-          href="https://liquipedia.net/marvelrivals/"
-          target="_blank"
-          rel="noreferrer"
-        >
-          Liquipedia
-        </a>{" "}
-        (CC BY-SA 3.0). Not affiliated with NetEase or Marvel.
+      <MatchStrip snapshot={snapshot} now={now} />
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 pb-24 sm:px-6 sm:pb-8">
+        {children}
+      </main>
+      <footer className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 border-t px-4 py-5 pb-24 text-xs text-muted-foreground sm:px-6 sm:pb-5">
+        <SyncStatus snapshot={snapshot} connection={connection} now={now} />
+        <span>
+          Data from{" "}
+          <a
+            className="underline hover:text-foreground"
+            href="https://liquipedia.net/marvelrivals/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Liquipedia
+          </a>{" "}
+          (CC BY-SA). Not affiliated with NetEase or Marvel.
+        </span>
       </footer>
+      <nav
+        aria-label="Main"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl sm:hidden"
+      >
+        {NAV.map(({ href, label, icon: Icon }) => (
+          <Link
+            key={href}
+            href={href}
+            className="flex h-14 flex-col items-center justify-center gap-0.5 text-[0.7rem] text-muted-foreground"
+          >
+            <Icon className="size-5" aria-hidden />
+            {label}
+          </Link>
+        ))}
+        <div className="flex h-14 flex-col items-center justify-center gap-0.5 text-[0.7rem] text-muted-foreground">
+          <SpoilerToggle compact />
+          Spoilers
+        </div>
+      </nav>
+      <SearchPalette snapshot={snapshot} now={now} open={searchOpen} onOpenChange={setSearchOpen} />
       <AnimatedToastStack toasts={toasts} onDismiss={dismissToast} position="bottom-right" fixed />
     </div>
   );

@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": { "noUncheckedIndexedAccess": false },
-  "include": ["src/components/motion", "src/lib"]
+  "include": ["src/components", "src/lib"]
 }

@@ -2,47 +2,52 @@ import { useMemo, useState } from "react";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/motion/tabs";
 import { matchState } from "@/domain/matchState";
-import { type IgniteEvent, type Match } from "@/domain/model";
+import type { IgniteEvent, Match } from "@/domain/model";
 import { AppShell } from "@/ui/AppShell";
-import { EventCard } from "@/ui/EventCard";
-import { LiveMatchCard, MatchRow } from "@/ui/MatchViews";
-import { groupByDay, useHydrated } from "@/ui/time";
+import { DayHeading } from "@/ui/DayHeading";
+import { EventRow, eventPhase, type EventPhase } from "@/ui/EventRow";
+import { MatchCard } from "@/ui/MatchCard";
+import { REGION_FILTERS, regionKey, type RegionFilter } from "@/ui/region";
+import { dayKey, groupByDay, useHydrated } from "@/ui/time";
 import { useLiveSnapshot } from "@/ui/useLiveSnapshot";
 
 import type { Props } from "./index.server";
 
-const REGIONS = ["All", "Americas", "EMEA", "China", "Pacific"] as const;
+type ListTab = "upcoming" | "results";
 
-function inRegion(event: IgniteEvent | undefined, region: string) {
-  return region === "All" || (event?.region ?? "").startsWith(region);
+const UPCOMING_LIMIT = 30;
+const RESULTS_LIMIT = 36;
+
+function inRegion(event: IgniteEvent | undefined, region: RegionFilter) {
+  return region === "all" || regionKey(event?.region) === region;
 }
 
-function Section({
-  title,
-  count,
-  children,
-}: {
-  title: string;
-  count?: number;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="space-y-3">
-      <h2 className="flex items-baseline gap-2 font-display text-xl font-bold uppercase tracking-wide">
-        {title}
-        {count !== undefined && (
-          <span className="text-sm font-semibold text-muted-foreground">{count}</span>
-        )}
-      </h2>
-      {children}
-    </section>
-  );
+function smartDefaultTab(live: Match[], upcoming: Match[], results: Match[], now: number): ListTab {
+  if (live.length > 0) return "upcoming";
+  const today = dayKey(new Date(now).toISOString());
+  const playedToday = results.some((m) => m.startsAt && dayKey(m.startsAt) === today);
+  const moreToday = upcoming.some((m) => m.startsAt && dayKey(m.startsAt) === today);
+  return playedToday && !moreToday ? "results" : "upcoming";
+}
+
+function isListTab(value: string): value is ListTab {
+  return value === "upcoming" || value === "results";
+}
+
+function isRegionFilter(value: string): value is RegionFilter {
+  return REGION_FILTERS.some((r) => r.value === value);
+}
+
+function isEventPhase(value: string): value is EventPhase {
+  return value === "ongoing" || value === "upcoming" || value === "completed";
 }
 
 export default function HomePage({ snapshot: initial }: Props) {
   const { snapshot, connection, now } = useLiveSnapshot(initial);
-  const [region, setRegion] = useState<string>("All");
   const hydrated = useHydrated();
+  const [region, setRegion] = useState<RegionFilter>("all");
+  const [chosenTab, setChosenTab] = useState<{ region: RegionFilter; tab: ListTab } | null>(null);
+  const [eventTab, setEventTab] = useState<EventPhase>("ongoing");
   const events = useMemo(() => new Map(snapshot.events.map((e) => [e.id, e])), [snapshot.events]);
 
   const { live, upcoming, results } = useMemo(() => {
@@ -56,112 +61,132 @@ export default function HomePage({ snapshot: initial }: Props) {
     }
     return {
       live: byStatus.live,
-      upcoming: byStatus.upcoming.filter((m) => m.startsAt).slice(0, 24),
-      results: byStatus.finished.reverse().slice(0, 30),
+      upcoming: byStatus.upcoming.filter((m) => m.startsAt),
+      results: byStatus.finished.toReversed(),
     };
   }, [snapshot.matches, events, region, now]);
 
-  const activeEvents = snapshot.events.filter(
-    (e) => inRegion(e, region) && (!e.endDate || Date.parse(e.endDate) + 86_400_000 > now),
+  const fallbackTab = hydrated ? smartDefaultTab(live, upcoming, results, now) : "upcoming";
+  const tab = chosenTab?.region === region ? chosenTab.tab : fallbackTab;
+  const nextUp = upcoming.find((m) => m.team1 && m.team2) ?? upcoming[0];
+  const shown =
+    tab === "upcoming" ? upcoming.slice(0, UPCOMING_LIMIT) : results.slice(0, RESULTS_LIMIT);
+  const sidebarEvents = snapshot.events.filter(
+    (e) => inRegion(e, region) && eventPhase(e, now) === eventTab,
+  );
+
+  const card = (m: Match) => (
+    <MatchCard key={m.id} match={m} event={events.get(m.eventId)} snapshot={snapshot} now={now} />
   );
 
   return (
     <AppShell snapshot={snapshot} connection={connection} now={now}>
-      <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-            Marvel Rivals Ignite 2026
-          </p>
-          <h1 className="font-display text-4xl font-extrabold uppercase leading-none tracking-tight sm:text-5xl">
-            Live scores
-          </h1>
-        </div>
-        <Tabs value={region} onValueChange={setRegion}>
-          <TabsList aria-label="Region">
-            {REGIONS.map((r) => (
-              <TabsTrigger key={r} value={r}>
-                {r}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-      </div>
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="min-w-0 space-y-6">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Matches</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Marvel Rivals Ignite: live series, schedule and results.
+            </p>
+          </div>
 
-      <div className="grid gap-10 lg:grid-cols-[1fr_20rem]">
-        <div className="min-w-0 space-y-10">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <Tabs
+              value={tab}
+              onValueChange={(v) => isListTab(v) && setChosenTab({ region, tab: v })}
+              variant="segment"
+            >
+              <TabsList aria-label="Show">
+                <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+                <TabsTrigger value="results">Results</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <div className="-mx-4 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:px-0">
+              <Tabs
+                value={region}
+                onValueChange={(v) => isRegionFilter(v) && setRegion(v)}
+                variant="underline"
+              >
+                <TabsList aria-label="Region">
+                  {REGION_FILTERS.map((r) => (
+                    <TabsTrigger key={r.value} value={r.value} className="whitespace-nowrap">
+                      {r.label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+            </div>
+          </div>
+
           {live.length > 0 && (
-            <Section title="Live now" count={live.length}>
-              <div className={live.length > 1 ? "grid gap-4 xl:grid-cols-2" : "grid gap-4"}>
-                {live.map((m) => (
-                  <LiveMatchCard
-                    key={m.id}
-                    match={m}
-                    event={events.get(m.eventId)}
-                    snapshot={snapshot}
-                    now={now}
-                  />
-                ))}
-              </div>
-            </Section>
+            <section aria-labelledby="live-heading" className="space-y-3">
+              <h2 id="live-heading" className="flex items-center gap-2 text-sm font-semibold">
+                <span className="live-dot size-2 rounded-full bg-live" aria-hidden />
+                Live now
+              </h2>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{live.map(card)}</div>
+            </section>
           )}
 
-          <Section title="Up next">
-            {upcoming.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No scheduled matches in this region.</p>
-            ) : (
-              <div className="space-y-5">
-                {groupByDay(upcoming, (m) => m.startsAt, now, hydrated).map(([day, matches]) => (
-                  <div key={day} className="space-y-1">
-                    <h3 className="px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      {hydrated ? day : ""}
-                    </h3>
-                    {matches.map((m) => (
-                      <MatchRow
-                        key={m.id}
-                        match={m}
-                        event={events.get(m.eventId)}
-                        snapshot={snapshot}
-                        now={now}
-                      />
-                    ))}
-                  </div>
-                ))}
-              </div>
-            )}
-          </Section>
+          {tab === "results" && nextUp && (
+            <section aria-labelledby="next-heading" className="space-y-3">
+              <h2 id="next-heading" className="text-sm font-semibold">
+                Next up
+              </h2>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{card(nextUp)}</div>
+            </section>
+          )}
 
-          <Section title="Results">
-            <div className="space-y-5">
-              {groupByDay(results, (m) => m.startsAt, now, hydrated).map(([day, matches]) => (
-                <div key={day} className="space-y-1">
-                  <h3 className="px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    {hydrated ? day : ""}
-                  </h3>
-                  {matches.map((m) => (
-                    <MatchRow
-                      key={m.id}
-                      match={m}
-                      event={events.get(m.eventId)}
-                      snapshot={snapshot}
-                      now={now}
-                    />
-                  ))}
+          <section
+            aria-label={tab === "upcoming" ? "Upcoming matches" : "Results"}
+            className="space-y-6"
+          >
+            {shown.length === 0 && (
+              <p className="rounded-xl border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
+                {tab === "upcoming"
+                  ? "Nothing scheduled in this region yet. Check Results for the latest series."
+                  : "No results in this region yet."}
+              </p>
+            )}
+            {groupByDay(shown, (m) => m.startsAt, hydrated).map((group) => (
+              <div key={group.key} className="space-y-3">
+                <DayHeading date={group.date} now={now} />
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {group.items.map(card)}
                 </div>
-              ))}
-            </div>
-          </Section>
+              </div>
+            ))}
+          </section>
         </div>
 
-        <aside className="space-y-3">
-          <h2 className="font-display text-xl font-bold uppercase tracking-wide">Events</h2>
-          {activeEvents.map((e) => (
-            <EventCard
-              key={e.id}
-              event={e}
-              matches={snapshot.matches.filter((m) => m.eventId === e.id)}
-              now={now}
-            />
-          ))}
+        <aside aria-labelledby="events-heading" className="space-y-3">
+          <h2 id="events-heading" className="text-lg font-semibold">
+            Events
+          </h2>
+          <Tabs
+            value={eventTab}
+            onValueChange={(v) => isEventPhase(v) && setEventTab(v)}
+            variant="segment"
+          >
+            <TabsList aria-label="Event status">
+              <TabsTrigger value="ongoing">Ongoing</TabsTrigger>
+              <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+              <TabsTrigger value="completed">Completed</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <div className="space-y-2">
+            {sidebarEvents.length === 0 && (
+              <p className="px-1 text-sm text-muted-foreground">No {eventTab} events.</p>
+            )}
+            {sidebarEvents.map((e) => (
+              <EventRow
+                key={e.id}
+                event={e}
+                matches={snapshot.matches.filter((m) => m.eventId === e.id)}
+                now={now}
+              />
+            ))}
+          </div>
         </aside>
       </div>
     </AppShell>

@@ -1,13 +1,7 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["typescript", "react", "import", "vitest"],
-  "ignorePatterns": [
-    "src/components/motion/**",
-    "src/lib/**",
-    ".void/**",
-    "dist/**",
-    "node_modules/**"
-  ],
+  "ignorePatterns": ["src/components/**", "src/lib/**", ".void/**", "dist/**", "node_modules/**"],
   "categories": {
     "correctness": "error",
     "suspicious": "error"

@@ -32,6 +32,23 @@ async function pageTitles(client: LiquipediaClient): Promise<string[]> {
   return titles;
 }
 
+const EVENT_ICON_WIDTH_PX = 64;
+
+async function resolveEventIcons(
+  client: LiquipediaClient,
+  pages: Record<string, PageData>,
+): Promise<void> {
+  const events = Object.values(pages).flatMap((p) => (p.event?.iconFile ? [p.event] : []));
+  if (events.length === 0) return;
+  const urls = await client.imageUrls(
+    [...new Set(events.map((e) => e.iconFile ?? ""))],
+    EVENT_ICON_WIDTH_PX,
+  );
+  for (const event of events) {
+    event.iconUrl = event.iconFile ? (urls.get(event.iconFile) ?? null) : null;
+  }
+}
+
 export interface SyncResult {
   stored: StoredSnapshot;
   changedPages: number;
@@ -58,6 +75,7 @@ export async function syncFromLiquipedia(client: LiquipediaClient): Promise<Sync
       matches: parsePageMatches(title, text),
     };
   }
+  await resolveEventIcons(client, updates);
   const pages = applyPages(prev.pages, plan.removed, updates);
   const missing = teamsMissingInfo(pages, prev.teams);
   const teams = missing.length

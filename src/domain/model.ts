@@ -46,6 +46,8 @@ export const IgniteEventSchema = z.object({
   prizePoolUsd: z.number().nullable(),
   liquipediaUrl: z.url(),
   updatedAt: z.iso.datetime(),
+  iconFile: z.string().nullable(),
+  iconUrl: z.url().nullable(),
 });
 export type IgniteEvent = z.infer<typeof IgniteEventSchema>;
 
@@ -64,7 +66,7 @@ export const PageDataSchema = z.object({
 });
 export type PageData = z.infer<typeof PageDataSchema>;
 
-export const STORED_SNAPSHOT_VERSION = 3;
+export const STORED_SNAPSHOT_VERSION = 4;
 
 export const StoredSnapshotSchema = z.object({
   version: z.literal(STORED_SNAPSHOT_VERSION),

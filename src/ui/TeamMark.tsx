@@ -1,5 +1,4 @@
-import { type Team, type TeamInfo } from "@/domain/model";
-import { teamHue } from "@/domain/teams";
+import type { Team, TeamInfo } from "@/domain/model";
 import { cn } from "@/lib/utils";
 
 export function logoUrl(info: TeamInfo | undefined): string | undefined {
@@ -10,7 +9,7 @@ export function logoUrl(info: TeamInfo | undefined): string | undefined {
 export function TeamLogo({
   team,
   info,
-  size = 28,
+  size = 24,
   className,
 }: {
   team: Team | null;
@@ -18,21 +17,8 @@ export function TeamLogo({
   size?: number;
   className?: string;
 }) {
-  const src = logoUrl(info);
   const box = { width: size, height: size };
-  if (!team) {
-    return (
-      <span
-        style={box}
-        className={cn(
-          "grid shrink-0 place-items-center rounded-md bg-muted text-[10px] font-semibold text-muted-foreground",
-          className,
-        )}
-      >
-        ?
-      </span>
-    );
-  }
+  const src = logoUrl(info);
   if (src) {
     return (
       <img
@@ -44,16 +30,16 @@ export function TeamLogo({
       />
     );
   }
-  const hue = teamHue(team.name);
   return (
     <span
-      style={{ ...box, background: `oklch(42% 0.12 ${hue})`, fontSize: size * 0.34 }}
+      style={box}
+      aria-hidden
       className={cn(
-        "grid shrink-0 place-items-center rounded-md font-display font-bold text-white",
+        "grid shrink-0 place-items-center rounded-md bg-muted font-mono text-[0.6rem] font-semibold text-muted-foreground",
         className,
       )}
     >
-      {team.short.slice(0, 3)}
+      {team ? team.short.slice(0, 3) : "?"}
     </span>
   );
 }

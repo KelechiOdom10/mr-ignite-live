@@ -1,34 +1,199 @@
 import { Link } from "@void/react";
-import { BarChart3, ExternalLink } from "lucide-react";
+import { BarChart3, ExternalLink, Play } from "lucide-react";
 
+import { StatusBar, type StatusBarStatus } from "@/components/charts/status-bar";
 import { Card } from "@/components/motion/card";
-import { matchState } from "@/domain/matchState";
-import type { Match, Snapshot } from "@/domain/model";
+import { NotFoundGlitch } from "@/components/motion/not-found";
+import { matchState, type MatchState } from "@/domain/matchState";
+import type { IgniteEvent, MapResult, Match, Snapshot, Team } from "@/domain/model";
 import { eventSlug } from "@/domain/scope";
+import { cn } from "@/lib/utils";
 import { AppShell } from "@/ui/AppShell";
-import { LiveMatchCard, MatchRow } from "@/ui/MatchViews";
+import { EventIcon } from "@/ui/EventRow";
+import { MatchCard } from "@/ui/MatchCard";
+import { useSpoilersHidden } from "@/ui/spoilers";
+import { LiveDot } from "@/ui/StatusLabel";
 import { TeamLogo } from "@/ui/TeamMark";
-import { formatDay, formatTime, useHydrated } from "@/ui/time";
+import { formatCountdown, formatDate, formatTime, useHydrated } from "@/ui/time";
 import { useLiveSnapshot, type Connection } from "@/ui/useLiveSnapshot";
 
 import type { Props } from "./[id].server";
 
-export default function MatchPage({ snapshot: initial, matchId, eventId }: Props) {
-  const { snapshot, connection, now } = useLiveSnapshot(initial, eventId);
+export default function MatchPage({ snapshot: initial, matchId }: Props) {
+  const { snapshot, connection, now } = useLiveSnapshot(initial, { match: matchId });
   const match = snapshot.matches.find((m) => m.id === matchId);
   if (!match) {
     return (
       <AppShell snapshot={snapshot} connection={connection} now={now}>
-        <p className="text-muted-foreground">
-          This match is no longer listed on Liquipedia.{" "}
-          <Link href="/" className="underline hover:text-foreground">
-            Back to matches
-          </Link>
-        </p>
+        <NotFoundGlitch
+          title="Match not found"
+          description="This series is no longer listed on Liquipedia."
+          homeLabel="Back to matches"
+          browseHref="/events"
+          browseLabel="Browse events"
+        />
       </AppShell>
     );
   }
   return <MatchDetail match={match} snapshot={snapshot} connection={connection} now={now} />;
+}
+
+function involves(match: Match, team: Team | null): boolean {
+  return team !== null && (match.team1?.name === team.name || match.team2?.name === team.name);
+}
+
+function emptyMap(index: number): MapResult {
+  return { index, map: "", score1: null, score2: null, winner: 0, vod: null };
+}
+
+function ScoreCenter({ match, state, now }: { match: Match; state: MatchState; now: number }) {
+  const hydrated = useHydrated();
+  const hidden = useSpoilersHidden();
+  if (state.status === "upcoming") {
+    return (
+      <div className="text-center">
+        <div className="text-3xl font-semibold text-muted-foreground sm:text-4xl">vs</div>
+        {hydrated && match.startsAt && (
+          <div className="mt-1 font-mono text-sm text-soon tabular-nums">
+            {formatCountdown(match.startsAt, now)}
+          </div>
+        )}
+      </div>
+    );
+  }
+  return (
+    <div className="text-center">
+      {state.status === "live" && (
+        <span className="mb-1 inline-flex items-center gap-1.5 rounded-md bg-live/15 px-2 py-0.5 text-xs font-semibold tracking-wide text-live uppercase">
+          <LiveDot /> Live
+        </span>
+      )}
+      <div className="font-mono text-4xl font-semibold tabular-nums sm:text-5xl">
+        {hidden ? "– : –" : `${state.wins1} : ${state.wins2}`}
+      </div>
+      <div className="mt-1 text-xs text-muted-foreground">Bo{match.bestOf}</div>
+    </div>
+  );
+}
+
+function TeamSide({
+  team,
+  snapshot,
+  align,
+  dim,
+}: {
+  team: Team | null;
+  snapshot: Snapshot;
+  align: "start" | "end";
+  dim: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex min-w-0 flex-col items-center gap-3 sm:flex-row",
+        align === "end" && "sm:flex-row-reverse",
+        dim && "opacity-60",
+      )}
+    >
+      <TeamLogo team={team} info={team ? snapshot.teams[team.name] : undefined} size={64} />
+      <div
+        className={cn("min-w-0 text-center", align === "end" ? "sm:text-right" : "sm:text-left")}
+      >
+        <div className="truncate text-lg font-semibold sm:text-2xl" title={team?.name}>
+          {team?.name ?? "TBD"}
+        </div>
+        <div className="text-xs text-muted-foreground">{team?.short ?? "To be decided"}</div>
+      </div>
+    </div>
+  );
+}
+
+function MapCard({
+  map,
+  match,
+  snapshot,
+  current,
+}: {
+  map: MapResult;
+  match: Match;
+  snapshot: Snapshot;
+  current: boolean;
+}) {
+  const hidden = useSpoilersHidden();
+  const winner = map.winner === 0 ? null : map.winner === 1 ? match.team1 : match.team2;
+  const winnerScore = map.winner === 1 ? map.score1 : map.score2;
+  const loserScore = map.winner === 1 ? map.score2 : map.score1;
+  return (
+    <div
+      className={cn(
+        "flex min-h-32 flex-col justify-between rounded-xl border bg-card p-4",
+        current && "border-live/50 bg-live/[0.05]",
+      )}
+    >
+      <div>
+        <div className="text-xs text-muted-foreground uppercase">Map {map.index}</div>
+        <div className="mt-1 font-medium">{map.map || (current ? "Picking…" : "TBD")}</div>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        {current ? (
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-live">
+            <LiveDot /> In progress
+          </span>
+        ) : winner && !hidden ? (
+          <span className="inline-flex min-w-0 items-center gap-2 rounded-md bg-win/10 px-2 py-1 text-xs font-medium text-win">
+            <TeamLogo team={winner} info={snapshot.teams[winner.name]} size={16} />
+            <span className="truncate">{winner.short}</span>
+            <span className="font-mono tabular-nums">
+              {winnerScore ?? "?"}-{loserScore ?? "?"}
+            </span>
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground">{winner ? "Played" : "Not played"}</span>
+        )}
+        {map.vod && (
+          <a
+            href={map.vod}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex min-h-8 items-center gap-1 text-xs text-primary hover:underline"
+          >
+            VOD <ExternalLink className="size-3" aria-hidden />
+            <span className="sr-only">(opens in a new tab)</span>
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const FORM_STATUSES: readonly StatusBarStatus[] = [
+  { id: "win", label: "Win", color: "var(--win)" },
+  { id: "loss", label: "Loss", color: "var(--live)" },
+];
+
+function TeamForm({ team, matches, now }: { team: Team; matches: Match[]; now: number }) {
+  const hidden = useSpoilersHidden();
+  const data = matches
+    .map((m) => ({ m, s: matchState(m, now) }))
+    .filter(({ m, s }) => involves(m, team) && s.status === "finished" && s.winner !== 0)
+    .slice(-10)
+    .map(({ m, s }) => {
+      const side = m.team1?.name === team.name ? 1 : 2;
+      const opponent = side === 1 ? m.team2 : m.team1;
+      return {
+        id: m.id,
+        label: `vs ${opponent?.short ?? "TBD"}`,
+        status: s.winner === side ? "win" : "loss",
+        description: `${s.wins1}–${s.wins2} · ${m.round}`,
+      };
+    });
+  if (hidden || data.length === 0) return null;
+  return (
+    <div className="space-y-2">
+      <div className="text-sm font-medium">{team.short}</div>
+      <StatusBar data={data} statuses={FORM_STATUSES} label={`${team.name} recent results`} />
+    </div>
+  );
 }
 
 function MatchDetail({
@@ -43,146 +208,180 @@ function MatchDetail({
   now: number;
 }) {
   const hydrated = useHydrated();
-  const event = snapshot.events.find((e) => e.id === match.eventId);
+  const hidden = useSpoilersHidden();
+  const event: IgniteEvent | undefined = snapshot.events.find((e) => e.id === match.eventId);
   const state = matchState(match, now);
-  const pair = [match.team1?.name, match.team2?.name];
-  const h2h = snapshot.matches.filter(
-    (m) =>
-      m.id !== match.id &&
-      match.team1 &&
-      match.team2 &&
-      pair.includes(m.team1?.name) &&
-      pair.includes(m.team2?.name),
-  );
-  const listedMaps = match.maps.filter((m) => m.map || m.winner);
+  const currentIndex = state.status === "live" ? state.playedMaps.length + 1 : -1;
+  const slots = Array.from({ length: match.bestOf }, (_, i) => i + 1);
+  const h2h = snapshot.matches
+    .filter((m) => m.id !== match.id && involves(m, match.team1) && involves(m, match.team2))
+    .toReversed();
+  const vods = match.maps.filter((m) => m.vod);
 
   return (
     <AppShell snapshot={snapshot} connection={connection} now={now}>
-      <div className="mb-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        <Link href="/" className="hover:text-foreground">
-          Matches
-        </Link>
-        <span>/</span>
-        {event && (
-          <Link href={`/event/${eventSlug(event.id)}`} className="hover:text-foreground">
-            {event.name}
-          </Link>
-        )}
-        <span>/</span>
-        <span>{match.round}</span>
-        {hydrated && match.startsAt && (
-          <span className="ml-auto">
-            {formatDay(match.startsAt, now)} · {formatTime(match.startsAt)}
-          </span>
-        )}
-      </div>
+      <div className="space-y-8">
+        <Card className="gap-0 rounded-2xl bg-card py-0">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 sm:px-8 sm:pt-6">
+            {event ? (
+              <Link
+                href={`/event/${eventSlug(event.id)}`}
+                className="flex min-w-0 items-center gap-3 hover:underline"
+              >
+                <EventIcon event={event} size={36} />
+                <div className="min-w-0">
+                  <div className="truncate font-semibold">{event.name}</div>
+                  <div className="text-xs text-muted-foreground">{match.round}</div>
+                </div>
+              </Link>
+            ) : (
+              <div className="text-sm text-muted-foreground">{match.round}</div>
+            )}
+            {hydrated && match.startsAt && (
+              <div className="text-right text-sm">
+                <div className="font-medium">{formatDate(match.startsAt)}</div>
+                <div className="text-xs text-muted-foreground">{formatTime(match.startsAt)}</div>
+              </div>
+            )}
+          </div>
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 px-5 py-8 sm:gap-8 sm:px-8 sm:py-10">
+            <TeamSide
+              team={match.team1}
+              snapshot={snapshot}
+              align="end"
+              dim={!hidden && state.winner === 2}
+            />
+            <ScoreCenter match={match} state={state} now={now} />
+            <TeamSide
+              team={match.team2}
+              snapshot={snapshot}
+              align="start"
+              dim={!hidden && state.winner === 1}
+            />
+          </div>
+        </Card>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
-        <div className="min-w-0 space-y-6">
-          <LiveMatchCard match={match} event={event} snapshot={snapshot} now={now} />
-
-          <Card className="bg-card p-0">
-            <div className="border-b px-5 py-3 font-display text-lg font-bold uppercase">Maps</div>
-            <ol className="divide-y">
-              {listedMaps.map((m) => (
-                <li
-                  key={m.index}
-                  className="grid grid-cols-[2.5rem_1fr_auto_3.5rem] items-center gap-3 px-5 py-3"
-                >
-                  <span className="font-display text-sm font-bold text-muted-foreground">
-                    M{m.index}
-                  </span>
-                  <span className="truncate font-medium">{m.map || "TBD"}</span>
-                  <span className="font-display text-lg font-bold tabular-nums">
-                    {m.winner ? (
-                      <>
-                        <span className={m.winner === 1 ? "text-win" : "text-muted-foreground"}>
-                          {m.score1 ?? "–"}
-                        </span>
-                        <span className="mx-1 text-muted-foreground">:</span>
-                        <span className={m.winner === 2 ? "text-win" : "text-muted-foreground"}>
-                          {m.score2 ?? "–"}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">
-                        {state.status === "live" ? "In progress" : "—"}
-                      </span>
-                    )}
-                  </span>
-                  {m.vod ? (
-                    <a
-                      href={m.vod}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center justify-end gap-1 text-xs text-primary hover:underline"
-                    >
-                      VOD <ExternalLink className="size-3" />
-                    </a>
-                  ) : (
-                    <span />
+        <div className="grid gap-6 md:grid-cols-2">
+          <section aria-labelledby="streams-heading" className="space-y-3">
+            <h2 id="streams-heading" className="text-lg font-semibold">
+              Streams
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {match.twitch && (
+                <a
+                  href={`https://twitch.tv/${match.twitch}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={cn(
+                    "inline-flex h-10 items-center gap-2 rounded-lg px-4 text-sm font-medium",
+                    state.status === "live" ? "bg-live text-white" : "border hover:bg-accent",
                   )}
-                </li>
-              ))}
-              {listedMaps.length === 0 && (
-                <li className="px-5 py-4 text-sm text-muted-foreground">
-                  Map picks appear once the series starts.
-                </li>
+                >
+                  <Play className="size-4" aria-hidden /> Twitch · {match.twitch}
+                  <span className="sr-only">(opens in a new tab)</span>
+                </a>
               )}
-            </ol>
-          </Card>
-
-          <Card className="bg-card p-5">
-            <div className="flex items-center gap-2 font-display text-lg font-bold uppercase">
-              <BarChart3 className="size-4 text-primary" /> MVP, SVP &amp; player stats
+              {match.youtube && (
+                <a
+                  href={`https://youtube.com/@${match.youtube}/live`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium hover:bg-accent"
+                >
+                  <Play className="size-4" aria-hidden /> YouTube
+                  <span className="sr-only">(opens in a new tab)</span>
+                </a>
+              )}
+              {!match.twitch && !match.youtube && (
+                <p className="text-sm text-muted-foreground">No stream listed yet.</p>
+              )}
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Per-map MVP/SVP, hero picks and player stats will show here once a stats source is
-              connected.
-            </p>
-          </Card>
-        </div>
-
-        <aside className="space-y-6">
-          {[match.team1, match.team2].map((team, i) =>
-            team ? (
-              <Card key={i} className="bg-card p-4">
-                <div className="flex items-center gap-3">
-                  <TeamLogo team={team} info={snapshot.teams[team.name]} size={40} />
-                  <div>
-                    <div className="font-display text-xl font-bold uppercase leading-none">
-                      {team.short}
-                    </div>
-                    <div className="text-xs text-muted-foreground">{team.name}</div>
-                  </div>
+          </section>
+          <section aria-labelledby="vods-heading" className="space-y-3">
+            <h2 id="vods-heading" className="text-lg font-semibold">
+              VODs
+            </h2>
+            {vods.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Not yet available.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {vods.map((m) => (
                   <a
-                    href={`https://liquipedia.net/marvelrivals/${team.name.replace(/ /g, "_")}`}
+                    key={m.index}
+                    href={m.vod ?? undefined}
                     target="_blank"
                     rel="noreferrer"
-                    className="ml-auto text-xs text-muted-foreground hover:text-foreground"
+                    className="inline-flex h-10 items-center gap-2 rounded-lg border px-4 text-sm hover:bg-accent"
                   >
-                    Liquipedia ↗
+                    Map {m.index}
+                    <ExternalLink className="size-3.5" aria-hidden />
+                    <span className="sr-only">(opens in a new tab)</span>
                   </a>
-                </div>
-              </Card>
-            ) : null,
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+
+        <section aria-labelledby="maps-heading" className="space-y-3">
+          <h2 id="maps-heading" className="text-lg font-semibold">
+            Maps
+          </h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {slots.map((i) => (
+              <MapCard
+                key={i}
+                map={match.maps.find((m) => m.index === i) ?? emptyMap(i)}
+                match={match}
+                snapshot={snapshot}
+                current={i === currentIndex}
+              />
+            ))}
+          </div>
+        </section>
+
+        <section aria-labelledby="stats-heading" className="rounded-xl border border-dashed p-5">
+          <h2 id="stats-heading" className="flex items-center gap-2 font-semibold">
+            <BarChart3 className="size-4 text-primary" aria-hidden /> Player stats
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            MVP, SVP, heroes and per-player stats for each map will appear here once a stats source
+            is connected.
+          </p>
+        </section>
+
+        <div className="grid gap-8 lg:grid-cols-2">
+          {(match.team1 || match.team2) && (
+            <section aria-labelledby="form-heading" className="space-y-4">
+              <h2 id="form-heading" className="text-lg font-semibold">
+                Recent form
+              </h2>
+              {[match.team1, match.team2].map((team) =>
+                team ? (
+                  <TeamForm key={team.name} team={team} matches={snapshot.matches} now={now} />
+                ) : null,
+              )}
+            </section>
           )}
           {h2h.length > 0 && (
-            <div className="space-y-1">
-              <h2 className="px-3 font-display text-lg font-bold uppercase">Head to head</h2>
-              {h2h.map((m) => (
-                <MatchRow
-                  key={m.id}
-                  match={m}
-                  event={event}
-                  snapshot={snapshot}
-                  now={now}
-                  showEvent={false}
-                />
-              ))}
-            </div>
+            <section aria-labelledby="h2h-heading" className="space-y-3">
+              <h2 id="h2h-heading" className="text-lg font-semibold">
+                Head to head
+              </h2>
+              <div className="grid gap-3">
+                {h2h.map((m) => (
+                  <MatchCard
+                    key={m.id}
+                    match={m}
+                    event={snapshot.events.find((e) => e.id === m.eventId)}
+                    snapshot={snapshot}
+                    now={now}
+                  />
+                ))}
+              </div>
+            </section>
           )}
-        </aside>
+        </div>
       </div>
     </AppShell>
   );
