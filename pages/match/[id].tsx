@@ -1,7 +1,6 @@
 import { Link } from "@void/react";
 import { ExternalLink, Play } from "lucide-react";
 
-import { StatusBar, type StatusBarStatus } from "@/components/charts/status-bar";
 import { Card } from "@/components/motion/card";
 import { NotFoundGlitch } from "@/components/motion/not-found";
 import { mapInfo } from "@/domain/maps";
@@ -11,12 +10,14 @@ import { eventSlug } from "@/domain/scope";
 import type { MatchStats, PlayerStats } from "@/domain/stats";
 import { cn } from "@/lib/utils";
 import { AppShell } from "@/ui/AppShell";
+import { AwardBadge } from "@/ui/AwardBadge";
 import { EventIcon } from "@/ui/EventRow";
 import { proxiedImage } from "@/ui/images";
 import { MatchCard } from "@/ui/MatchCard";
 import { useSpoilersHidden } from "@/ui/spoilers";
 import { HeroPortrait, StatsPanel, useMatchStats } from "@/ui/StatsPanel";
 import { LiveDot } from "@/ui/StatusLabel";
+import { TeamForm } from "@/ui/TeamForm";
 import { TeamLogo } from "@/ui/TeamMark";
 import { formatCountdown, formatDate, formatTime, useHydrated } from "@/ui/time";
 import { useLiveSnapshot, type Connection } from "@/ui/useLiveSnapshot";
@@ -169,10 +170,11 @@ function MapCard({
         {mvp && !hidden && (
           <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
             {mvp.hero && <HeroPortrait hero={mvp.hero} size={22} />}
-            <span>
-              MVP <span className="font-medium text-foreground">{mvp.name}</span>
-              {mvp.hero && <span> · {mvp.hero.name}</span>}
+            <span className="min-w-0 truncate font-medium text-foreground" title={mvp.hero?.name}>
+              {mvp.name}
+              {mvp.hero && <span className="sr-only"> on {mvp.hero.name}</span>}
             </span>
+            <AwardBadge award="MVP" className="ml-auto" />
           </div>
         )}
       </div>
@@ -204,36 +206,6 @@ function MapCard({
           </a>
         )}
       </div>
-    </div>
-  );
-}
-
-const FORM_STATUSES: readonly StatusBarStatus[] = [
-  { id: "win", label: "Win", color: "var(--win)" },
-  { id: "loss", label: "Loss", color: "var(--live)" },
-];
-
-function TeamForm({ team, matches, now }: { team: Team; matches: Match[]; now: number }) {
-  const hidden = useSpoilersHidden();
-  const data = matches
-    .map((m) => ({ m, s: matchState(m, now) }))
-    .filter(({ m, s }) => involves(m, team) && s.status === "finished" && s.winner !== 0)
-    .slice(-10)
-    .map(({ m, s }) => {
-      const side = m.team1?.name === team.name ? 1 : 2;
-      const opponent = side === 1 ? m.team2 : m.team1;
-      return {
-        id: m.id,
-        label: `vs ${opponent?.short ?? "TBD"}`,
-        status: s.winner === side ? "win" : "loss",
-        description: `${s.wins1}–${s.wins2} · ${m.round}`,
-      };
-    });
-  if (hidden || data.length === 0) return null;
-  return (
-    <div className="space-y-2">
-      <div className="text-sm font-medium">{team.short}</div>
-      <StatusBar data={data} statuses={FORM_STATUSES} label={`${team.name} recent results`} />
     </div>
   );
 }
@@ -399,7 +371,7 @@ function MatchDetail({
               </h2>
               {[match.team1, match.team2].map((team) =>
                 team ? (
-                  <TeamForm key={team.name} team={team} matches={snapshot.matches} now={now} />
+                  <TeamForm key={team.name} team={team} snapshot={snapshot} now={now} />
                 ) : null,
               )}
             </section>

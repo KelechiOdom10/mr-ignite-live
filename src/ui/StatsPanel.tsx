@@ -13,6 +13,7 @@ import {
 } from "@/domain/stats";
 import { cn } from "@/lib/utils";
 
+import { AwardBadge } from "./AwardBadge";
 import { proxiedImage } from "./images";
 import { useSpoilersHidden } from "./spoilers";
 import { TeamLogo } from "./TeamMark";
@@ -77,19 +78,6 @@ function HeroName({ hero }: { hero: Hero }) {
       <HeroPortrait hero={hero} />
       {hero.name}
       {hero.role && <span className="sr-only"> ({hero.role})</span>}
-    </span>
-  );
-}
-
-function Badge({ kind }: { kind: "MVP" | "SVP" }) {
-  return (
-    <span
-      className={cn(
-        "rounded px-1.5 py-0.5 text-[0.65rem] font-bold tracking-wide",
-        kind === "MVP" ? "bg-primary text-primary-foreground" : "bg-foreground/80 text-background",
-      )}
-    >
-      {kind}
     </span>
   );
 }
@@ -207,14 +195,16 @@ function StatsTable({
                 <th scope="row" className="px-3 py-2 text-left font-medium">
                   <span className="inline-flex items-center gap-2">
                     {p.name}
-                    {combined
-                      ? p.mvpCount > 0 && (
-                          <span className="text-xs text-primary">{p.mvpCount}× MVP</span>
-                        )
-                      : (p.isMvp && <Badge kind="MVP" />) || (p.isSvp && <Badge kind="SVP" />)}
-                    {combined && p.svpCount > 0 && (
-                      <span className="text-xs text-muted-foreground">{p.svpCount}× SVP</span>
-                    )}
+                    {combined ? (
+                      <>
+                        {p.mvpCount > 0 && <AwardBadge award="MVP" count={p.mvpCount} />}
+                        {p.svpCount > 0 && <AwardBadge award="SVP" count={p.svpCount} />}
+                      </>
+                    ) : p.isMvp ? (
+                      <AwardBadge award="MVP" />
+                    ) : p.isSvp ? (
+                      <AwardBadge award="SVP" />
+                    ) : null}
                   </span>
                 </th>
                 <td className="px-3 py-2 text-muted-foreground">
