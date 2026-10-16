@@ -7,22 +7,20 @@ import {
   useAnimatedToastStack,
 } from "@/components/motion/animated-toast-stack";
 import { matchState, type MatchState } from "@/domain/matchState";
-import type { Match, Snapshot } from "@/domain/model";
+import type { Snapshot } from "@/domain/model";
 import { cn } from "@/lib/utils";
 
 import { LiveIsland } from "./LiveIsland";
 import { MatchStrip } from "./MatchStrip";
+import { scoreToasts } from "./scoreToasts";
 import { SearchPalette } from "./SearchPalette";
 import { SpoilerToggle, useSpoilersHidden } from "./spoilers";
 import { formatRelative, useHydrated } from "./time";
 import type { Connection } from "./useLiveSnapshot";
 
-function teamLabel(match: Match, side: 1 | 2) {
-  return (side === 1 ? match.team1?.short : match.team2?.short) ?? "TBD";
-}
-
 function useScoreToasts(snapshot: Snapshot, now: number) {
   const hidden = useSpoilersHidden();
+  const router = useRouter();
   const { toasts, showToast, dismissToast } = useAnimatedToastStack({
     defaultDuration: 7000,
     limit: 4,
@@ -34,37 +32,15 @@ function useScoreToasts(snapshot: Snapshot, now: number) {
     const prev = previous.current;
     previous.current = next;
     if (!prev) return;
-    for (const match of snapshot.matches) {
-      const before = prev.get(match.id);
-      const after = next.get(match.id);
-      if (!before || !after) continue;
-      const pairing = `${teamLabel(match, 1)} vs ${teamLabel(match, 2)}`;
-      const score = `${teamLabel(match, 1)} ${after.wins1}–${after.wins2} ${teamLabel(match, 2)}`;
-      if (after.status === "live" && before.status === "upcoming") {
-        showToast({
-          title: "Match is live",
-          description: `${pairing} · ${match.round}`,
-          status: "loading",
-        });
-      } else if (hidden && after.playedMaps.length > before.playedMaps.length) {
-        showToast({ title: "Score update", description: pairing, status: "info" });
-      } else if (after.winner !== 0 && before.winner === 0) {
-        showToast({
-          title: `${teamLabel(match, after.winner)} win the series`,
-          description: score,
-          status: "success",
-        });
-      } else if (after.playedMaps.length > before.playedMaps.length) {
-        const map = after.playedMaps.at(-1);
-        if (!map || map.winner === 0) continue;
-        showToast({
-          title: `${teamLabel(match, map.winner)} take ${map.map || `Map ${map.index}`}`,
-          description: score,
-          status: "info",
-        });
-      }
+    for (const t of scoreToasts(snapshot.matches, prev, next, hidden)) {
+      showToast({
+        title: t.title,
+        description: t.description,
+        status: t.status,
+        action: { label: "Open", onClick: () => void router.visit(`/match/${t.matchId}`) },
+      });
     }
-  }, [snapshot, now, showToast, hidden]);
+  }, [snapshot, now, showToast, hidden, router]);
 
   return { toasts, dismissToast };
 }
