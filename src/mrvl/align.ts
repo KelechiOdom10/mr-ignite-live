@@ -92,8 +92,9 @@ function alignTeams(game: MrvlGame, match: Match): [MrvlScoreboardTeam, MrvlScor
   if (!a || !b) return null;
   const sideA = sideOf(a, match);
   const sideB = sideOf(b, match);
-  if (sideA === 2 || sideB === 1) return [b, a];
-  return [a, b];
+  if (sideA === sideB) return null;
+  if (sideA === 1 || sideB === 2) return [a, b];
+  return [b, a];
 }
 
 function toHero(hero: {

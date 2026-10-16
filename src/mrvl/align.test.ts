@@ -4,7 +4,7 @@ import { z } from "zod";
 import { aMatch } from "../../test/builders";
 import { mrvlFixture } from "../../test/fixtures";
 import { findMrvlMatch, toMapOverrides, toMatchStats } from "./align";
-import { MrvlMatchPageSchema, MrvlMatchSummarySchema } from "./client";
+import { MrvlMatchPageSchema, MrvlMatchSummarySchema, type MrvlMatchPage } from "./client";
 
 const Summaries = z.object({ value: z.array(MrvlMatchSummarySchema) });
 const page = z
@@ -82,6 +82,30 @@ describe("toMatchStats on a recorded series", () => {
       "psylocke",
     ]);
     expect(thieves?.bans.map((h) => h.id)).toContain("devil-dinosaur");
+  });
+
+  it("drops a map whose scoreboard names match neither Liquipedia team instead of guessing the order", () => {
+    // Guessing mrvl's order would flip map 1's winner, since mrvl lists 100 Thieves first.
+    const unnamed: MrvlMatchPage = {
+      match: {
+        ...page.match,
+        games: page.match.games.map((game) => ({
+          ...game,
+          scoreboard: game.scoreboard && {
+            ...game.scoreboard,
+            teams: game.scoreboard.teams.map((team, i) => ({
+              ...team,
+              name: `Clan ${i}`,
+              shortName: null,
+              linkedTeamName: null,
+            })),
+          },
+        })),
+      },
+    };
+    const unaligned = toMatchStats(flyVs100t, unnamed, "u1", new Date("2026-10-17T00:00:00Z"));
+    expect(unaligned.maps).toEqual([]);
+    expect(toMapOverrides(unaligned)).toEqual([]);
   });
 
   it("turns map winners into score overrides in Liquipedia's orientation", () => {
