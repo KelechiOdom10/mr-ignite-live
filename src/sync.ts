@@ -33,8 +33,7 @@ async function runSync(): Promise<Snapshot> {
   return snapshot;
 }
 
-// Concurrent callers in one isolate share a run. Across isolates two runs can overlap;
-// both write the same Liquipedia revisions, so the last write is still correct.
+// Runs in separate isolates can overlap; both write the same revisions, so last-write-wins is safe.
 export function sync(): Promise<Snapshot> {
   inFlight ??= runSync().finally(() => {
     inFlight = null;

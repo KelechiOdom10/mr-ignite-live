@@ -18,7 +18,6 @@ export async function readStored(): Promise<StoredSnapshot | null> {
   if (raw === null) return null;
   const parsed = StoredSnapshotSchema.safeParse(raw);
   if (parsed.success) return parsed.data;
-  // An older or corrupt value is treated as absent, so the next sync rebuilds it from Liquipedia.
   console.warn("Discarding stored snapshot that fails the current schema", {
     issues: parsed.error.issues.slice(0, 3),
   });

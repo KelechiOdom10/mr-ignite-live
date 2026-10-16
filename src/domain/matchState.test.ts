@@ -22,7 +22,6 @@ describe("matchState", () => {
   });
 
   it("is live as soon as a map result appears, even before the listed start", () => {
-    // Bug: early starts would show "upcoming" with a score already on the board.
     expect(matchState(aMatch({ maps: [aMap(1, 2)] }), START - 10 * MINUTE).status).toBe("live");
   });
 
@@ -31,7 +30,6 @@ describe("matchState", () => {
   });
 
   it("stops calling an abandoned series live after the live window", () => {
-    // Bug: a group match Liquipedia never completed sat in "Live now" for weeks.
     const m = aMatch({ bestOf: 3, maps: [aMap(1, 2)] });
     expect(matchState(m, START + LIVE_WINDOW_MS + MINUTE).status).toBe("finished");
   });

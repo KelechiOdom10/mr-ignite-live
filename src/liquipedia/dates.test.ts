@@ -4,7 +4,6 @@ import { parseLiquipediaDate } from "./dates";
 
 describe("parseLiquipediaDate", () => {
   it("converts a caster-zone time to UTC, crossing the date line", () => {
-    // Bug: treating 06:00 AEST as UTC would show Americas matches 10 hours late.
     expect(parseLiquipediaDate("2026-10-16 - 06:00 {{Abbr/AEST}}")).toBe(
       "2026-10-15T20:00:00.000Z",
     );

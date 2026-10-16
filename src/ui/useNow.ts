@@ -23,11 +23,10 @@ function subscribe(listener: () => void) {
   };
 }
 
-// The server's render time is used during hydration so time-derived markup matches the HTML.
-export function useNow(serverNow: number): number {
+export function useNow(serverRenderedAt: number): number {
   return useSyncExternalStore(
     subscribe,
     () => current,
-    () => serverNow,
+    () => serverRenderedAt,
   );
 }

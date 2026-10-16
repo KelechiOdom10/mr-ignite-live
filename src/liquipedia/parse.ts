@@ -58,6 +58,10 @@ function phaseFor(title: string, kind: ContainerKind): string {
   return kind === "bracket" ? "Playoffs" : "Matches";
 }
 
+function firstToken(value: string): string {
+  return value.split(/\s+/)[0] ?? "";
+}
+
 function lastCommentBefore(text: string, end: number): string | null {
   const comments = [...text.slice(0, end).matchAll(/<!--\s*([\s\S]*?)\s*-->/g)];
   return comments.at(-1)?.[1]?.trim() ?? null;
@@ -71,8 +75,7 @@ export function parsePageMatches(title: string, text: string): Match[] {
   ];
   const matches: Match[] = [];
   for (const { tpl, kind } of containers) {
-    // The id param can be followed by a round comment before the next `|`, so keep only the first token.
-    const containerId = stripMarkup(tpl.params.id ?? "").split(/\s+/)[0] || String(tpl.start);
+    const containerId = firstToken(stripMarkup(tpl.params.id ?? "")) || String(tpl.start);
     const containerText = text.slice(tpl.start, tpl.end);
     for (const [key, value] of Object.entries(tpl.params)) {
       if (!MATCH_KEY.test(key)) continue;

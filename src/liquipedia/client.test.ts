@@ -42,7 +42,6 @@ describe("createLiquipediaClient", () => {
   });
 
   it("identifies itself as Liquipedia's API terms require", async () => {
-    // Bug: a missing User-Agent gets the client blocked by Liquipedia.
     const { fetchImpl, calls } = fakeFetch(json(liquipediaFixture("revisions.json")));
     await createLiquipediaClient({ fetch: fetchImpl, wait: noWait }).fetchRevisions(["a"]);
     expect(new Headers(calls[0]?.init?.headers).get("User-Agent")).toBe(LIQUIPEDIA_USER_AGENT);
@@ -50,7 +49,6 @@ describe("createLiquipediaClient", () => {
   });
 
   it("waits out the minimum gap between requests", async () => {
-    // Bug: back-to-back requests break Liquipedia's one-request-per-2s rule.
     let clock = 1_000;
     const waits: number[] = [];
     const { fetchImpl } = fakeFetch(json(liquipediaFixture("revisions.json")));
@@ -94,7 +92,6 @@ describe("createLiquipediaClient", () => {
   });
 
   it("rejects a response with an unexpected shape instead of trusting it", async () => {
-    // Bug: a cast would let `undefined.map` crash the cron far from the cause.
     const { fetchImpl } = fakeFetch(json({ query: { allpages: "nope" } }));
     const call = createLiquipediaClient({ fetch: fetchImpl, wait: noWait }).listPages("x");
     await expect(call).rejects.toBeInstanceOf(LiquipediaResponseError);

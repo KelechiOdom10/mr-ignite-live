@@ -18,7 +18,6 @@ describe("planSync", () => {
   ]);
 
   it("refetches only pages whose revision moved, plus new pages", () => {
-    // Bug: refetching every page each minute would break Liquipedia's rate rules.
     expect(planSync(pages, revisions)).toEqual({ changed: ["B", "New"], removed: ["Gone"] });
   });
 

@@ -44,7 +44,6 @@ describe("scopeSnapshot", () => {
   );
 
   it("keeps events that ended within 30 days and drops older ones", () => {
-    // Bug: shipping every 2026 match to the home page made each poll several hundred KB.
     const scoped = scopeSnapshot(snapshot, { kind: "recent" }, NOW);
     expect(scoped.events.map((e) => e.id)).toEqual(["current"]);
     expect(scoped.matches.map((m) => m.id)).toEqual(["a"]);
@@ -67,7 +66,6 @@ describe("event slugs", () => {
 
 describe("scopeSnapshot event scope", () => {
   it("does not pull in a live match from another event", () => {
-    // Bug: live matches from other events leaked into an event page's group stage list.
     const snapshot = aSnapshot(
       [anEvent("mine", "2026-10-18"), anEvent("other", "2026-10-18")],
       [

@@ -24,8 +24,8 @@ export function matchState(match: Match, now: number): MatchState {
   const start = match.startsAt ? Date.parse(match.startsAt) : Number.NaN;
   const hasStart = !Number.isNaN(start);
   const bothTeams = match.team1 !== null && match.team2 !== null;
-  // Old series Liquipedia never completed (missing map results) shouldn't sit in "Live" forever.
-  if (hasStart && bothTeams && now - start > LIVE_WINDOW_MS) return finished;
+  const abandoned = hasStart && bothTeams && now - start > LIVE_WINDOW_MS;
+  if (abandoned) return finished;
 
   const started = playedMaps.length > 0 || (hasStart && start <= now);
   return { status: started && bothTeams ? "live" : "upcoming", wins1, wins2, winner, playedMaps };

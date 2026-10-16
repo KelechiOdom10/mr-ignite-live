@@ -29,7 +29,6 @@ export const MatchSchema = z.object({
   team1: TeamSchema.nullable(),
   team2: TeamSchema.nullable(),
   maps: z.array(MapResultSchema),
-  /** Liquipedia's explicit finished/walkover flag; score-based completion is derived in `matchState`. */
   markedFinished: z.boolean(),
   twitch: z.string().nullable(),
   youtube: z.string().nullable(),

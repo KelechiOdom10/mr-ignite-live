@@ -10,7 +10,6 @@
   "endOfLine": "lf",
   "experimentalSortPackageJson": true,
   "experimentalSortImports": { "ignoreCase": true, "newlinesBetween": true, "order": "asc" },
-  // beUI components are copied verbatim from the registry so they can be re-pulled cleanly.
   "ignorePatterns": [
     "src/components/motion/**",
     "src/lib/**",

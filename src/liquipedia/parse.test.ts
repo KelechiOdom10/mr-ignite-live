@@ -22,7 +22,6 @@ describe("parsePageMatches on a recorded playoff bracket", () => {
   });
 
   it("builds URL-safe ids without the round comment that follows the bracket id", () => {
-    // Bug: the id once included `<!-- Upper Bracket Quarterfinals -->`, breaking match links.
     for (const m of matches) expect(m.id).toMatch(/^[A-Za-z0-9]+_R\d+M\d+$/);
   });
 
@@ -57,7 +56,6 @@ describe("parsePageMatches on a recorded group stage", () => {
   const matches = parsePageMatches(AMERICAS_GROUPS, recordedWikitext(AMERICAS_GROUPS));
 
   it("files group matches under the parent event", () => {
-    // Bug: without this the group stage would show up as a separate event with no info.
     expect(new Set(matches.map((m) => m.eventId))).toEqual(new Set([AMERICAS]));
     expect(matches.every((m) => m.phase === "Group Stage")).toBe(true);
   });

@@ -1,4 +1,3 @@
-// Match times are written in the caster's local zone, e.g. "2026-10-16 - 06:00 {{Abbr/AEST}}".
 const TZ_OFFSET_HOURS: Record<string, number> = {
   UTC: 0,
   GMT: 0,
