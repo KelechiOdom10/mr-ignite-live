@@ -8,6 +8,7 @@ import {
   type StoredSnapshot,
 } from "@/domain/model";
 import { STORED_SNAPSHOT_VERSION } from "@/domain/model";
+import type { MatchStats } from "@/domain/stats";
 import type { Revision } from "@/liquipedia/client";
 import { eventIdFor } from "@/liquipedia/parse";
 
@@ -69,6 +70,34 @@ export function mergeMapOverrides(maps: MapResult[], overrides: MapOverride[]): 
     byIndex.set(o.index, { ...o, map: existing?.map || o.map, vod: existing?.vod ?? null });
   }
   return [...byIndex.values()].sort((a, b) => a.index - b.index);
+}
+
+function canonicalJson(value: unknown): string {
+  return JSON.stringify(value, (_key, v: unknown) =>
+    v && typeof v === "object" && !Array.isArray(v)
+      ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => a.localeCompare(b)))
+      : v,
+  );
+}
+
+export function withMapOverrides(
+  stored: StoredSnapshot,
+  incoming: Record<string, MapOverride[]>,
+): StoredSnapshot | null {
+  const changed = Object.entries(incoming).filter(
+    ([matchId, overrides]) =>
+      canonicalJson(stored.mapOverrides[matchId]) !== canonicalJson(overrides),
+  );
+  if (changed.length === 0) return null;
+  return { ...stored, mapOverrides: { ...stored.mapOverrides, ...Object.fromEntries(changed) } };
+}
+
+export function statsChanged(previous: MatchStats | null, next: MatchStats): boolean {
+  return (
+    previous === null ||
+    previous.sourceMatchId !== next.sourceMatchId ||
+    canonicalJson(previous.maps) !== canonicalJson(next.maps)
+  );
 }
 
 export function toSnapshot(stored: StoredSnapshot, servedAt: Date): Snapshot {

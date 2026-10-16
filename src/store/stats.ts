@@ -7,6 +7,8 @@ import { MatchStatsSchema, type MatchStats } from "@/domain/stats";
 import { findMrvlMatch, toMapOverrides, toMatchStats } from "@/mrvl/align";
 import type { MrvlClient } from "@/mrvl/client";
 
+import { statsChanged } from "./plan";
+
 const STATS_PREFIX = "stats:v2:";
 const INDEX_KEY = "stats-index:v2";
 const RECENT_LIMIT = 40;
@@ -61,14 +63,17 @@ export async function syncStats(
   const index = await readIndex();
   const updatedMatchIds: string[] = [];
   const mapOverrides: Record<string, MapOverride[]> = {};
+  let indexChanged = false;
+  let pagesFetched = 0;
 
   for (const match of candidates) {
-    if (updatedMatchIds.length >= MAX_PAGES_PER_SYNC) break;
+    if (pagesFetched >= MAX_PAGES_PER_SYNC) break;
     const summary = findMrvlMatch(match, summaries);
     if (!summary) continue;
     const sourceUpdatedAt = String(summary.updatedAt ?? "");
     if (index[match.id]?.sourceUpdatedAt === sourceUpdatedAt) continue;
 
+    pagesFetched++;
     const stats = toMatchStats(
       match,
       await mrvl.matchPage(summary.id),
@@ -76,12 +81,13 @@ export async function syncStats(
       new Date(now),
     );
     index[match.id] = { sourceMatchId: summary.id, sourceUpdatedAt };
-    updatedMatchIds.push(match.id);
-    if (stats.maps.length === 0) continue;
+    indexChanged = true;
+    if (stats.maps.length === 0 || !statsChanged(await readStats(match.id), stats)) continue;
     await kv.put(STATS_PREFIX + match.id, stats);
+    updatedMatchIds.push(match.id);
     mapOverrides[match.id] = toMapOverrides(stats);
   }
 
-  if (updatedMatchIds.length > 0) await kv.put(INDEX_KEY, index);
+  if (indexChanged) await kv.put(INDEX_KEY, index);
   return { updatedMatchIds, mapOverrides };
 }

@@ -1,7 +1,7 @@
 import type { Snapshot, StoredSnapshot } from "@/domain/model";
 import { createLiquipediaClient } from "@/liquipedia/client";
 import { createMrvlClient } from "@/mrvl/client";
-import { toSnapshot } from "@/store/plan";
+import { toSnapshot, withMapOverrides } from "@/store/plan";
 import { readStored, syncFromLiquipedia, writeStored } from "@/store/snapshot";
 import { syncStats } from "@/store/stats";
 
@@ -18,10 +18,8 @@ let lastFailureAt = Number.NEGATIVE_INFINITY;
 async function withStats(stored: StoredSnapshot, now: Date) {
   try {
     const result = await syncStats(mrvl, toSnapshot(stored, now), now.getTime());
-    if (Object.keys(result.mapOverrides).length === 0) {
-      return { stored, updatedStats: result.updatedMatchIds.length };
-    }
-    const next = { ...stored, mapOverrides: { ...stored.mapOverrides, ...result.mapOverrides } };
+    const next = withMapOverrides(stored, result.mapOverrides);
+    if (!next) return { stored, updatedStats: result.updatedMatchIds.length };
     await writeStored(next);
     return { stored: next, updatedStats: result.updatedMatchIds.length };
   } catch (error) {

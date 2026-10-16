@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { PageData, StoredSnapshot } from "@/domain/model";
+import type { MatchStats } from "@/domain/stats";
 
 import { aMatch } from "../../test/builders";
 import {
@@ -8,8 +9,10 @@ import {
   emptyStored,
   mergeMapOverrides,
   planSync,
+  statsChanged,
   teamsMissingInfo,
   toSnapshot,
+  withMapOverrides,
 } from "./plan";
 
 function aPage(revid: number, overrides: Partial<PageData> = {}): PageData {
@@ -95,5 +98,41 @@ describe("mergeMapOverrides", () => {
       [1, 1, 2, "v1"],
       [2, 1, 3, null],
     ]);
+  });
+});
+
+describe("withMapOverrides", () => {
+  const override = { index: 1, map: "Midtown", score1: 3, score2: 1, winner: 1 } as const;
+
+  it("returns null when mrvl repeats overrides already stored, so KV isn't rewritten", () => {
+    // mrvl bumps updatedAt on every bulk edit; each rewrite cost a KV write a minute while live.
+    const stored = { ...emptyStored(), mapOverrides: { m1: [override] } };
+    expect(withMapOverrides(stored, { m1: [{ ...override }] })).toBeNull();
+  });
+
+  it("adds new overrides and keeps other matches' ones", () => {
+    const stored = { ...emptyStored(), mapOverrides: { m1: [override] } };
+    const next = withMapOverrides(stored, { m2: [{ ...override, index: 2 }] });
+    expect(Object.keys(next?.mapOverrides ?? {})).toEqual(["m1", "m2"]);
+  });
+});
+
+describe("statsChanged", () => {
+  const stats: MatchStats = {
+    matchId: "m1",
+    source: "mrvl",
+    sourceMatchId: "js1",
+    sourceUpdatedAt: "a",
+    fetchedAt: "2026-10-17T00:00:00.000Z",
+    maps: [],
+  };
+
+  it("ignores a new fetch time or source timestamp when the maps are the same", () => {
+    const refetched = { ...stats, sourceUpdatedAt: "b", fetchedAt: "2026-10-17T00:01:00.000Z" };
+    expect(statsChanged(stats, refetched)).toBe(false);
+  });
+
+  it("reports stats never stored before as changed", () => {
+    expect(statsChanged(null, stats)).toBe(true);
   });
 });
