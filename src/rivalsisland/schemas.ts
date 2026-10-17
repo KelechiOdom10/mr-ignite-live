@@ -5,6 +5,10 @@ import { UidSchema } from "@/domain/player";
 // Hand-written from RivalsIsland's OpenAPI 2.1.0. Objects strip unknown keys because the API adds
 // fields without notice; a missing or retyped field fails the parse.
 
+// The spec only constrains uids in request paths. Bots and hidden players may not have a linkable
+// one, so response uids stay plain strings and become a Uid only where we link to a player.
+const VendorUidSchema = z.string();
+
 const PlayTimeSchema = z.object({ seconds: z.number(), formatted: z.string() });
 const AssetRefSchema = z.object({ id: z.string(), image: z.string().nullable() });
 const DisplayHeroSchema = z.object({ id: z.number().int(), name: z.string().nullable() });
@@ -41,7 +45,7 @@ export const SearchResponseSchema = z.object({
   query: z.string(),
   player: z
     .object({
-      uid: UidSchema,
+      uid: VendorUidSchema,
       name: z.string(),
       account_level: z.number().int().nullable(),
       head_icon: AssetRefSchema.nullable(),
@@ -177,8 +181,8 @@ export const MatchDetailSchema = z.object({
     z.object({ id: z.number().int(), score: z.number().nullable(), result: ResultSchema }),
   ),
   awards: z.object({
-    mvp: z.object({ uid: UidSchema, hero: HeroRefSchema.nullable() }).nullable(),
-    svp: z.object({ uid: UidSchema, hero: HeroRefSchema.nullable() }).nullable(),
+    mvp: z.object({ uid: VendorUidSchema, hero: HeroRefSchema.nullable() }).nullable(),
+    svp: z.object({ uid: VendorUidSchema, hero: HeroRefSchema.nullable() }).nullable(),
   }),
   draft: z
     .array(
@@ -192,7 +196,7 @@ export const MatchDetailSchema = z.object({
     .nullable(),
   players: z.array(
     z.object({
-      uid: UidSchema,
+      uid: VendorUidSchema,
       name: z.string().nullable(),
       team_id: z.number().int(),
       result: ResultSchema,
@@ -222,7 +226,7 @@ export const LeaderboardResponseSchema = z.object({
     z.object({
       position: z.number().int(),
       player: z.object({
-        uid: UidSchema,
+        uid: VendorUidSchema,
         name: z.string().nullable(),
         head_icon: z.string().nullable(),
       }),

@@ -45,8 +45,8 @@ export interface Scripted {
 }
 
 /**
- * Serves recorded RivalsIsland responses with their recorded credit headers. Anything unrecorded
- * answers 404 `player_not_found` at no cost, as the API does for a missing player.
+ * Serves recorded RivalsIsland responses with their recorded credit headers. An unrecorded search
+ * finds nobody (200, 5 credits) and anything else unrecorded is a free 404, as the API answers.
  */
 export function fakeRivalsIsland(scripted: Record<string, Scripted> = {}) {
   const calls: string[] = [];
@@ -63,6 +63,10 @@ export function fakeRivalsIsland(scripted: Record<string, Scripted> = {}) {
       });
     }
     const name = RECORDED[path];
+    if (!name && url.pathname === "/players/search") {
+      const query = url.searchParams.get("name") ?? "";
+      return Response.json({ query, player: null }, { headers: { "x-credit-cost": "5" } });
+    }
     if (!name) {
       return Response.json(
         { error: "player not found", code: "player_not_found" },

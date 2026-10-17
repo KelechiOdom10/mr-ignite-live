@@ -12,12 +12,14 @@ import {
   CreditBudgetExceededError,
   MatchHistoryPrivateError,
   NotFoundError,
+  RivalsIslandContractError,
   RivalsIslandError,
+  UpstreamUnavailableError,
 } from "@/rivalsisland/errors";
 
 const NEGATIVE_TTL_MS = 30 * 60 * 1000;
 
-export type CachedStatus = "ok" | "history_private" | "career_private" | "not_found";
+export type CachedStatus = "ok" | "history_private" | "career_private" | "not_found" | "broken";
 
 export interface CachedResponse {
   status: CachedStatus;
@@ -59,6 +61,8 @@ export interface Fetched<T> {
   fetchedAt: number;
   /** Past its TTL; shown with its age and a priced refresh. */
   stale: boolean;
+  /** A refresh was asked for but refused or failed, so this is the older copy. */
+  refreshFailed: boolean;
 }
 
 export interface PlayerDataOptions {
@@ -77,6 +81,9 @@ function negativeError(status: CachedStatus): RivalsIslandError | null {
     return new MatchHistoryPrivateError("Match history is private", 0);
   if (status === "career_private") return new CareerPrivateError("Career is private", 0);
   if (status === "not_found") return new NotFoundError("Not found on RivalsIsland", 0);
+  if (status === "broken") {
+    return new UpstreamUnavailableError("RivalsIsland's last answer didn't match our schema", 0);
+  }
   return null;
 }
 
@@ -84,6 +91,8 @@ function negativeStatus(error: unknown): CachedStatus | null {
   if (error instanceof MatchHistoryPrivateError) return "history_private";
   if (error instanceof CareerPrivateError) return "career_private";
   if (error instanceof NotFoundError) return "not_found";
+  // A changed response would fail again; remembering it stops a paid retry on every view.
+  if (error instanceof RivalsIslandContractError) return "broken";
   return null;
 }
 
@@ -94,12 +103,14 @@ export function createPlayerData(options: PlayerDataOptions) {
   function fromCache<E extends EndpointName>(
     name: E,
     entry: CachedResponse,
+    refreshFailed = false,
   ): Fetched<ResponseOf<E>> {
     const negative = negativeError(entry.status);
     if (negative) throw negative;
     const endpoint: Endpoint<E> = ENDPOINTS[name];
     const stale = entry.expiresAt !== null && entry.expiresAt <= now();
-    return { data: endpoint.schema.parse(entry.body), fetchedAt: entry.fetchedAt, stale };
+    const data = endpoint.schema.parse(entry.body);
+    return { data, fetchedAt: entry.fetchedAt, stale, refreshFailed };
   }
 
   async function fetchAndStore<E extends EndpointName>(
@@ -112,21 +123,18 @@ export function createPlayerData(options: PlayerDataOptions) {
     const at = now();
     const id = await ledger.reserve({ endpoint: name, key, expected: endpoint.cost, budget, at });
     if (id === null) {
-      if (fallback?.status === "ok") return fromCache(name, fallback);
+      if (fallback?.status === "ok") return fromCache(name, fallback, true);
       throw new CreditBudgetExceededError(endpoint.cost, budget);
     }
+    let charged: Awaited<ReturnType<typeof client.call<E>>>;
     try {
-      const { data, cost, balance } = await client.call(name, params);
-      if (cost !== null && cost !== endpoint.cost) {
-        console.warn(JSON.stringify({ event: "credit_cost_mismatch", endpoint: name, cost }));
-      }
-      await ledger.settle(id, { cost: cost ?? endpoint.cost, balance, httpStatus: 200 });
-      const expiresAt = endpoint.ttlSeconds === null ? null : at + endpoint.ttlSeconds * 1000;
-      await cache.put(key, name, { status: "ok", body: data, fetchedAt: at, expiresAt });
-      return { data, fetchedAt: at, stale: false };
+      charged = await client.call(name, params);
     } catch (error) {
-      const charged = error instanceof RivalsIslandError ? error.creditCost : 0;
-      await ledger.settle(id, { cost: charged, balance: null, httpStatus: 0 });
+      await ledger.settle(id, {
+        cost: error instanceof RivalsIslandError ? error.creditCost : 0,
+        balance: null,
+        httpStatus: 0,
+      });
       const status = negativeStatus(error);
       if (status) {
         await cache.put(key, name, {
@@ -139,10 +147,18 @@ export function createPlayerData(options: PlayerDataOptions) {
         console.warn(
           JSON.stringify({ event: "rivalsisland_failed_serving_stale", endpoint: name }),
         );
-        return fromCache(name, fallback);
+        return fromCache(name, fallback, true);
       }
       throw error;
     }
+    const { data, cost, balance } = charged;
+    if (cost !== null && cost !== endpoint.cost) {
+      console.warn(JSON.stringify({ event: "credit_cost_mismatch", endpoint: name, cost }));
+    }
+    await ledger.settle(id, { cost: cost ?? endpoint.cost, balance, httpStatus: 200 });
+    const expiresAt = endpoint.ttlSeconds === null ? null : at + endpoint.ttlSeconds * 1000;
+    await cache.put(key, name, { status: "ok", body: data, fetchedAt: at, expiresAt });
+    return { data, fetchedAt: at, stale: false, refreshFailed: false };
   }
 
   return {

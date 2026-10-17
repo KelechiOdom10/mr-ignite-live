@@ -1,6 +1,6 @@
 # RivalsIsland fixtures
 
-Raw responses from https://api.rivalsisland.com (OpenAPI 2.1.0), recorded 2026-10-17 with a free-tier key. Each `.json` body sits beside the `.headers` of the same response (`heroes` was recorded without headers). Copied byte-for-byte from the original recording; never hand-edit, re-record with `scripts/record-rivalsisland.ts` instead.
+Raw responses from https://api.rivalsisland.com (OpenAPI 2.1.0), recorded 2026-10-17 with a free-tier key. Each `.json` body sits beside the `.headers` of the same response (`heroes` was recorded without headers). Copied byte-for-byte from the original recording; never hand-edit; re-record instead.
 
 | File | Request | Credits | sha256 |
 | --- | --- | --- | --- |
@@ -19,7 +19,7 @@ Raw responses from https://api.rivalsisland.com (OpenAPI 2.1.0), recorded 2026-1
 
 Check with `shasum -a 256 test/fixtures/rivalsisland/*.json`.
 
-The original match-history recording is not here: its body (a 200 for uid 670067075) and headers (a 403) came from different requests, so it is re-recorded instead.
+The original match-history recording is not here: its body (a 200 for uid 670067075) and headers (a 403) came from different requests, so it needs re-recording.
 
 ## Vendor quirks
 

@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import { UidSchema } from "@/domain/player";
 import { createRivalsIslandClient } from "@/rivalsisland/client";
-import { CreditBudgetExceededError, MatchHistoryPrivateError } from "@/rivalsisland/errors";
+import {
+  CreditBudgetExceededError,
+  MatchHistoryPrivateError,
+  RivalsIslandContractError,
+  UpstreamUnavailableError,
+} from "@/rivalsisland/errors";
 
 import {
   fakeRivalsIsland,
@@ -12,7 +17,7 @@ import {
   type Scripted,
 } from "../../test/fakeRivalsIsland";
 import { memoryCreditLedger, memoryPlayerCache } from "../../test/memoryPlayerDb";
-import { createPlayerData } from "./playerData";
+import { createPlayerData, type PlayerCache } from "./playerData";
 
 const trqstMe = UidSchema.parse(RECORDED_UIDS.trqstMe);
 const sypeh = UidSchema.parse(RECORDED_UIDS.sypeh);
@@ -21,9 +26,9 @@ const HOUR = 60 * 60 * 1000;
 function setup({
   budget = 200,
   scripted = {},
-}: { budget?: number; scripted?: Record<string, Scripted> } = {}) {
+  cache = memoryPlayerCache(),
+}: { budget?: number; scripted?: Record<string, Scripted>; cache?: PlayerCache } = {}) {
   const fake = fakeRivalsIsland(scripted);
-  const cache = memoryPlayerCache();
   const ledger = memoryCreditLedger();
   let time = Date.parse("2026-10-17T12:00:00Z");
   const data = createPlayerData({
@@ -126,6 +131,39 @@ describe("player data", () => {
     advance(2 * HOUR);
     const kept = await data.get("career", { uid: trqstMe }, { refresh: true });
     expect(kept.stale).toBe(true);
+    expect(fake.calls).toHaveLength(1);
+  });
+
+  it("still books a paid call when saving it to the cache fails", async () => {
+    const cache = memoryPlayerCache();
+    const failing: PlayerCache = {
+      get: (key) => cache.get(key),
+      put: () => Promise.reject(new Error("D1 unavailable")),
+    };
+    const { data, ledger } = setup({ cache: failing });
+    await expect(data.get("career", { uid: trqstMe })).rejects.toThrow("D1 unavailable");
+    expect(await ledger.summary()).toMatchObject({ spent: 10, pending: 0 });
+  });
+
+  it("says when a paid refresh was refused, so the page doesn't claim fresh data", async () => {
+    const { data, fake } = setup({ budget: 10 });
+    await data.get("career", { uid: trqstMe });
+    const result = await data.get("career", { uid: trqstMe }, { refresh: true });
+    expect(result.refreshFailed).toBe(true);
+    expect(fake.calls).toHaveLength(1);
+  });
+
+  it("remembers a response that broke our schema instead of paying for it on every visit", async () => {
+    const path = `/players/${trqstMe}/career`;
+    const { data, fake } = setup({
+      scripted: { [path]: { status: 200, cost: 10, body: { player: {} } } },
+    });
+    await expect(data.get("career", { uid: trqstMe })).rejects.toBeInstanceOf(
+      RivalsIslandContractError,
+    );
+    await expect(data.get("career", { uid: trqstMe })).rejects.toBeInstanceOf(
+      UpstreamUnavailableError,
+    );
     expect(fake.calls).toHaveLength(1);
   });
 });
