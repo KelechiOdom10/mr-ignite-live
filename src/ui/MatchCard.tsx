@@ -1,7 +1,7 @@
 import { Link } from "@void/react";
 
 import { Card, CARD_TARGET_CLASS } from "@/components/motion/card";
-import type { SideView } from "@/domain/matchView";
+import type { SideView, SlotFeeders } from "@/domain/matchView";
 import type { IgniteEvent, Match, Snapshot } from "@/domain/model";
 import { cn } from "@/lib/utils";
 
@@ -48,6 +48,7 @@ export function MatchCard({
   snapshot,
   now,
   footer = "event",
+  feeders,
   className,
 }: {
   match: Match;
@@ -55,9 +56,10 @@ export function MatchCard({
   snapshot: Snapshot;
   now: number;
   footer?: "event" | "round" | "none";
+  feeders?: SlotFeeders;
   className?: string;
 }) {
-  const view = useMatchView(match, now);
+  const view = useMatchView(match, now, feeders);
   return (
     <Card
       interactive

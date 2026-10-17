@@ -45,19 +45,37 @@ export interface MatchView {
   summary: string;
 }
 
-export function matchView(match: Match, state: MatchState, hidden: boolean): MatchView {
+export interface Feeder {
+  result: "Winner" | "Loser" | "From";
+  round: string;
+}
+
+export type SlotFeeders = Partial<Record<Side, Feeder>>;
+
+export function matchView(
+  match: Match,
+  state: MatchState,
+  hidden: boolean,
+  feeders: SlotFeeders = {},
+): MatchView {
   const revealed = !hidden;
   const scored = state.status !== "upcoming" && revealed;
   const winner = revealed && state.winner !== 0 ? state.winner : null;
   const side = (n: Side): SideView => {
     const team = n === 1 ? match.team1 : match.team2;
-    return {
-      team,
-      name: team?.name ?? "TBD",
-      short: team?.short ?? "TBD",
-      score: scored ? (n === 1 ? state.wins1 : state.wins2) : null,
-      outcome: winner === null ? "open" : winner === n ? "won" : "lost",
-    };
+    const score = scored ? (n === 1 ? state.wins1 : state.wins2) : null;
+    const outcome = winner === null ? "open" : winner === n ? "won" : "lost";
+    const feeder = hidden ? feeders[n] : undefined;
+    if (team && feeder) {
+      return {
+        team: null,
+        name: `${feeder.result} of ${feeder.round}`,
+        short: `${feeder.result} of ${abbreviateRound(feeder.round)}`,
+        score,
+        outcome,
+      };
+    }
+    return { team, name: team?.name ?? "TBD", short: team?.short ?? "TBD", score, outcome };
   };
   const side1 = side(1);
   const side2 = side(2);
@@ -110,6 +128,60 @@ function vodLinks(match: Match, revealed: boolean): VodLink[] {
   const alwaysPlayed = Math.ceil(match.bestOf / 2);
   const first = withVod.find((v) => v.index <= alwaysPlayed);
   return first ? [{ ...first, label: `Watch from map ${first.index}` }] : [];
+}
+
+function abbreviateRound(round: string): string {
+  return round.replace(/\bUpper Bracket\b/i, "UB").replace(/\bLower Bracket\b/i, "LB");
+}
+
+function bracketOf(match: Match): string {
+  return `${match.eventId}|${match.id.slice(0, match.id.lastIndexOf("_"))}`;
+}
+
+function roundNumber(match: Match): number {
+  const r = /_R(\d+)M\d+$/.exec(match.id);
+  return r ? Number(r[1]) : Number.NaN;
+}
+
+function playedBefore(earlier: Match, later: Match): boolean {
+  if (earlier.startsAt && later.startsAt)
+    return Date.parse(earlier.startsAt) < Date.parse(later.startsAt);
+  return roundNumber(earlier) < roundNumber(later);
+}
+
+// Read from team history: Liquipedia's slot ids don't say which upper-bracket loser drops
+// into which lower-bracket slot.
+export function bracketFeeders(matches: Match[], now: number): ReadonlyMap<string, SlotFeeders> {
+  const finished = matches
+    .map((m) => ({ m, s: matchState(m, now) }))
+    .filter(({ s }) => s.status === "finished");
+  const feeders = new Map<string, SlotFeeders>();
+  for (const match of matches) {
+    const slots: SlotFeeders = {};
+    for (const n of [1, 2] as const) {
+      const team = n === 1 ? match.team1 : match.team2;
+      if (!team) continue;
+      const previous = finished
+        .filter(
+          ({ m }) =>
+            m.id !== match.id &&
+            bracketOf(m) === bracketOf(match) &&
+            (m.team1?.name === team.name || m.team2?.name === team.name) &&
+            playedBefore(m, match),
+        )
+        .reduce<(typeof finished)[number] | undefined>(
+          (latest, f) => (!latest || playedBefore(latest.m, f.m) ? f : latest),
+          undefined,
+        );
+      if (!previous) continue;
+      const side = previous.m.team1?.name === team.name ? 1 : 2;
+      const result =
+        previous.s.winner === 0 ? "From" : previous.s.winner === side ? "Winner" : "Loser";
+      slots[n] = { result, round: previous.m.round };
+    }
+    if (slots[1] || slots[2]) feeders.set(match.id, slots);
+  }
+  return feeders;
 }
 
 const FORM_LENGTH = 10;

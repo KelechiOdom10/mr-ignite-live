@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { aMap, aMatch } from "../../test/builders";
 import { matchState } from "./matchState";
-import { formView, matchView } from "./matchView";
+import { bracketFeeders, formView, matchView } from "./matchView";
 import type { Match } from "./model";
 
 const NOW = Date.parse("2026-10-16T23:00:00.000Z");
@@ -64,6 +64,85 @@ describe("matchView with spoilers hidden", () => {
     expect(formView({ name: "Liquid Citadel", short: "TLC" }, [sweep], NOW, true)).toEqual({
       kind: "hidden",
     });
+  });
+});
+
+describe("bracketFeeders", () => {
+  const team = (short: string) => ({ name: short, short });
+  const at = (hour: number) => `2026-10-16T${String(hour).padStart(2, "0")}:00:00.000Z`;
+  const won = (winner: 1 | 2) => [aMap(1, winner), aMap(2, winner), aMap(3, winner)];
+  const semi1 = aMatch({
+    id: "kOK_R2M1",
+    round: "Upper Bracket Semifinals",
+    startsAt: at(10),
+    team1: team("FLY"),
+    team2: team("100T"),
+    maps: won(1),
+  });
+  const semi2 = aMatch({
+    id: "kOK_R2M2",
+    round: "Upper Bracket Semifinals",
+    startsAt: at(12),
+    team1: team("TLC"),
+    team2: team("SG"),
+    maps: won(1),
+  });
+  const upperFinal = aMatch({
+    id: "kOK_R4M1",
+    round: "Upper Bracket Final",
+    startsAt: at(20),
+    team1: team("FLY"),
+    team2: team("TLC"),
+  });
+  const lowerQuarter = aMatch({
+    id: "kOK_R2M3",
+    round: "Lower Bracket Quarterfinals",
+    startsAt: at(22),
+    team1: team("SG"),
+    team2: null,
+  });
+  const bracket = [semi1, semi2, upperFinal, lowerQuarter];
+  const hiddenView = (m: Match) =>
+    matchView(m, matchState(m, NOW), true, bracketFeeders(bracket, NOW).get(m.id));
+
+  it("doesn't name the semifinal winners in a hidden upper final", () => {
+    const v = hiddenView(upperFinal);
+    expect([v.side1.team, v.side2.team]).toEqual([null, null]);
+    expect([v.side1.name, v.side1.short]).toEqual([
+      "Winner of Upper Bracket Semifinals",
+      "Winner of UB Semifinals",
+    ]);
+    expect(v.summary).not.toMatch(/FLY|TLC/);
+  });
+
+  it("names a dropped team as the loser of its upper-bracket round, though ids share a round number", () => {
+    expect(hiddenView(lowerQuarter).side1.name).toBe("Loser of Upper Bracket Semifinals");
+    expect(hiddenView(lowerQuarter).side2.name).toBe("TBD");
+  });
+
+  it("keeps first-round teams, which came from outside the bracket", () => {
+    expect([hiddenView(semi1).side1.short, hiddenView(semi1).side2.short]).toEqual(["FLY", "100T"]);
+  });
+
+  it("orders by round when start times are missing", () => {
+    const undated = bracket.map((m) => ({ ...m, startsAt: null }));
+    const feeders = bracketFeeders(undated, NOW).get("kOK_R4M1");
+    expect(feeders?.[1]).toEqual({ result: "Winner", round: "Upper Bracket Semifinals" });
+  });
+
+  it("ignores another bracket's results for the same team", () => {
+    const otherEvent = { ...semi1, id: "other_R1M1", eventId: "MR Ignite/2026/Stage 2/EMEA" };
+    expect(bracketFeeders([otherEvent, semi1], NOW).has(semi1.id)).toBe(false);
+  });
+
+  it("names the teams when spoilers are shown", () => {
+    const v = matchView(
+      upperFinal,
+      matchState(upperFinal, NOW),
+      false,
+      bracketFeeders(bracket, NOW).get(upperFinal.id),
+    );
+    expect([v.side1.short, v.side2.short]).toEqual(["FLY", "TLC"]);
   });
 });
 
