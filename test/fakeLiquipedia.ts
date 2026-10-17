@@ -55,13 +55,13 @@ export interface LiquipediaRequest {
 export function fakeLiquipedia({
   clock,
   revids,
-  latencyMs = 0,
 }: {
   clock: Clock;
   revids: Record<string, number>;
-  latencyMs?: number;
 }) {
   const requests: LiquipediaRequest[] = [];
+  /** How long each response takes on the fake clock. */
+  const settings = { latencyMs: 0 };
   const titlesOf = (params: URLSearchParams) => (params.get("titles") ?? "").split("|");
 
   function body(params: URLSearchParams): unknown {
@@ -90,9 +90,9 @@ export function fakeLiquipedia({
   const fetchImpl: typeof fetch = async (input) => {
     const params = new URL(String(input)).searchParams;
     requests.push({ params, at: clock.now() });
-    clock.advance(latencyMs);
+    clock.advance(settings.latencyMs);
     return new Response(JSON.stringify(body(params)), { status: 200 });
   };
 
-  return { fetch: fetchImpl, requests, revids };
+  return { fetch: fetchImpl, requests, revids, settings };
 }

@@ -105,6 +105,25 @@ describe("syncOnce on match day", () => {
     expect(stored?.mapOverrides[FLY_100T]?.map((m) => m.winner)).toEqual([2, 1, 1, 1]);
   });
 
+  it("defers changed pages when Liquipedia is slow instead of running into the next cron run", async () => {
+    const day = matchDay();
+    day.liquipedia.settings.latencyMs = 20_000;
+    const startsAt = day.clock.now() + 60_000;
+
+    const slow = await day.sync();
+
+    // Revisions at 0s, contents at 20s; the icon lookup would start at 40s, past the 30s window.
+    expect(day.liquipedia.requests.map((r) => r.at - startsAt)).toEqual([0, 20_000]);
+    expect(day.store.putCounts()).toEqual({});
+    expect(slow.deferredPages).toBe(3);
+
+    day.liquipedia.settings.latencyMs = 0;
+    const next = await day.sync();
+
+    expect(next.changedPages).toBe(3);
+    expect(day.store.putCounts().snapshot).toBe(1);
+  });
+
   it("still saves Liquipedia's changes when mrvl is down", async () => {
     const day = matchDay({ mrvl: { down: true } });
 

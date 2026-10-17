@@ -1,14 +1,14 @@
 import { type TeamInfo } from "@/domain/model";
 import { teamShortName } from "@/domain/teams";
 
-import type { LiquipediaClient } from "./client";
+import type { LiquipediaRun } from "./client";
 import { parseTeamShortExpansion, TEAM_TEMPLATE_SEPARATOR } from "./parse";
 
 const NAMES_PER_EXPANSION = 40;
 const LOGO_WIDTH_PX = 96;
 
 export async function fetchTeamInfo(
-  client: LiquipediaClient,
+  client: LiquipediaRun,
   names: string[],
 ): Promise<Record<string, TeamInfo>> {
   const templates = new Map<string, ReturnType<typeof parseTeamShortExpansion>>();

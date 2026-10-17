@@ -29,12 +29,20 @@ describe("planSync", () => {
   ]);
 
   it("refetches only pages whose revision moved, plus new pages", () => {
-    expect(planSync(pages, revisions)).toEqual({ changed: ["B", "New"], removed: ["Gone"] });
+    expect(planSync(pages, revisions, 50)).toEqual({
+      changed: ["B", "New"],
+      deferred: [],
+      removed: ["Gone"],
+    });
   });
 
   it("plans nothing when every revision is unchanged", () => {
     const same = new Map([["A", { revid: 1, timestamp: "t" }]]);
-    expect(planSync({ A: aPage(1) }, same)).toEqual({ changed: [], removed: [] });
+    expect(planSync({ A: aPage(1) }, same, 50)).toEqual({ changed: [], deferred: [], removed: [] });
+  });
+
+  it("defers changed pages beyond one run's share instead of dropping them", () => {
+    expect(planSync(pages, revisions, 1)).toMatchObject({ changed: ["B"], deferred: ["New"] });
   });
 });
 
@@ -120,7 +128,7 @@ describe("withMapOverrides", () => {
 
 describe("nextStored", () => {
   const builtAt = new Date("2026-10-16T22:31:00Z");
-  const noLiquipediaChanges = { updates: {}, removed: [], teams: {} };
+  const noLiquipediaChanges = { updates: {}, removed: [], teams: {}, deferred: [] };
 
   it("returns null when neither Liquipedia nor mrvl brought anything new, so KV isn't rewritten", () => {
     const override = { index: 1, map: "Midtown", score1: 3, score2: 1, winner: 1 } as const;

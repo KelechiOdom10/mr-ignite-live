@@ -41,6 +41,13 @@ export class LiquipediaResponseError extends Error {
   }
 }
 
+export class LiquipediaBudgetSpentError extends Error {
+  override name = "LiquipediaBudgetSpentError";
+  constructor(readonly action: string) {
+    super(`This sync run's Liquipedia budget is spent; ${action} waits for the next run`);
+  }
+}
+
 const ApiErrorSchema = z.object({ error: z.object({ code: z.string(), info: z.string() }) });
 
 const AllPagesSchema = z.object({
@@ -86,6 +93,12 @@ export interface Revision {
   timestamp: string;
 }
 
+export interface RunBudget {
+  maxRequests: number;
+  /** Epoch ms after which no request may start. */
+  deadlineAt: number;
+}
+
 export interface LiquipediaClientOptions {
   fetch?: typeof fetch;
   wait?: (ms: number) => Promise<void>;
@@ -94,6 +107,7 @@ export interface LiquipediaClientOptions {
 }
 
 export type LiquipediaClient = ReturnType<typeof createLiquipediaClient>;
+export type LiquipediaRun = ReturnType<LiquipediaClient["startRun"]>;
 
 function chunks<T>(items: T[], size: number): T[][] {
   const out: T[][] = [];
@@ -106,15 +120,21 @@ export function createLiquipediaClient(options: LiquipediaClientOptions = {}) {
   const wait = options.wait ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
   const now = options.now ?? Date.now;
   const minGapMs = options.minGapMs ?? DEFAULT_MIN_GAP_MS;
+  // Shared by every run in this isolate, so back-to-back runs stay paced too.
   let lastRequestAt = Number.NEGATIVE_INFINITY;
 
   async function request<S extends z.ZodType>(
+    run: { budget: RunBudget; requests: number },
     schema: S,
     params: Record<string, string>,
   ): Promise<z.infer<S>> {
     const action = params.action ?? "unknown";
-    const gap = lastRequestAt + minGapMs - now();
-    if (gap > 0) await wait(gap);
+    const startAt = Math.max(now(), lastRequestAt + minGapMs);
+    if (run.requests >= run.budget.maxRequests || startAt > run.budget.deadlineAt) {
+      throw new LiquipediaBudgetSpentError(action);
+    }
+    if (startAt > now()) await wait(startAt - now());
+    run.requests++;
     lastRequestAt = now();
 
     const url = `${LIQUIPEDIA_API}?${new URLSearchParams({ format: "json", formatversion: "2", ...params })}`;
@@ -133,79 +153,84 @@ export function createLiquipediaClient(options: LiquipediaClientOptions = {}) {
     return parsed.data;
   }
 
-  return {
-    async listPages(prefix: string): Promise<string[]> {
-      const body = await request(AllPagesSchema, {
-        action: "query",
-        list: "allpages",
-        apprefix: prefix,
-        aplimit: "200",
-      });
-      return body.query.allpages.map((p) => p.title);
-    },
-
-    async fetchRevisions(titles: string[]): Promise<Map<string, Revision>> {
-      const out = new Map<string, Revision>();
-      for (const batch of chunks(titles, TITLES_PER_QUERY)) {
-        const body = await request(RevisionsSchema, {
+  function startRun(budget: RunBudget) {
+    const run = { budget, requests: 0 };
+    return {
+      async listPages(prefix: string): Promise<string[]> {
+        const body = await request(run, AllPagesSchema, {
           action: "query",
-          prop: "revisions",
-          rvprop: "ids|timestamp",
-          titles: batch.join("|"),
+          list: "allpages",
+          apprefix: prefix,
+          aplimit: "200",
         });
-        for (const page of body.query.pages) {
-          const rev = page.revisions?.[0];
-          if (rev?.revid !== undefined && rev.timestamp !== undefined) {
-            out.set(page.title, { revid: rev.revid, timestamp: rev.timestamp });
+        return body.query.allpages.map((p) => p.title);
+      },
+
+      async fetchRevisions(titles: string[]): Promise<Map<string, Revision>> {
+        const out = new Map<string, Revision>();
+        for (const batch of chunks(titles, TITLES_PER_QUERY)) {
+          const body = await request(run, RevisionsSchema, {
+            action: "query",
+            prop: "revisions",
+            rvprop: "ids|timestamp",
+            titles: batch.join("|"),
+          });
+          for (const page of body.query.pages) {
+            const rev = page.revisions?.[0];
+            if (rev?.revid !== undefined && rev.timestamp !== undefined) {
+              out.set(page.title, { revid: rev.revid, timestamp: rev.timestamp });
+            }
           }
         }
-      }
-      return out;
-    },
+        return out;
+      },
 
-    async fetchContents(titles: string[]): Promise<Map<string, string>> {
-      const out = new Map<string, string>();
-      for (const batch of chunks(titles, TITLES_PER_QUERY)) {
-        const body = await request(RevisionsSchema, {
-          action: "query",
-          prop: "revisions",
-          rvprop: "content",
-          rvslots: "main",
-          titles: batch.join("|"),
-        });
-        for (const page of body.query.pages) {
-          const content = page.revisions?.[0]?.slots?.main.content;
-          if (content !== undefined) out.set(page.title, content);
+      async fetchContents(titles: string[]): Promise<Map<string, string>> {
+        const out = new Map<string, string>();
+        for (const batch of chunks(titles, TITLES_PER_QUERY)) {
+          const body = await request(run, RevisionsSchema, {
+            action: "query",
+            prop: "revisions",
+            rvprop: "content",
+            rvslots: "main",
+            titles: batch.join("|"),
+          });
+          for (const page of body.query.pages) {
+            const content = page.revisions?.[0]?.slots?.main.content;
+            if (content !== undefined) out.set(page.title, content);
+          }
         }
-      }
-      return out;
-    },
+        return out;
+      },
 
-    async expandTemplates(text: string): Promise<string> {
-      const body = await request(ExpandTemplatesSchema, {
-        action: "expandtemplates",
-        prop: "wikitext",
-        text,
-      });
-      return body.expandtemplates.wikitext;
-    },
-
-    async imageUrls(files: string[], width: number): Promise<Map<string, string>> {
-      const out = new Map<string, string>();
-      for (const batch of chunks(files, TITLES_PER_QUERY)) {
-        const body = await request(ImageInfoSchema, {
-          action: "query",
-          prop: "imageinfo",
-          iiprop: "url",
-          iiurlwidth: String(width),
-          titles: batch.map((f) => `File:${f}`).join("|"),
+      async expandTemplates(text: string): Promise<string> {
+        const body = await request(run, ExpandTemplatesSchema, {
+          action: "expandtemplates",
+          prop: "wikitext",
+          text,
         });
-        for (const page of body.query.pages) {
-          const info = page.imageinfo?.[0];
-          if (info) out.set(page.title.replace(/^File:/, ""), info.thumburl ?? info.url);
+        return body.expandtemplates.wikitext;
+      },
+
+      async imageUrls(files: string[], width: number): Promise<Map<string, string>> {
+        const out = new Map<string, string>();
+        for (const batch of chunks(files, TITLES_PER_QUERY)) {
+          const body = await request(run, ImageInfoSchema, {
+            action: "query",
+            prop: "imageinfo",
+            iiprop: "url",
+            iiurlwidth: String(width),
+            titles: batch.map((f) => `File:${f}`).join("|"),
+          });
+          for (const page of body.query.pages) {
+            const info = page.imageinfo?.[0];
+            if (info) out.set(page.title.replace(/^File:/, ""), info.thumburl ?? info.url);
+          }
         }
-      }
-      return out;
-    },
-  };
+        return out;
+      },
+    };
+  }
+
+  return { startRun };
 }

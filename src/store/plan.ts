@@ -25,18 +25,21 @@ export function emptyStored(): StoredSnapshot {
 
 export interface SyncPlan {
   changed: string[];
+  /** Changed beyond this run's share; their stored revids stay old, so the next run picks them up. */
+  deferred: string[];
   removed: string[];
 }
 
 export function planSync(
   pages: StoredSnapshot["pages"],
   revisions: ReadonlyMap<string, Revision>,
+  maxChanged: number,
 ): SyncPlan {
   const changed = [...revisions]
     .filter(([title, rev]) => pages[title]?.revid !== rev.revid)
     .map(([title]) => title);
   const removed = Object.keys(pages).filter((title) => !revisions.has(title));
-  return { changed, removed };
+  return { changed: changed.slice(0, maxChanged), deferred: changed.slice(maxChanged), removed };
 }
 
 export function applyPages(
@@ -97,6 +100,8 @@ export interface LiquipediaChanges {
   updates: Record<string, PageData>;
   removed: string[];
   teams: Record<string, TeamInfo>;
+  /** Changed pages left for the next run. */
+  deferred: string[];
 }
 
 export function applyLiquipedia(
