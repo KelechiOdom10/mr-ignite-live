@@ -1,12 +1,15 @@
 import { defineHandler, defineHead, type InferProps } from "void";
 import { z } from "zod";
 
-import { UidSchema, type Uid } from "@/domain/player";
+import { problemMessage } from "@/domain/player";
+import { recentHeroes, UidSchema, type HeroCareer, type HeroPlay, type Uid } from "@/domain/player";
 import { COMPETITIVE } from "@/rivalsisland/endpoints";
 import {
   toCareer,
+  toHeroCareer,
   toHeroCatalogue,
   toHistoryPage,
+  toMatchDetail,
   toProfile,
   type HeroCatalogue,
 } from "@/rivalsisland/toDomain";
@@ -58,6 +61,33 @@ function readPlayer(uid: Uid, query: z.infer<typeof QuerySchema>, refresh: boole
   ]);
 }
 
+/** Heroes from matches already cached, and any hero cards already loaded. Costs nothing. */
+async function heroesFromCache(
+  uid: Uid,
+  matchUids: readonly string[],
+  signatureHeroId: number | null,
+): Promise<{ recent: HeroPlay[]; coveredMatches: number; cards: HeroCareer[] }> {
+  const loaded = await loadPlayers(async (data) => {
+    const catalogue = await heroCatalogue(data).catch(() => new Map());
+    const peeked = await Promise.all(matchUids.map((matchUid) => data.peek("match", { matchUid })));
+    const matches = peeked.flatMap((m) => (m ? [toMatchDetail(m.data, catalogue)] : []));
+    const recent = recentHeroes(uid, matches);
+    const ids = [...new Set([signatureHeroId, ...recent.map((h) => h.id)])].filter(
+      (id): id is number => id !== null,
+    );
+    const cards = await Promise.all(
+      ids.map(async (heroId) => {
+        const card = await data.peek("heroCareer", { uid, heroId });
+        return card
+          ? [toHeroCareer(card.data, catalogue, { fetchedAt: card.fetchedAt, stale: card.stale })]
+          : [];
+      }),
+    );
+    return { recent, coveredMatches: matches.length, cards: cards.flat() };
+  });
+  return loaded.ok ? loaded.value : { recent: [], coveredMatches: 0, cards: [] };
+}
+
 export const loader = defineHandler(async (c) => {
   const uid = UidSchema.safeParse(c.req.param("uid"));
   const query = QuerySchema.parse({
@@ -67,7 +97,15 @@ export const loader = defineHandler(async (c) => {
   const snapshot = await shellSnapshot();
   if (!uid.success) {
     c.set("notFound", true);
-    return { snapshot, uid: null, query, player: null, history: null, isFavourite: false };
+    return {
+      snapshot,
+      uid: null,
+      query,
+      player: null,
+      history: null,
+      heroes: null,
+      isFavourite: false,
+    };
   }
   const [[player, history], saved] = await Promise.all([
     readPlayer(uid.data, query, false),
@@ -75,7 +113,12 @@ export const loader = defineHandler(async (c) => {
   ]);
   if (!player.ok && player.problem === "not_found") c.set("notFound", true);
   const isFavourite = saved.some((f) => f.uid === uid.data);
-  return { snapshot, uid: uid.data, query, player, history, isFavourite };
+  const heroes = await heroesFromCache(
+    uid.data,
+    history.ok ? history.value.rows.map((r) => r.matchUid) : [],
+    player.ok ? (player.value.profile.signatureHero?.id ?? null) : null,
+  );
+  return { snapshot, uid: uid.data, query, player, history, heroes, isFavourite };
 });
 
 const ActionBody = z.discriminatedUnion("intent", [
@@ -86,6 +129,7 @@ const ActionBody = z.discriminatedUnion("intent", [
   }),
   z.object({ intent: z.literal("favourite"), name: z.string().min(1).max(64) }),
   z.object({ intent: z.literal("unfavourite") }),
+  z.object({ intent: z.literal("hero"), heroId: z.number().int().min(1).max(100_000) }),
 ]);
 
 export const action = defineHandler.withValidator({ body: ActionBody })(async (c, { body }) => {
@@ -96,6 +140,12 @@ export const action = defineHandler.withValidator({ body: ActionBody })(async (c
   }
   if (body.intent === "unfavourite") {
     await favourites.remove(uid);
+    return;
+  }
+  if (body.intent === "hero") {
+    const heroId = body.heroId;
+    const loaded = await loadPlayers((data) => data.get("heroCareer", { uid, heroId }));
+    if (!loaded.ok) return c.json({ errors: { intent: problemMessage(loaded.problem) } }, 422);
     return;
   }
   const [player, history] = await readPlayer(uid, body, true);

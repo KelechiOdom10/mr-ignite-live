@@ -5,7 +5,6 @@ import type { Freshness as FreshnessData, PlayerProfile, Uid } from "@/domain/pl
 import { cn } from "@/lib/utils";
 
 import { Freshness } from "./Freshness";
-import { HeroIcon } from "./HeroIcon";
 import { PlayerAvatar } from "./PlayerAvatar";
 import { RankBadge } from "./RankBadge";
 
@@ -116,20 +115,5 @@ export function PlayerHeader({
       </div>
       <div className="flex shrink-0 flex-wrap items-start gap-2">{actions}</div>
     </header>
-  );
-}
-
-export function SignatureHero({ profile }: { profile: PlayerProfile }) {
-  if (!profile.signatureHero) return null;
-  const hero = profile.signatureHero;
-  return (
-    <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
-      <HeroIcon hero={hero} size={44} />
-      <div>
-        <p className="text-xs text-muted-foreground">Signature hero</p>
-        <p className="font-medium">{hero.name}</p>
-        {hero.role && <p className="text-xs text-muted-foreground">{hero.role}</p>}
-      </div>
-    </div>
   );
 }

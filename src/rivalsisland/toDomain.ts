@@ -5,8 +5,10 @@ import {
   type Career,
   type Freshness,
   type Hero,
+  type HeroCareer,
   type HistoryPage,
   type Leaderboard,
+  type MatchDetail,
   type PlayerProfile,
   type Uid,
 } from "@/domain/player";
@@ -141,6 +143,70 @@ export function toHistoryPage(res: ResponseOf<"history">, freshness: Freshness):
     })),
     page: res.pagination.page,
     hasMore: res.pagination.has_more,
+    freshness,
+  };
+}
+
+export function toMatchDetail(res: ResponseOf<"match">, catalogue: HeroCatalogue): MatchDetail {
+  return {
+    matchUid: res.match_uid,
+    playedAt: res.played_at,
+    mode: res.game_mode,
+    map: res.map.name,
+    category: res.category?.name ?? null,
+    season: res.season.number,
+    durationSeconds: res.duration.seconds,
+    teams: res.teams.map((t) => ({
+      id: t.id,
+      score: t.score,
+      result: t.result,
+      players: res.players
+        .filter((p) => p.team_id === t.id)
+        .map((p) => ({
+          uid: linkableUid(p.uid),
+          name: p.name ?? (p.is_ai ? "Bot" : "Hidden name"),
+          isAi: p.is_ai,
+          leftGame: p.left_game,
+          kills: p.kills,
+          deaths: p.deaths,
+          assists: p.assists,
+          damage: p.damage,
+          healing: p.healing,
+          damageTaken: p.damage_taken,
+          accuracy: p.accuracy,
+          mvp: p.mvp,
+          svp: p.svp,
+          heroes: p.heroes
+            .map((h) => ({ ...toHero(h, catalogue), playSeconds: h.play_time.seconds }))
+            .sort((a, b) => b.playSeconds - a.playSeconds),
+        })),
+    })),
+    draft: (res.draft ?? []).map((d) => ({
+      round: d.round,
+      teamId: d.team_id,
+      action: d.action,
+      hero: d.hero ? toHero(d.hero, catalogue) : null,
+    })),
+  };
+}
+
+export function toHeroCareer(
+  res: ResponseOf<"heroCareer">,
+  catalogue: HeroCatalogue,
+  freshness: Freshness,
+): HeroCareer {
+  const c = res.career;
+  return {
+    hero: toHero(res.hero, catalogue),
+    matches: c.matches,
+    winRate: c.win_rate,
+    playSeconds: c.play_time.seconds,
+    kda: c.kda,
+    kills: c.kills,
+    deaths: c.deaths,
+    assists: c.assists,
+    mvp: c.mvp,
+    svp: c.svp,
     freshness,
   };
 }

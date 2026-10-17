@@ -4,13 +4,9 @@ import { cn } from "@/lib/utils";
 import { AppShell } from "@/ui/AppShell";
 import { CareerTiles } from "@/ui/players/CareerTiles";
 import { Freshness } from "@/ui/players/Freshness";
+import { HeroesPanel } from "@/ui/players/HeroesPanel";
 import { HistoryList } from "@/ui/players/HistoryList";
-import {
-  FavouriteButton,
-  PlayerHeader,
-  RefreshButton,
-  SignatureHero,
-} from "@/ui/players/PlayerHeader";
+import { FavouriteButton, PlayerHeader, RefreshButton } from "@/ui/players/PlayerHeader";
 import { ProblemNotice } from "@/ui/players/ProblemNotice";
 import { useLiveSnapshot } from "@/ui/useLiveSnapshot";
 
@@ -27,10 +23,11 @@ export default function PlayerPage({
   query,
   player,
   history,
+  heroes,
   isFavourite,
 }: Props) {
   const { snapshot, connection, now } = useLiveSnapshot(initial, { view: "events" });
-  if (!uid || !player || !history) {
+  if (!uid || !player || !history || !heroes) {
     return (
       <AppShell snapshot={snapshot} connection={connection} now={now}>
         <ProblemNotice problem="not_found" />
@@ -68,7 +65,13 @@ export default function PlayerPage({
         <aside className="space-y-4">
           {player.ok && (
             <>
-              <SignatureHero profile={player.value.profile} />
+              <HeroesPanel
+                uid={uid}
+                signature={player.value.profile.signatureHero}
+                recent={heroes.recent}
+                coveredMatches={heroes.coveredMatches}
+                cards={heroes.cards}
+              />
               <section aria-labelledby="career" className="space-y-2">
                 <h2 id="career" className="text-sm font-semibold text-muted-foreground">
                   Career

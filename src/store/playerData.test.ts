@@ -175,4 +175,14 @@ describe("player data", () => {
     expect(later.data.player.name).toBe(first.data.player.name);
     expect(fake.calls).toHaveLength(2);
   });
+
+  it("peeks at cached data without calling RivalsIsland or spending", async () => {
+    const { data, fake, ledger } = setup();
+    expect(await data.peek("match", { matchUid: RECORDED_MATCH })).toBeNull();
+    await data.get("match", { matchUid: RECORDED_MATCH });
+    const peeked = await data.peek("match", { matchUid: RECORDED_MATCH });
+    expect(peeked?.data.match_uid).toBe(RECORDED_MATCH);
+    expect(fake.calls).toHaveLength(1);
+    expect((await ledger.summary()).spent).toBe(5);
+  });
 });

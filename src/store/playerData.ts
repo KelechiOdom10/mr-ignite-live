@@ -186,6 +186,15 @@ export function createPlayerData(options: PlayerDataOptions) {
       inFlight.set(key, request);
       return request;
     },
+    /** What the cache already holds, without calling RivalsIsland or touching the budget. */
+    async peek<E extends EndpointName>(
+      name: E,
+      params: EndpointParams[E],
+    ): Promise<Fetched<ResponseOf<E>> | null> {
+      const cached = await cache.get(requestKey(name, params));
+      if (cached?.status !== "ok") return null;
+      return fromCache(name, cached);
+    },
     credits: () => ledger.summary(),
   };
 }

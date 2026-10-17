@@ -7,6 +7,8 @@ export const UidSchema = z
   .brand<"Uid">();
 export type Uid = z.infer<typeof UidSchema>;
 
+export const MatchUidSchema = z.string().regex(/^[0-9_]{5,80}$/);
+
 export const FavouriteSchema = z.object({
   uid: UidSchema,
   name: z.string().min(1).max(64),
@@ -166,3 +168,85 @@ export const HistoryPageSchema = z.object({
   freshness: FreshnessSchema,
 });
 export type HistoryPage = z.infer<typeof HistoryPageSchema>;
+
+export const HeroPlaySchema = HeroSchema.extend({ playSeconds: z.number() });
+export type HeroPlay = z.infer<typeof HeroPlaySchema>;
+
+export const MatchPlayerSchema = z.object({
+  /** null for bots and players we can't link to. */
+  uid: UidSchema.nullable(),
+  name: z.string(),
+  isAi: z.boolean(),
+  leftGame: z.boolean(),
+  kills: z.number(),
+  deaths: z.number(),
+  assists: z.number(),
+  damage: z.number(),
+  healing: z.number(),
+  damageTaken: z.number(),
+  accuracy: z.number().nullable(),
+  mvp: z.boolean(),
+  svp: z.boolean(),
+  heroes: z.array(HeroPlaySchema),
+});
+export type MatchPlayer = z.infer<typeof MatchPlayerSchema>;
+
+export const MatchTeamSchema = z.object({
+  id: z.number().int(),
+  score: z.number().nullable(),
+  result: ResultSchema,
+  players: z.array(MatchPlayerSchema),
+});
+
+export const DraftActionSchema = z.object({
+  round: z.number().int(),
+  teamId: z.number().int(),
+  action: z.enum(["ban", "pick"]),
+  hero: HeroSchema.nullable(),
+});
+
+export const MatchDetailSchema = z.object({
+  matchUid: z.string(),
+  playedAt: z.iso.datetime(),
+  mode: z.string().nullable(),
+  map: z.string().nullable(),
+  category: z.string().nullable(),
+  season: z.string().nullable(),
+  durationSeconds: z.number(),
+  teams: z.array(MatchTeamSchema),
+  draft: z.array(DraftActionSchema),
+});
+export type MatchDetail = z.infer<typeof MatchDetailSchema>;
+
+export const HeroCareerSchema = z.object({
+  hero: HeroSchema,
+  matches: z.number(),
+  winRate: z.number().nullable(),
+  playSeconds: z.number(),
+  kda: z.number().nullable(),
+  kills: z.number().int(),
+  deaths: z.number().int(),
+  assists: z.number().int(),
+  mvp: z.number().int(),
+  svp: z.number().int(),
+  freshness: FreshnessSchema,
+});
+export type HeroCareer = z.infer<typeof HeroCareerSchema>;
+
+/**
+ * Heroes a player used across matches we already hold, most played first. RivalsIsland has no
+ * free per-player hero ranking, so this only covers cached matches and says how many.
+ */
+export function recentHeroes(uid: Uid, matches: readonly MatchDetail[], limit = 3): HeroPlay[] {
+  const byHero = new Map<number, HeroPlay>();
+  for (const match of matches) {
+    for (const player of match.teams.flatMap((t) => t.players)) {
+      if (player.uid !== uid) continue;
+      for (const hero of player.heroes) {
+        const seen = byHero.get(hero.id);
+        byHero.set(hero.id, { ...hero, playSeconds: (seen?.playSeconds ?? 0) + hero.playSeconds });
+      }
+    }
+  }
+  return [...byHero.values()].sort((a, b) => b.playSeconds - a.playSeconds).slice(0, limit);
+}
