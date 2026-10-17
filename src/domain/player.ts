@@ -269,7 +269,9 @@ export function seasonRecord(profile: PlayerProfile): SeasonRecord {
   const { season, seasonMatches: matches, seasonWins } = profile;
   if (season === null || matches === null) return { kind: "unknown", season };
   if (matches === 0) return { kind: "none", season };
-  const wins = seasonWins ?? 0;
+  // A missing win count isn't zero wins.
+  if (seasonWins === null) return { kind: "unknown", season };
+  const wins = seasonWins;
   if (matches < MIN_MATCHES_FOR_WIN_RATE) return { kind: "few", season, matches, wins };
   return { kind: "enough", season, matches, wins, winRate: wins / matches };
 }

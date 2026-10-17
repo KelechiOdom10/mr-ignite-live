@@ -38,12 +38,9 @@ export function HistoryList({
   return (
     <div className="space-y-4">
       {groupBySeason(rows).map((group, i) => (
-        <section
-          key={`${group.season}-${i}`}
-          aria-label={seasonHeading(group.season, currentSeason)}
-        >
+        <section key={`${group.season}-${i}`} aria-labelledby={`season-group-${i}`}>
           <h3 className="mb-2 flex items-baseline justify-between gap-2 text-xs font-medium text-muted-foreground">
-            <span>{seasonHeading(group.season, currentSeason)}</span>
+            <span id={`season-group-${i}`}>{seasonHeading(group.season, currentSeason)}</span>
             <span>
               {group.rows.length} {group.rows.length === 1 ? "match" : "matches"} on this page
             </span>

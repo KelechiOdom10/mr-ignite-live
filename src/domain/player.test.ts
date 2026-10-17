@@ -101,6 +101,10 @@ describe("seasonRecord", () => {
     expect(seasonRecord(profile("10.5", null, null)).kind).toBe("unknown");
     expect(seasonRecord(profile(null, 3, 1)).kind).toBe("unknown");
   });
+
+  it("doesn't turn a missing win count into a 0% season", () => {
+    expect(seasonRecord(profile("10.5", 12, null)).kind).toBe("unknown");
+  });
 });
 
 describe("groupBySeason", () => {

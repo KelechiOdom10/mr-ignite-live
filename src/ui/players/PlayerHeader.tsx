@@ -85,7 +85,7 @@ function SeasonSummary({ record }: { record: SeasonRecord }) {
       <span className="text-muted-foreground">Season {record.season}</span>
     ) : null;
   }
-  const label = <span className="text-foreground">This season ({record.season})</span>;
+  const label = <span className="text-foreground">Ranked this season ({record.season})</span>;
   if (record.kind === "none") {
     return <span className="text-muted-foreground">{label}: no matches yet</span>;
   }
