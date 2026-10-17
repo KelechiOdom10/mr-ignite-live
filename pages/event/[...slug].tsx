@@ -1,6 +1,5 @@
 import { NotFoundGlitch } from "@/components/motion/not-found";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/motion/tabs";
-import { bracketFeeders } from "@/domain/matchView";
 import { matchesOfEvent } from "@/domain/scope";
 import { cn } from "@/lib/utils";
 import { AppShell } from "@/ui/AppShell";
@@ -36,7 +35,6 @@ export default function EventPage({ snapshot: initial, eventId }: Props) {
   const upper = playoffs.filter((m) => /upper/i.test(m.round));
   const lower = playoffs.filter((m) => /lower/i.test(m.round));
   const finals = playoffs.filter((m) => !/upper|lower/i.test(m.round));
-  const feeders = bracketFeeders(playoffs, now);
   const defaultTab = playoffs.some((m) => m.team1 || m.team2) ? "playoffs" : "groups";
   const region = regionKey(event.region);
 
@@ -83,7 +81,6 @@ export default function EventPage({ snapshot: initial, eventId }: Props) {
               event={event}
               snapshot={snapshot}
               now={now}
-              feeders={feeders}
             />
             <Bracket
               title="Lower bracket"
@@ -91,16 +88,8 @@ export default function EventPage({ snapshot: initial, eventId }: Props) {
               event={event}
               snapshot={snapshot}
               now={now}
-              feeders={feeders}
             />
-            <Bracket
-              title="Finals"
-              matches={finals}
-              event={event}
-              snapshot={snapshot}
-              now={now}
-              feeders={feeders}
-            />
+            <Bracket title="Finals" matches={finals} event={event} snapshot={snapshot} now={now} />
           </div>
         </TabsContent>
 

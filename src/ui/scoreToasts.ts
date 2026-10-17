@@ -18,14 +18,16 @@ export function scoreToasts(
   before: ReadonlyMap<string, MatchState>,
   after: ReadonlyMap<string, MatchState>,
   hidden: boolean,
+  now: number,
 ): ScoreToast[] {
+  const bracket = { matches, now };
   const toasts: ScoreToast[] = [];
   for (const match of matches) {
     const prev = before.get(match.id);
     const next = after.get(match.id);
     if (!prev || !next) continue;
-    const prevView = matchView(match, prev, hidden);
-    const nextView = matchView(match, next, hidden);
+    const prevView = matchView(match, prev, hidden, bracket);
+    const nextView = matchView(match, next, hidden, bracket);
     const { side1, side2 } = nextView;
     const pairing = `${side1.short} vs ${side2.short}`;
     const score = `${side1.short} ${side1.score ?? ""}–${side2.score ?? ""} ${side2.short}`;

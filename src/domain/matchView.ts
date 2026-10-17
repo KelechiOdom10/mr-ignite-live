@@ -45,19 +45,27 @@ export interface MatchView {
   summary: string;
 }
 
-export interface Feeder {
+interface Feeder {
   result: "Winner" | "Loser" | "From";
   round: string;
 }
 
-export type SlotFeeders = Partial<Record<Side, Feeder>>;
+type SlotFeeders = Partial<Record<Side, Feeder>>;
+
+export interface BracketContext {
+  matches: readonly Match[];
+  now: number;
+}
+
+const PLAYOFFS = "Playoffs";
 
 export function matchView(
   match: Match,
   state: MatchState,
   hidden: boolean,
-  feeders: SlotFeeders = {},
+  bracket?: BracketContext,
 ): MatchView {
+  const feeders = hidden && bracket ? slotFeeders(match, bracket) : {};
   const revealed = !hidden;
   const unplayed = state.status === "finished" && state.playedMaps.length === 0;
   const scored = revealed && state.status !== "upcoming" && !unplayed;
@@ -66,7 +74,7 @@ export function matchView(
     const team = n === 1 ? match.team1 : match.team2;
     const score = scored ? (n === 1 ? state.wins1 : state.wins2) : null;
     const outcome = winner === null ? "open" : winner === n ? "won" : "lost";
-    const feeder = hidden ? feeders[n] : undefined;
+    const feeder = feeders[n];
     if (team && feeder) {
       const lead = feeder.result === "From" ? "From" : `${feeder.result} of`;
       return {
@@ -164,35 +172,33 @@ function playedBefore(earlier: Match, later: Match): boolean {
 
 // Read from team history: Liquipedia's slot ids don't say which upper-bracket loser drops
 // into which lower-bracket slot.
-export function bracketFeeders(matches: Match[], now: number): ReadonlyMap<string, SlotFeeders> {
-  const finished = matches
+function slotFeeders(match: Match, { matches, now }: BracketContext): SlotFeeders {
+  if (match.phase !== PLAYOFFS) return {};
+  const earlier = matches
+    .filter(
+      (m) =>
+        m.phase === PLAYOFFS &&
+        m.id !== match.id &&
+        bracketOf(m) === bracketOf(match) &&
+        playedBefore(m, match),
+    )
     .map((m) => ({ m, s: matchState(m, now) }))
     .filter(({ s }) => s.status === "finished");
-  const feeders = new Map<string, SlotFeeders>();
-  for (const match of matches) {
-    const slots: SlotFeeders = {};
-    for (const n of [1, 2] as const) {
-      const team = n === 1 ? match.team1 : match.team2;
-      if (!team) continue;
-      const previous = finished
-        .filter(
-          ({ m }) =>
-            m.id !== match.id &&
-            bracketOf(m) === bracketOf(match) &&
-            (m.team1?.name === team.name || m.team2?.name === team.name) &&
-            playedBefore(m, match),
-        )
-        .reduce<(typeof finished)[number] | undefined>(
-          (latest, f) => (!latest || playedBefore(latest.m, f.m) ? f : latest),
-          undefined,
-        );
-      if (!previous) continue;
-      const side = previous.m.team1?.name === team.name ? 1 : 2;
-      const result =
-        previous.s.winner === 0 ? "From" : previous.s.winner === side ? "Winner" : "Loser";
-      slots[n] = { result, round: previous.m.round };
-    }
-    if (slots[1] || slots[2]) feeders.set(match.id, slots);
+  const feeders: SlotFeeders = {};
+  for (const n of [1, 2] as const) {
+    const team = n === 1 ? match.team1 : match.team2;
+    if (!team) continue;
+    const previous = earlier
+      .filter(({ m }) => m.team1?.name === team.name || m.team2?.name === team.name)
+      .reduce<(typeof earlier)[number] | undefined>(
+        (latest, f) => (!latest || playedBefore(latest.m, f.m) ? f : latest),
+        undefined,
+      );
+    if (!previous) continue;
+    const side = previous.m.team1?.name === team.name ? 1 : 2;
+    const result =
+      previous.s.winner === 0 ? "From" : previous.s.winner === side ? "Winner" : "Loser";
+    feeders[n] = { result, round: previous.m.round };
   }
   return feeders;
 }

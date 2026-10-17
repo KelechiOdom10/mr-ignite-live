@@ -32,7 +32,7 @@ function useScoreToasts(snapshot: Snapshot, now: number) {
     const prev = previous.current;
     previous.current = next;
     if (!prev) return;
-    for (const t of scoreToasts(snapshot.matches, prev, next, hidden)) {
+    for (const t of scoreToasts(snapshot.matches, prev, next, hidden, now)) {
       showToast({
         title: t.title,
         description: t.description,

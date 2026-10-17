@@ -29,7 +29,7 @@ export function stripMatches(snapshot: Snapshot, now: number): Match[] {
 }
 
 function Chip({ match, snapshot, now }: { match: Match; snapshot: Snapshot; now: number }) {
-  const view = useMatchView(match, now);
+  const view = useMatchView(match, now, snapshot.matches);
   const event = snapshot.events.find((e) => e.id === match.eventId);
   const row = (side: SideView) => (
     <div

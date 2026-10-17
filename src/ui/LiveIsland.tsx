@@ -23,7 +23,7 @@ function IslandMatch({
   now: number;
   position: string | null;
 }) {
-  const { side1, side2, summary } = useMatchView(match, now);
+  const { side1, side2, summary } = useMatchView(match, now, snapshot.matches);
   return (
     <Link
       href={`/match/${match.id}`}

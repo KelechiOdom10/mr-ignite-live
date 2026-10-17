@@ -1,4 +1,3 @@
-import type { SlotFeeders } from "@/domain/matchView";
 import type { IgniteEvent, Match, Snapshot } from "@/domain/model";
 
 import { MatchCard } from "./MatchCard";
@@ -25,14 +24,12 @@ export function Bracket({
   event,
   snapshot,
   now,
-  feeders,
 }: {
   title: string;
   matches: Match[];
   event: IgniteEvent | undefined;
   snapshot: Snapshot;
   now: number;
-  feeders: ReadonlyMap<string, SlotFeeders>;
 }) {
   const rounds = roundsOf(matches);
   if (rounds.length === 0) return null;
@@ -53,7 +50,6 @@ export function Bracket({
                       snapshot={snapshot}
                       now={now}
                       footer="none"
-                      feeders={feeders.get(m.id)}
                     />
                   </li>
                 ))}

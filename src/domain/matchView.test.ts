@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { aMap, aMatch } from "../../test/builders";
 import { matchState } from "./matchState";
-import { bracketFeeders, formView, matchView } from "./matchView";
+import { formView, matchView } from "./matchView";
 import type { Match } from "./model";
 
 const NOW = Date.parse("2026-10-16T23:00:00.000Z");
@@ -67,7 +67,7 @@ describe("matchView with spoilers hidden", () => {
   });
 });
 
-describe("bracketFeeders", () => {
+describe("matchView in a hidden bracket", () => {
   const team = (short: string) => ({ name: short, short });
   const at = (hour: number) => `2026-10-16T${String(hour).padStart(2, "0")}:00:00.000Z`;
   const won = (winner: 1 | 2) => [aMap(1, winner), aMap(2, winner), aMap(3, winner)];
@@ -102,11 +102,11 @@ describe("bracketFeeders", () => {
     team2: null,
   });
   const bracket = [semi1, semi2, upperFinal, lowerQuarter];
-  const hiddenView = (m: Match) =>
-    matchView(m, matchState(m, NOW), true, bracketFeeders(bracket, NOW).get(m.id));
+  const viewIn = (m: Match, matches: Match[], hidden = true) =>
+    matchView(m, matchState(m, NOW), hidden, { matches, now: NOW });
 
   it("doesn't name the semifinal winners in a hidden upper final", () => {
-    const v = hiddenView(upperFinal);
+    const v = viewIn(upperFinal, bracket);
     expect([v.side1.team, v.side2.team]).toEqual([null, null]);
     expect([v.side1.name, v.side1.short]).toEqual([
       "Winner of Upper Bracket Semifinals",
@@ -116,18 +116,18 @@ describe("bracketFeeders", () => {
   });
 
   it("names a dropped team as the loser of its upper-bracket round, though ids share a round number", () => {
-    expect(hiddenView(lowerQuarter).side1.name).toBe("Loser of Upper Bracket Semifinals");
-    expect(hiddenView(lowerQuarter).side2.name).toBe("TBD");
+    expect(viewIn(lowerQuarter, bracket).side1.name).toBe("Loser of Upper Bracket Semifinals");
+    expect(viewIn(lowerQuarter, bracket).side2.name).toBe("TBD");
   });
 
   it("keeps first-round teams, which came from outside the bracket", () => {
-    expect([hiddenView(semi1).side1.short, hiddenView(semi1).side2.short]).toEqual(["FLY", "100T"]);
+    const v = viewIn(semi1, bracket);
+    expect([v.side1.short, v.side2.short]).toEqual(["FLY", "100T"]);
   });
 
   it("says where a team came from when its previous series has no recorded winner", () => {
     const walkoverSemi = { ...semi1, maps: [], markedFinished: true };
-    const feeders = bracketFeeders([walkoverSemi, semi2, upperFinal], NOW);
-    const v = matchView(upperFinal, matchState(upperFinal, NOW), true, feeders.get(upperFinal.id));
+    const v = viewIn(upperFinal, [walkoverSemi, semi2, upperFinal]);
     expect([v.side1.name, v.side1.short]).toEqual([
       "From Upper Bracket Semifinals",
       "From UB Semifinals",
@@ -136,22 +136,24 @@ describe("bracketFeeders", () => {
 
   it("orders by round when start times are missing", () => {
     const undated = bracket.map((m) => ({ ...m, startsAt: null }));
-    const feeders = bracketFeeders(undated, NOW).get("kOK_R4M1");
-    expect(feeders?.[1]).toEqual({ result: "Winner", round: "Upper Bracket Semifinals" });
+    const final = undated.find((m) => m.id === upperFinal.id) ?? upperFinal;
+    expect(viewIn(final, undated).side1.name).toBe("Winner of Upper Bracket Semifinals");
   });
 
   it("ignores another bracket's results for the same team", () => {
     const otherEvent = { ...semi1, id: "other_R1M1", eventId: "MR Ignite/2026/Stage 2/EMEA" };
-    expect(bracketFeeders([otherEvent, semi1], NOW).has(semi1.id)).toBe(false);
+    expect(viewIn(semi1, [otherEvent, semi1]).side1.short).toBe("FLY");
+  });
+
+  it("doesn't relabel group-stage teams by their earlier group results", () => {
+    const group = (id: string, hour: number, maps: Match["maps"]) =>
+      aMatch({ id, phase: "Group Stage", round: "Week 1", startsAt: at(hour), maps });
+    const second = group("grp_0002", 12, []);
+    expect(viewIn(second, [group("grp_0001", 10, won(1)), second]).side1.short).toBe("TLC");
   });
 
   it("names the teams when spoilers are shown", () => {
-    const v = matchView(
-      upperFinal,
-      matchState(upperFinal, NOW),
-      false,
-      bracketFeeders(bracket, NOW).get(upperFinal.id),
-    );
+    const v = viewIn(upperFinal, bracket, false);
     expect([v.side1.short, v.side2.short]).toEqual(["FLY", "TLC"]);
   });
 });

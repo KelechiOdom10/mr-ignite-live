@@ -3,7 +3,7 @@ import { useSyncExternalStore } from "react";
 
 import { Switch } from "@/components/motion/switch";
 import { matchState } from "@/domain/matchState";
-import { matchView, type MatchView, type SlotFeeders } from "@/domain/matchView";
+import { matchView, type MatchView } from "@/domain/matchView";
 import type { Match } from "@/domain/model";
 
 import { SPOILER_COOKIE, spoilerCookie, spoilersHiddenIn } from "./spoilerCookie";
@@ -42,8 +42,9 @@ export function useSpoilersHidden(): boolean {
   return useSyncExternalStore(subscribe, read, () => spoilersHidden);
 }
 
-export function useMatchView(match: Match, now: number, feeders?: SlotFeeders): MatchView {
-  return matchView(match, matchState(match, now), useSpoilersHidden(), feeders);
+export function useMatchView(match: Match, now: number, matches?: readonly Match[]): MatchView {
+  const bracket = matches ? { matches, now } : undefined;
+  return matchView(match, matchState(match, now), useSpoilersHidden(), bracket);
 }
 
 export function SpoilerToggle({ compact = false }: { compact?: boolean }) {
