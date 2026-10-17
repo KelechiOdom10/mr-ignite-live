@@ -166,4 +166,18 @@ describe("player data", () => {
     );
     expect(fake.calls).toHaveLength(1);
   });
+
+  it("keeps the last good copy when a refresh gets a response that broke our schema", async () => {
+    const path = `/players/${trqstMe}/career`;
+    const scripted: Record<string, Scripted> = {};
+    const { data, fake } = setup({ scripted });
+    const first = await data.get("career", { uid: trqstMe });
+    scripted[path] = { status: 200, cost: 10, body: { player: {} } };
+    const refreshed = await data.get("career", { uid: trqstMe }, { refresh: true });
+    expect(refreshed.refreshFailed).toBe(true);
+    expect(refreshed.data.player.name).toBe(first.data.player.name);
+    const later = await data.get("career", { uid: trqstMe });
+    expect(later.data.player.name).toBe(first.data.player.name);
+    expect(fake.calls).toHaveLength(2);
+  });
 });
