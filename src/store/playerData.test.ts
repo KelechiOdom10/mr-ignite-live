@@ -84,13 +84,8 @@ describe("player data", () => {
   });
 
   it("remembers a private history for a while at no cost, instead of asking again on every view", async () => {
-    const path = `/players/${sypeh}/match-history?page=0&page_size=20&category=2`;
-    const { data, fake, ledger } = setup({
-      scripted: {
-        [path]: { status: 403, cost: 0, body: { error: "private", code: "match_history_private" } },
-      },
-    });
-    const params = { uid: sypeh, page: 0, category: 2 };
+    const { data, fake, ledger } = setup();
+    const params = { uid: trqstMe, page: 0, category: 2 };
     await expect(data.get("history", params)).rejects.toBeInstanceOf(MatchHistoryPrivateError);
     await expect(data.get("history", params)).rejects.toBeInstanceOf(MatchHistoryPrivateError);
     expect(fake.calls).toHaveLength(1);

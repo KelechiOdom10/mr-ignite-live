@@ -1,0 +1,25 @@
+HTTP 200
+alt-svc: h3=":443"; ma=86400
+cache-control: private, no-store
+cf-cache-status: DYNAMIC
+cf-ray: a4bbbc4d4dc2bd6f-LHR
+connection: keep-alive
+content-length: 40
+content-security-policy: default-src 'none'; frame-ancestors 'none'; base-uri 'none'
+content-type: application/json
+date: Sat, 17 Oct 2026 02:04:57 GMT
+nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+permissions-policy: geolocation=(), microphone=(), camera=()
+referrer-policy: no-referrer
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=syI6SKrgtGRF9jxOLcFK53sQLBaQeXY14ImFOP3d0RSpsOvaECSOMfxPVRcf1rsgiOYKQMg3TDkEusA0%2F4h8ZjbcPNq1LaooMQh2LLwzpAATcSh7um1ZRLqisTv0c20FVRCcac4FuQ%3D%3D"}]}
+server: cloudflare
+strict-transport-security: max-age=31536000; includeSubDomains
+vary: Origin
+x-content-type-options: nosniff
+x-credit-balance: 9943
+x-credit-cost: 5
+x-frame-options: DENY
+x-ratelimit-burst: 200
+x-ratelimit-rate: 20
+x-ratelimit-remaining: 195
+x-request-id: aa8a8b884c8923c282faed70fefe89b2

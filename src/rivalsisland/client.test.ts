@@ -42,21 +42,26 @@ describe("RivalsIsland client against recorded responses", () => {
     expect(board.data.entries).toHaveLength(100);
     expect(board.cost).toBe(1);
 
+    const history = await c.call("history", { uid: sypeh, page: 0, category: 2 });
+    expect(history.data.matches).toHaveLength(20);
+    expect(history.data.matches.every((m) => m.category?.name === "Competitive")).toBe(true);
+    expect(history.cost).toBe(10);
+
+    const sypehCareer = await c.call("career", { uid: sypeh });
+    expect(sypehCareer.data.player.name).toBe("Sypeh");
+
+    const miss = await c.call("search", { name: "zzqxnoplayer77" });
+    expect(miss.data.player).toBeNull();
+    expect(miss.cost).toBe(5);
+
     const heroes = await c.call("heroes", {});
     expect(heroes.data.heroes).toHaveLength(56);
     expect(heroes.cost).toBeNull();
   });
 
   it("turns a private history into its own error at no cost, so the page can show rank without it", async () => {
-    const path = `/players/${sypeh}/match-history?page=0&page_size=20&category=2`;
-    const { client: c } = client({
-      [path]: {
-        status: 403,
-        cost: 0,
-        body: { error: "match history private", code: "match_history_private" },
-      },
-    });
-    const call = c.call("history", { uid: sypeh, page: 0, category: 2 });
+    const { client: c } = client();
+    const call = c.call("history", { uid: trqstMe, page: 0, category: 2 });
     await expect(call).rejects.toBeInstanceOf(MatchHistoryPrivateError);
     await expect(call).rejects.toMatchObject({ creditCost: 0 });
   });
@@ -66,9 +71,10 @@ describe("RivalsIsland client against recorded responses", () => {
       "/heroes": { status: 402, cost: 0, body: { error: "premium", code: "premium_required" } },
     });
     await expect(c.call("heroes", {})).rejects.toBeInstanceOf(PremiumRequiredError);
-    await expect(c.call("career", { uid: UidSchema.parse("42") })).rejects.toBeInstanceOf(
+    await expect(c.call("career", { uid: UidSchema.parse("1") })).rejects.toBeInstanceOf(
       NotFoundError,
     );
+    await expect(c.call("match", { matchUid: "1_1_1_1_1" })).rejects.toBeInstanceOf(NotFoundError);
   });
 
   it("fails loudly when a response changes shape instead of rendering half a player", async () => {

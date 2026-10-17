@@ -1,6 +1,6 @@
 # RivalsIsland fixtures
 
-Raw responses from https://api.rivalsisland.com (OpenAPI 2.1.0), recorded 2026-10-17 with a free-tier key. Each `.json` body sits beside the `.headers` of the same response (`heroes` was recorded without headers). Copied byte-for-byte from the original recording; never hand-edit; re-record instead.
+Raw responses from https://api.rivalsisland.com (OpenAPI 2.1.0), recorded 2026-10-17 with a free-tier key. Each `.json` body sits beside the `.headers` of the same response (`heroes` was recorded without headers). Copied byte-for-byte from the original recording; never hand-edit; re-record with `scripts/record-rivalsisland.ts --max-credits <n> name=/path` instead (it reads the key from `.env` and never prints it).
 
 | File | Request | Credits | sha256 |
 | --- | --- | --- | --- |
@@ -19,11 +19,26 @@ Raw responses from https://api.rivalsisland.com (OpenAPI 2.1.0), recorded 2026-1
 
 Check with `shasum -a 256 test/fixtures/rivalsisland/*.json`.
 
-The original match-history recording is not here: its body (a 200 for uid 670067075) and headers (a 403) came from different requests, so it needs re-recording.
+## Recorded 2026-10-17 with `scripts/record-rivalsisland.ts` (31 credits, balance 9,948 → 9,917)
+
+| File | Request | Credits | sha256 |
+| --- | --- | --- | --- |
+| `history-private.json` | `/players/1364513129/match-history?page=0&page_size=20&category=2` | 0 (403) | `c013f9685f946e76da37f79f88d9325e419b04896136ab7abdd2a5d4aeb33676` |
+| `career-not-found.json` | `/players/1/career` | 0 (404) | `eec91fb4a505f0fccda51fc67ab1ce633078ddf9606357385a9cd98878c1e716` |
+| `match-not-found.json` | `/matches/1_1_1_1_1` | 0 (404) | `b6bb3e51ab98df64719f75cf015352431162c2147f89fe385cc395000677c697` |
+| `search-miss.json` | `/players/search?name=zzqxnoplayer77` | 5 (200, `player: null`) | `fc2c417b3c2c15e95b15921f884b91656da6138463bb5b93d0906c50fe566939` |
+| `search-sypeh.json` | `/players/search?name=Sypeh` | 5 | `0d65c987b9b2432e818cb84eaeb2fc30a0736335452596c95e21b2e75e8cb1a6` |
+| `career-sypeh.json` | `/players/670067075/career` | 10 | `adddacffd62527e4a72f99b78434dc658e7acb5ea972002ea54cc957ff046886` |
+| `history-sypeh.json` | `/players/670067075/match-history?page=0&page_size=20&category=2` | 10 | `0902bb27d5d0e8f30d34a37f1f203bd423f88a4d34d8b4d32b36a2b08c7af81c` |
+| `leaderboard-pc.json` | `/leaderboard?device_type=pc&limit=100` | 1 | `43eee12c30e3ede2fa18f2305e4e33b79ae8e84f6794af83abc9ca01adfac862` |
+
+Sypeh's newest Competitive match in `history-sypeh.json` is the match already recorded in `match-detail.json`.
+
+The original match-history recording is not here: its body (a 200 for uid 670067075) and headers (a 403) came from different requests, so it was re-recorded as `history-sypeh` above.
 
 ## Vendor quirks
 
-- Every response carries `x-credit-balance` and `x-credit-cost`. Failed requests cost 0.
+- Every response carries `x-credit-balance` and `x-credit-cost`. Failed requests cost 0, but a search that finds nobody is a 200 with `player: null` and costs 5.
 - Match history is private for many players: `403 {"code":"match_history_private"}`. Careers can be private too (`career_private`).
 - `/players/{uid}/career` embeds the full profile, so the profile endpoint isn't needed.
 - Hero career `matches` and `wins` are fractional (for example `7.5014`).
