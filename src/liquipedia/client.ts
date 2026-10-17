@@ -5,6 +5,8 @@ export const LIQUIPEDIA_API = "https://liquipedia.net/marvelrivals/api.php";
 export const LIQUIPEDIA_USER_AGENT =
   "RivalsHub/0.1 (personal Marvel Rivals site; contact via github.com/KelechiOdom10)";
 const DEFAULT_MIN_GAP_MS = 2100;
+// A dead connection otherwise hangs the in-flight sync until the runtime gives up, tens of minutes later.
+const DEFAULT_TIMEOUT_MS = 10_000;
 const TITLES_PER_QUERY = 50;
 
 export class LiquipediaHttpError extends Error {
@@ -104,6 +106,7 @@ export interface LiquipediaClientOptions {
   wait?: (ms: number) => Promise<void>;
   now?: () => number;
   minGapMs?: number;
+  timeoutMs?: number;
 }
 
 export type LiquipediaClient = ReturnType<typeof createLiquipediaClient>;
@@ -120,6 +123,7 @@ export function createLiquipediaClient(options: LiquipediaClientOptions = {}) {
   const wait = options.wait ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
   const now = options.now ?? Date.now;
   const minGapMs = options.minGapMs ?? DEFAULT_MIN_GAP_MS;
+  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   // Shared by every run in this isolate, so back-to-back runs stay paced too.
   let lastRequestAt = Number.NEGATIVE_INFINITY;
 
@@ -140,6 +144,7 @@ export function createLiquipediaClient(options: LiquipediaClientOptions = {}) {
     const url = `${LIQUIPEDIA_API}?${new URLSearchParams({ format: "json", formatversion: "2", ...params })}`;
     const res = await doFetch(url, {
       headers: { "User-Agent": LIQUIPEDIA_USER_AGENT, "Accept-Encoding": "gzip" },
+      signal: AbortSignal.timeout(timeoutMs),
     });
     if (res.status === 429) throw new LiquipediaRateLimitedError(res.status, action);
     if (!res.ok) throw new LiquipediaHttpError(res.status, action);

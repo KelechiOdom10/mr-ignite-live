@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const MRVL_QUERY_URL = "https://bold-walrus-4.convex.cloud/api/query";
 const USER_AGENT = "RivalsHub/0.1 (personal Marvel Rivals site)";
+const DEFAULT_TIMEOUT_MS = 10_000;
 
 export class MrvlHttpError extends Error {
   override name = "MrvlHttpError";
@@ -115,12 +116,14 @@ const EnvelopeSchema = z.object({
 
 export interface MrvlClientOptions {
   fetch?: typeof fetch;
+  timeoutMs?: number;
 }
 
 export type MrvlClient = ReturnType<typeof createMrvlClient>;
 
 export function createMrvlClient(options: MrvlClientOptions = {}) {
   const doFetch = options.fetch ?? fetch;
+  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
   async function query<S extends z.ZodType>(
     schema: S,
@@ -131,6 +134,7 @@ export function createMrvlClient(options: MrvlClientOptions = {}) {
       method: "POST",
       headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
       body: JSON.stringify({ path, args, format: "json" }),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     if (!res.ok) throw new MrvlHttpError(res.status, path);
     const envelope = EnvelopeSchema.safeParse(await res.json());

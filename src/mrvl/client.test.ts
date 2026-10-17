@@ -12,6 +12,12 @@ function respondWith(body: unknown, status = 200) {
   return { fetchImpl, calls };
 }
 
+/** A fetch over a dead connection: it never settles unless its signal aborts. */
+const hangingFetch: typeof fetch = (_input, init) =>
+  new Promise((_resolve, reject) => {
+    init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+  });
+
 describe("createMrvlClient", () => {
   it("posts a Convex query and unwraps the envelope", async () => {
     const { fetchImpl, calls } = respondWith(mrvlFixture("live.json"));
@@ -36,5 +42,10 @@ describe("createMrvlClient", () => {
     await expect(createMrvlClient({ fetch: fetchImpl }).matchPage("x")).rejects.toBeInstanceOf(
       MrvlHttpError,
     );
+  });
+
+  it("gives up on a request that never answers, so a dead connection can't stall the sync", async () => {
+    const call = createMrvlClient({ fetch: hangingFetch, timeoutMs: 20 }).matchPage("x");
+    await expect(call).rejects.toMatchObject({ name: "TimeoutError" });
   });
 });
