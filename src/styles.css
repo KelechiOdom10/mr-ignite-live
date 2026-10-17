@@ -30,6 +30,15 @@
   --region-china: oklch(68% 0.19 25);
   --region-pacific: oklch(74% 0.12 190);
   --region-global: oklch(84% 0.14 90);
+  --rank-bronze: oklch(66% 0.09 55);
+  --rank-silver: oklch(82% 0.01 250);
+  --rank-gold: oklch(83% 0.14 85);
+  --rank-platinum: oklch(80% 0.08 200);
+  --rank-diamond: oklch(76% 0.12 240);
+  --rank-grandmaster: oklch(72% 0.17 300);
+  --rank-celestial: oklch(78% 0.13 330);
+  --rank-eternity: oklch(74% 0.17 20);
+  --rank-oaa: oklch(86% 0.16 95);
   color-scheme: dark;
 }
 
@@ -61,6 +70,15 @@
   --color-region-china: var(--region-china);
   --color-region-pacific: var(--region-pacific);
   --color-region-global: var(--region-global);
+  --color-rank-bronze: var(--rank-bronze);
+  --color-rank-silver: var(--rank-silver);
+  --color-rank-gold: var(--rank-gold);
+  --color-rank-platinum: var(--rank-platinum);
+  --color-rank-diamond: var(--rank-diamond);
+  --color-rank-grandmaster: var(--rank-grandmaster);
+  --color-rank-celestial: var(--rank-celestial);
+  --color-rank-eternity: var(--rank-eternity);
+  --color-rank-oaa: var(--rank-oaa);
   --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, monospace;
 }

@@ -1,5 +1,7 @@
 import { defineHandler } from "void";
 
+import { LIQUIPEDIA_USER_AGENT } from "@/liquipedia/client";
+
 import { imageSource } from "../../src/imageSource";
 
 const ONE_WEEK = 7 * 24 * 60 * 60;
@@ -17,7 +19,7 @@ export const GET = defineHandler(async (c) => {
   if (cached) return cached;
 
   const upstream = await fetch(source, {
-    headers: { "User-Agent": "MRIgniteLive/0.1 (personal live score tracker)" },
+    headers: { "User-Agent": LIQUIPEDIA_USER_AGENT },
     redirect: "manual",
   });
   const contentType = upstream.headers.get("Content-Type") ?? "";

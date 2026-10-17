@@ -1,6 +1,6 @@
-# Ignite Live
+# Rivals Hub
 
-Live Marvel Rivals Ignite 2026 scores, brackets and results, built on [Void](https://void.cloud) with [beUI](https://beui.dev) components.
+A personal Marvel Rivals site. Its esports section has live Ignite 2026 scores, brackets and results, built on [Void](https://void.cloud) with [beUI](https://beui.dev) components.
 
 ## How it stays live
 
@@ -16,10 +16,15 @@ Liquipedia asks API users for an identifying User-Agent, gzip, and at most one r
 
 ```sh
 bun install
-bun run dev        # http://localhost:5180
+bunx void db migrate   # create or update the local D1 tables (players section)
+bun run dev            # http://localhost:5180 (players section replays recorded fixtures)
 ```
 
 Cron triggers don't fire under `vite dev`, so in development `/api/snapshot` syncs itself at most once a minute. To fire the cron by hand, use the curl command Void prints on start.
+
+## Players section
+
+Player data comes from the paid [RivalsIsland API](https://api.rivalsisland.com/docs). By default the dev server replays recorded responses at no cost. To use the live API, put `RIVALSISLAND_API_KEY` and `RIVALSISLAND_MODE=live` in `.env`; `RIVALSISLAND_CREDIT_BUDGET` (default 200) caps spending and `/api/credits` shows what's been spent. See [ADR 8](docs/adr/0008-rivalsisland-for-player-data.md).
 
 ## Deploy
 
@@ -29,13 +34,13 @@ bunx void deploy                      # first time: choose Cloudflare or a Void 
 
 ## Layout
 
-| Path                                          | What                                                                      |
-| --------------------------------------------- | ------------------------------------------------------------------------- |
-| `src/domain/`                                 | Zod schemas, `matchState` (live / upcoming / finished) and scoping        |
-| `src/liquipedia/`                             | Liquipedia API client (pacing and per-run budget), wikitext parser, teams |
-| `src/mrvl/`                                   | mrvl.net client and Liquipedia↔mrvl linking                               |
-| `src/store/plan.ts`                           | Pure sync planning: what changed, the next stored snapshot                |
-| `src/store/run.ts`                            | One sync run: fetch, compute, write each KV key at most once              |
-| `src/store/snapshot.ts`, `src/store/stats.ts` | Liquipedia and mrvl fetching, KV reads and writes through a `KvStore`     |
-| `src/sync.ts`, `crons/`, `routes/`, `pages/`  | Runtime shell: binds void/kv and the clients, cron, API routes, SSR pages |
-| `src/ui/`, `src/components/motion/`           | React views; beUI components (copied from the registry)                   |
+| Path                                          | What                                                                          |
+| --------------------------------------------- | ----------------------------------------------------------------------------- |
+| `src/domain/`                                 | Zod schemas, `matchState` (live / upcoming / finished) and scoping            |
+| `src/liquipedia/`                             | Liquipedia API client (pacing and per-run budget), wikitext parser, teams     |
+| `src/mrvl/`                                   | mrvl.net client and Liquipedia↔mrvl linking                                   |
+| `src/store/plan.ts`                           | Pure sync planning: what changed, the next stored snapshot                    |
+| `src/store/run.ts`                            | One sync run: fetch, compute, write each KV key at most once                  |
+| `src/store/snapshot.ts`, `src/store/stats.ts` | Liquipedia and mrvl fetching, KV reads and writes through a `KvStore`         |
+| `src/sync.ts`, `crons/`, `routes/`, `pages/`  | Runtime shell: binds void/kv, D1 and the clients, cron, API routes, SSR pages |
+| `src/ui/`, `src/components/motion/`           | React views; beUI components (copied from the registry)                       |

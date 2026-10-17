@@ -1,0 +1,25 @@
+HTTP/2 200 
+date: Sat, 17 Oct 2026 01:02:07 GMT
+content-type: application/json
+cache-control: private, no-store
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=ixd6vUc5VigL18NyahdBGStM3zW9mFW4LmM6nNk4SNYykRyUL6xAMINEI8DQ8Fnnk3t%2BHj5kQXnF1OcL6XBb0qTskIG7vF0xfeclDQQMoEs6ict71NbuXCuEYHTc7hExK1CQkIrDyA%3D%3D"}]}
+content-security-policy: default-src 'none'; frame-ancestors 'none'; base-uri 'none'
+permissions-policy: geolocation=(), microphone=(), camera=()
+referrer-policy: no-referrer
+strict-transport-security: max-age=31536000; includeSubDomains
+vary: Origin
+vary: Accept-Encoding
+x-content-type-options: nosniff
+x-credit-balance: 9958
+x-credit-cost: 5
+x-frame-options: DENY
+x-ratelimit-burst: 200
+x-ratelimit-rate: 20
+x-ratelimit-remaining: 195
+x-request-id: 016b1b51a852c700f7a7e4ed02c275b5
+cf-cache-status: DYNAMIC
+nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+server: cloudflare
+cf-ray: a4bb604118b9a690-LHR
+alt-svc: h3=":443"; ma=86400
+

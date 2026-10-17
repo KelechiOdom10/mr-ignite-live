@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const MRVL_QUERY_URL = "https://bold-walrus-4.convex.cloud/api/query";
-const USER_AGENT = "MRIgniteLive/0.1 (personal live score tracker)";
+const USER_AGENT = "RivalsHub/0.1 (personal Marvel Rivals site)";
 
 export class MrvlHttpError extends Error {
   override name = "MrvlHttpError";
