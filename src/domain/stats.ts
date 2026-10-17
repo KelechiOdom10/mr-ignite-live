@@ -35,12 +35,26 @@ export const TeamMapStatsSchema = z.object({
 });
 export type TeamMapStats = z.infer<typeof TeamMapStatsSchema>;
 
+export const DraftActionSchema = z.object({
+  /** The game's draft step; both teams act in some steps. */
+  phase: z.number().int().nonnegative(),
+  /** 1 or 2, in the Liquipedia match's team order. */
+  side: z.union([z.literal(1), z.literal(2)]),
+  /** The lobby's team camp, which decides who acts in each step. */
+  camp: z.number().int(),
+  kind: z.enum(["ban", "protect"]),
+  hero: HeroSchema,
+});
+export type DraftAction = z.infer<typeof DraftActionSchema>;
+
 export const MapStatsSchema = z.object({
   index: z.number().int().positive(),
   map: z.string(),
   durationSeconds: z.number().nullable(),
   /** Ordered to match the Liquipedia match's team1, team2. */
   teams: z.tuple([TeamMapStatsSchema, TeamMapStatsSchema]),
+  /** Bans and protects in draft order; null for maps stored before it was kept, or without a timeline. */
+  draft: z.array(DraftActionSchema).nullable().default(null),
 });
 export type MapStats = z.infer<typeof MapStatsSchema>;
 

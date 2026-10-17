@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 
+import { MatchStatsSchema as StoredStats } from "@/domain/stats";
 import { createLiquipediaClient } from "@/liquipedia/client";
 import { createMrvlClient } from "@/mrvl/client";
 
@@ -20,6 +22,8 @@ import {
 import { memoryKvStore } from "../../test/memoryKv";
 import { syncOnce } from "./run";
 import { readStored } from "./snapshot";
+
+const IndexSchema = z.record(z.string(), z.object({ sourceUpdatedAt: z.string() }));
 
 // Liquipedia ids from the recorded Americas bracket.
 const FLY_100T = "kOKqgtPHq4_R2M1";
@@ -181,6 +185,34 @@ describe("syncOnce on match day", () => {
     expect(refetched.map((r) => r.args.id)).toEqual([FLY_100T_MRVL_ID]);
     expect(day.store.putCounts()).toEqual({ "stats-index:v2": 1 });
     expect(outcome.changed).toBe(false);
+  });
+
+  it("refetches a recent series indexed before draft order was kept, once", async () => {
+    const day = matchDay();
+    await day.sync();
+    const key = `stats:v2:${FLY_100T}`;
+    const stored = StoredStats.parse(await day.store.get(key));
+    await day.store.put(key, { ...stored, maps: stored.maps.map(({ draft: _, ...m }) => m) });
+    const index = IndexSchema.parse(await day.store.get("stats-index:v2"));
+    await day.store.put("stats-index:v2", {
+      ...index,
+      [FLY_100T]: {
+        sourceMatchId: FLY_100T_MRVL_ID,
+        sourceUpdatedAt: index[FLY_100T]?.sourceUpdatedAt,
+      },
+    });
+    const pageRequests = () =>
+      day.mrvl.requests.filter(
+        (r) => r.path === "matches:getPageData" && r.args.id === FLY_100T_MRVL_ID,
+      ).length;
+    const before = pageRequests();
+
+    await day.sync();
+    await day.sync();
+
+    expect(pageRequests() - before).toBe(1);
+    const backfilled = StoredStats.parse(await day.store.get(key));
+    expect(backfilled.maps.every((m) => m.draft?.length === 14)).toBe(true);
   });
 
   it("doesn't let one failing mrvl series page hold back the others, and retries it next run", async () => {

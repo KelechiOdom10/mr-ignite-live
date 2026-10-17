@@ -1,5 +1,12 @@
 import type { MapOverride, MapWinner, Match, Team } from "@/domain/model";
-import type { Hero, MapStats, MatchStats, PlayerStats, TeamMapStats } from "@/domain/stats";
+import type {
+  DraftAction,
+  Hero,
+  MapStats,
+  MatchStats,
+  PlayerStats,
+  TeamMapStats,
+} from "@/domain/stats";
 
 import type { MrvlGame, MrvlMatchPage, MrvlMatchSummary, MrvlScoreboardTeam } from "./client";
 
@@ -144,6 +151,33 @@ function toTeam(team: MrvlScoreboardTeam): TeamMapStats {
   };
 }
 
+function isDraftKind(kind: string): kind is DraftAction["kind"] {
+  return kind === "ban" || kind === "protect";
+}
+
+/** Each team's timeline holds only its own steps; null when mrvl sent no timeline or no step order. */
+function toDraft(aligned: [MrvlScoreboardTeam, MrvlScoreboardTeam]): DraftAction[] | null {
+  if (aligned.some((team) => !team.draftTimeline?.length)) return null;
+  const actions: DraftAction[] = [];
+  for (const [i, team] of aligned.entries()) {
+    for (const step of team.draftTimeline ?? []) {
+      if (!isDraftKind(step.kind)) continue;
+      if ((step.teamCamp ?? team.camp) !== team.camp) continue;
+      const phase = step.phaseIndex;
+      if (phase == null || !Number.isInteger(phase) || phase < 0) return null;
+      if (!Number.isInteger(team.camp)) return null;
+      actions.push({
+        phase,
+        side: i === 0 ? 1 : 2,
+        camp: team.camp,
+        kind: step.kind,
+        hero: toHero(step.hero),
+      });
+    }
+  }
+  return actions.sort((a, b) => a.phase - b.phase || a.side - b.side);
+}
+
 export function toMatchStats(
   match: Match,
   page: MrvlMatchPage,
@@ -159,6 +193,7 @@ export function toMatchStats(
       map: game.scoreboard.map?.name ?? game.map ?? `Map ${game.gameNumber}`,
       durationSeconds: game.scoreboard.durationSeconds ?? null,
       teams: [toTeam(aligned[0]), toTeam(aligned[1])],
+      draft: toDraft(aligned),
     });
   }
   return {

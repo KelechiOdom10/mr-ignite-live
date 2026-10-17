@@ -5,7 +5,7 @@ import { createMrvlClient } from "@/mrvl/client";
 import { toSnapshot } from "@/store/plan";
 import { syncOnce } from "@/store/run";
 import { readStored } from "@/store/snapshot";
-import { readMatchStats } from "@/store/stats";
+import { readAllMatchStats, readMatchStats } from "@/store/stats";
 import { voidKvStore } from "@/store/voidKv";
 
 import { live, SCORES_TOPIC } from "./live";
@@ -78,4 +78,8 @@ export async function currentSnapshot(): Promise<Snapshot> {
 
 export function readStats(matchId: string): Promise<MatchStats | null> {
   return readMatchStats(voidKvStore, matchId);
+}
+
+export function readAllStats(): Promise<MatchStats[]> {
+  return readAllMatchStats(voidKvStore);
 }
