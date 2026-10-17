@@ -42,3 +42,35 @@ export function mapInfo(name: string): { mode: GameMode; imageUrl: string } | nu
   const info = MAPS[key(name)];
   return info ? { mode: info.mode, imageUrl: MRVL_IMAGES + info.image } : null;
 }
+
+function sameMap(a: string, b: string): boolean {
+  const [ka, kb] = [key(a), key(b)];
+  if (ka === kb) return true;
+  const [ia, ib] = [MAPS[ka], MAPS[kb]];
+  if (ia && ib) return ia.image === ib.image;
+  // "Hellfire Gala: Krakoa" and "Krakoa" are one map written two ways.
+  return ka.includes(kb) || kb.includes(ka);
+}
+
+export interface MapNameConflict {
+  index: number;
+  liquipedia: string;
+  mrvl: string;
+}
+
+/**
+ * Map slots where Liquipedia and mrvl name different maps. Neither source is treated as right:
+ * the page shows both names and says they disagree.
+ */
+export function mapNameConflicts(
+  liquipedia: readonly { index: number; map: string }[],
+  mrvl: readonly { index: number; map: string }[],
+): MapNameConflict[] {
+  return liquipedia.flatMap((slot) => {
+    const other = mrvl.find((m) => m.index === slot.index);
+    if (!other || slot.map.trim() === "" || other.map.trim() === "") return [];
+    return sameMap(slot.map, other.map)
+      ? []
+      : [{ index: slot.index, liquipedia: slot.map, mrvl: other.map }];
+  });
+}
