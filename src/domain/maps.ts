@@ -43,13 +43,19 @@ export function mapInfo(name: string): { mode: GameMode; imageUrl: string } | nu
   return info ? { mode: info.mode, imageUrl: MRVL_IMAGES + info.image } : null;
 }
 
-function sameMap(a: string, b: string): boolean {
-  const [ka, kb] = [key(a), key(b)];
-  if (ka === kb) return true;
-  const [ia, ib] = [MAPS[ka], MAPS[kb]];
-  if (ia && ib) return ia.image === ib.image;
-  // "Hellfire Gala: Krakoa" and "Krakoa" are one map written two ways.
-  return ka.includes(kb) || kb.includes(ka);
+/**
+ * The known map a name refers to, matched on whole words so long forms ("Yggsgard: Yggdrasill
+ * Path") resolve too. Null for placeholders like "tbd" or "Map 3".
+ */
+function knownMap(name: string): MapInfo | null {
+  const words = ` ${key(name)} `;
+  let best: { length: number; info: MapInfo } | null = null;
+  for (const [k, info] of Object.entries(MAPS)) {
+    if (words.includes(` ${k} `) && (!best || k.length > best.length)) {
+      best = { length: k.length, info };
+    }
+  }
+  return best?.info ?? null;
 }
 
 export interface MapNameConflict {
@@ -59,8 +65,9 @@ export interface MapNameConflict {
 }
 
 /**
- * Map slots where Liquipedia and mrvl name different maps. Neither source is treated as right:
- * the page shows both names and says they disagree.
+ * Map slots where Liquipedia and mrvl name two different known maps. Neither source is treated as
+ * right: the page shows both names and says they disagree. A name we can't place is no evidence
+ * of disagreement, so it isn't flagged.
  */
 export function mapNameConflicts(
   liquipedia: readonly { index: number; map: string }[],
@@ -68,9 +75,9 @@ export function mapNameConflicts(
 ): MapNameConflict[] {
   return liquipedia.flatMap((slot) => {
     const other = mrvl.find((m) => m.index === slot.index);
-    if (!other || slot.map.trim() === "" || other.map.trim() === "") return [];
-    return sameMap(slot.map, other.map)
-      ? []
-      : [{ index: slot.index, liquipedia: slot.map, mrvl: other.map }];
+    if (!other) return [];
+    const [ours, theirs] = [knownMap(slot.map), knownMap(other.map)];
+    if (!ours || !theirs || ours.image === theirs.image) return [];
+    return [{ index: slot.index, liquipedia: slot.map, mrvl: other.map }];
   });
 }

@@ -36,6 +36,30 @@ describe("mapNameConflicts", () => {
     ).toEqual([{ index: 1, liquipedia: "Krakoa", mrvl: "Celestial Husk" }]);
   });
 
+  it("doesn't flag mrvl placeholders it falls back to when a game has no map name", () => {
+    expect(
+      mapNameConflicts(
+        [
+          { index: 3, map: "Krakoa" },
+          { index: 5, map: "Midtown" },
+        ],
+        [
+          { index: 3, map: "Map 3" },
+          { index: 5, map: "tbd" },
+        ],
+      ),
+    ).toEqual([]);
+  });
+
+  it("matches a long form against a spelling variant of the same map", () => {
+    expect(
+      mapNameConflicts(
+        [{ index: 1, map: "Yggsgard: Yggdrasill Path" }],
+        [{ index: 1, map: "Yggdrasil Path" }],
+      ),
+    ).toEqual([]);
+  });
+
   it("doesn't flag spelling differences, long names or a map only one source has", () => {
     expect(
       mapNameConflicts(
