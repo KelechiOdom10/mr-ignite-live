@@ -151,7 +151,10 @@ export const action = defineHandler.withValidator({ body: ActionBody })(async (c
   }
   if (body.intent === "hero") {
     const heroId = body.heroId;
-    const loaded = await loadPlayers((data) => data.get("heroCareer", { uid, heroId }));
+    const loaded = await loadPlayers(async (data) => {
+      const cached = await data.peek("heroCareer", { uid, heroId });
+      return data.get("heroCareer", { uid, heroId }, { refresh: cached?.stale ?? false });
+    });
     if (!loaded.ok) return c.json({ errors: { intent: problemMessage(loaded.problem) } }, 422);
     return;
   }

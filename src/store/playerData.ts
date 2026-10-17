@@ -193,7 +193,12 @@ export function createPlayerData(options: PlayerDataOptions) {
     ): Promise<Fetched<ResponseOf<E>> | null> {
       const cached = await cache.get(requestKey(name, params));
       if (cached?.status !== "ok") return null;
-      return fromCache(name, cached);
+      const endpoint: Endpoint<E> = ENDPOINTS[name];
+      // An entry saved before a schema change shouldn't take down a page that only peeks at it.
+      const parsed = endpoint.schema.safeParse(cached.body);
+      if (!parsed.success) return null;
+      const stale = cached.expiresAt !== null && cached.expiresAt <= now();
+      return { data: parsed.data, fetchedAt: cached.fetchedAt, stale, refreshFailed: false };
     },
     credits: () => ledger.summary(),
   };

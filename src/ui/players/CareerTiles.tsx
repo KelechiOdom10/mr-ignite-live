@@ -41,7 +41,7 @@ export function CareerTiles({ career }: { career: Career }) {
           className={cn("rounded-lg border bg-card p-3", "wide" in t && "col-span-2")}
         >
           <dt className="text-xs text-muted-foreground">{t.label}</dt>
-          <dd className={cn("mt-1 font-mono text-lg font-semibold whitespace-nowrap tabular-nums")}>
+          <dd className="mt-1 font-mono text-lg font-semibold whitespace-nowrap tabular-nums">
             {t.value}
           </dd>
         </div>

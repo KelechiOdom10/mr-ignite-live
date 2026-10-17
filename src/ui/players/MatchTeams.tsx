@@ -16,7 +16,7 @@ function PlayerRow({ p }: { p: MatchPlayer }) {
   const [main, ...others] = p.heroes;
   return (
     <tr className="align-middle">
-      <td className="py-2 pr-2 pl-3">
+      <td className="w-full max-w-0 py-2 pr-2 pl-3">
         <div className="flex items-center gap-2">
           {main && <HeroIcon hero={main} size={32} />}
           <div className="min-w-0">
@@ -100,8 +100,8 @@ export function MatchTeams({ match }: { match: MatchDetail }) {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {team.players.map((p) => (
-                <PlayerRow key={`${p.uid ?? p.name}`} p={p} />
+              {team.players.map((p, row) => (
+                <PlayerRow key={p.uid ?? `${p.name}-${row}`} p={p} />
               ))}
             </tbody>
           </table>

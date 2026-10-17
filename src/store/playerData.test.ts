@@ -185,4 +185,16 @@ describe("player data", () => {
     expect(fake.calls).toHaveLength(1);
     expect((await ledger.summary()).spent).toBe(5);
   });
+
+  it("treats a cached entry that no longer matches the schema as missing when peeking", async () => {
+    const cache = memoryPlayerCache();
+    const { data } = setup({ cache });
+    await cache.put(`match:/matches/${RECORDED_MATCH}`, "match", {
+      status: "ok",
+      body: { match_uid: RECORDED_MATCH },
+      fetchedAt: 0,
+      expiresAt: null,
+    });
+    expect(await data.peek("match", { matchUid: RECORDED_MATCH })).toBeNull();
+  });
 });

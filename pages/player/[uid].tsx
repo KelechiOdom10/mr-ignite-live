@@ -71,6 +71,7 @@ export default function PlayerPage({
                 recent={heroes.recent}
                 coveredMatches={heroes.coveredMatches}
                 cards={heroes.cards}
+                now={now}
               />
               <section aria-labelledby="career" className="space-y-2">
                 <h2 id="career" className="text-sm font-semibold text-muted-foreground">

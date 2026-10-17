@@ -27,6 +27,6 @@ export const loader = defineHandler(async (c) => {
 
 export const head = defineHead<Props>((_c, props) => ({
   title: props.match.ok
-    ? `${props.match.value.map ?? "Match"} · ${props.match.value.mode ?? ""}`
+    ? [props.match.value.map ?? "Match", props.match.value.mode].filter(Boolean).join(" · ")
     : "Match",
 }));
