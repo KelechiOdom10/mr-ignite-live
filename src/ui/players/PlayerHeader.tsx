@@ -27,7 +27,6 @@ export function FavouriteButton({
       <button
         type="submit"
         disabled={form.pending}
-        aria-pressed={isFavourite}
         className="inline-flex h-9 items-center gap-2 rounded-md border px-3 text-sm transition-colors hover:bg-accent disabled:opacity-60"
       >
         <Star className={cn("size-4", isFavourite && "fill-primary text-primary")} aria-hidden />
@@ -59,7 +58,11 @@ export function RefreshButton({
         <RefreshCw className={cn("size-4", form.pending && "animate-spin")} aria-hidden />
         Refresh · {cost} credits
       </button>
-      {form.errors.intent && <p className="text-xs text-live">{form.errors.intent}</p>}
+      {form.errors.intent && (
+        <p role="alert" className="text-xs text-live">
+          {form.errors.intent}
+        </p>
+      )}
     </Form>
   );
 }

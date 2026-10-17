@@ -7,7 +7,7 @@ import { AwardBadge } from "../AwardBadge";
 import { HeroIcon } from "./HeroIcon";
 
 function compact(n: number): string {
-  return new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(
+  return new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(
     n,
   );
 }
@@ -23,6 +23,7 @@ function PlayerRow({ p }: { p: MatchPlayer }) {
             {p.uid ? (
               <Link
                 href={`/player/${p.uid}`}
+                rel="nofollow"
                 className="block truncate font-medium hover:underline"
               >
                 {p.name}

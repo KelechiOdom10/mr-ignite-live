@@ -4,7 +4,13 @@ import type { Snapshot } from "@/domain/model";
 import type { PlayerProblem } from "@/domain/player";
 import { scopeSnapshot } from "@/domain/scope";
 import { createRivalsIslandClient, type RivalsIslandClient } from "@/rivalsisland/client";
-import { NotConfiguredError, problemOf } from "@/rivalsisland/errors";
+import {
+  CreditBudgetExceededError,
+  NotConfiguredError,
+  problemOf,
+  RivalsIslandError,
+} from "@/rivalsisland/errors";
+import { toHeroCatalogue, type HeroCatalogue } from "@/rivalsisland/toDomain";
 import { d1CreditLedger, d1FavouriteStore, d1PlayerCache } from "@/store/d1";
 import {
   createPlayerData,
@@ -96,5 +102,17 @@ export async function loadPlayers<T>(read: (data: PlayerData) => Promise<T>): Pr
     const problem = problemOf(error);
     if (!problem) throw error;
     return { ok: false, problem };
+  }
+}
+
+/** Hero names, roles and icons are a nice-to-have: without them pages fall back to what each response carries. */
+export async function heroCatalogueOrEmpty(data: PlayerData): Promise<HeroCatalogue> {
+  try {
+    return toHeroCatalogue((await data.get("heroes", {})).data);
+  } catch (error) {
+    if (error instanceof RivalsIslandError || error instanceof CreditBudgetExceededError) {
+      return new Map();
+    }
+    throw error;
   }
 }

@@ -1,6 +1,6 @@
 # RivalsIsland fixtures
 
-Raw responses from https://api.rivalsisland.com (OpenAPI 2.1.0), recorded 2026-10-17 with a free-tier key. Each `.json` body sits beside the `.headers` of the same response (`heroes` was recorded without headers). Copied byte-for-byte from the original recording; never hand-edit; re-record with `scripts/record-rivalsisland.ts --max-credits <n> name=/path` instead (it reads the key from `.env` and never prints it).
+Raw responses from https://api.rivalsisland.com (OpenAPI 2.1.0), recorded 2026-10-17 with a free-tier key. Each `.json` body sits beside the `.headers` of the same response (`heroes` was recorded without headers). Copied byte-for-byte from the original recording; never hand-edit; re-record with `scripts/record-rivalsisland.ts --max-credits <n> name:cost=/path` instead (it reads the key from `.env` and never prints it).
 
 | File | Request | Credits | sha256 |
 | --- | --- | --- | --- |

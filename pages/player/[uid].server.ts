@@ -7,15 +7,18 @@ import { COMPETITIVE } from "@/rivalsisland/endpoints";
 import {
   toCareer,
   toHeroCareer,
-  toHeroCatalogue,
   toHistoryPage,
   toMatchDetail,
   toProfile,
-  type HeroCatalogue,
 } from "@/rivalsisland/toDomain";
-import type { PlayerData } from "@/store/playerData";
 
-import { favourites, loadPlayers, shellSnapshot } from "../../src/players";
+import {
+  favourites,
+  heroCatalogueOrEmpty,
+  loadPlayers,
+  shellSnapshot,
+  type Loaded,
+} from "../../src/players";
 
 export type Props = InferProps<typeof loader>;
 
@@ -28,16 +31,12 @@ function categoryId(category: "competitive" | "all"): number | null {
   return category === "competitive" ? COMPETITIVE : null;
 }
 
-async function heroCatalogue(data: PlayerData): Promise<HeroCatalogue> {
-  return toHeroCatalogue((await data.get("heroes", {})).data);
-}
-
 function readPlayer(uid: Uid, query: z.infer<typeof QuerySchema>, refresh: boolean) {
   return Promise.all([
     loadPlayers(async (data) => {
       const [{ data: res, fetchedAt, stale, refreshFailed }, catalogue] = await Promise.all([
         data.get("career", { uid }, { refresh }),
-        heroCatalogue(data).catch(() => new Map()),
+        heroCatalogueOrEmpty(data),
       ]);
       return {
         profile: toProfile(res, catalogue),
@@ -68,7 +67,7 @@ async function heroesFromCache(
   signatureHeroId: number | null,
 ): Promise<{ recent: HeroPlay[]; coveredMatches: number; cards: HeroCareer[] }> {
   const loaded = await loadPlayers(async (data) => {
-    const catalogue = await heroCatalogue(data).catch(() => new Map());
+    const catalogue = await heroCatalogueOrEmpty(data);
     const peeked = await Promise.all(matchUids.map((matchUid) => data.peek("match", { matchUid })));
     const matches = peeked.flatMap((m) => (m ? [toMatchDetail(m.data, catalogue)] : []));
     const recent = recentHeroes(uid, matches);
@@ -86,6 +85,12 @@ async function heroesFromCache(
     return { recent, coveredMatches: matches.length, cards: cards.flat() };
   });
   return loaded.ok ? loaded.value : { recent: [], coveredMatches: 0, cards: [] };
+}
+
+/** A private history or career answering again is a successful refresh; anything else that failed isn't. */
+function refreshDidNotHappen(result: Loaded<{ refreshFailed: boolean }>): boolean {
+  if (result.ok) return result.value.refreshFailed;
+  return result.problem !== "history_private" && result.problem !== "career_private";
 }
 
 export const loader = defineHandler(async (c) => {
@@ -133,7 +138,9 @@ const ActionBody = z.discriminatedUnion("intent", [
 ]);
 
 export const action = defineHandler.withValidator({ body: ActionBody })(async (c, { body }) => {
-  const uid = UidSchema.parse(c.req.param("uid"));
+  const parsed = UidSchema.safeParse(c.req.param("uid"));
+  if (!parsed.success) return c.json({ errors: { intent: "Unknown player." } }, 404);
+  const uid = parsed.data;
   if (body.intent === "favourite") {
     await favourites.save({ uid, name: body.name, addedAt: Date.now() });
     return;
@@ -149,8 +156,7 @@ export const action = defineHandler.withValidator({ body: ActionBody })(async (c
     return;
   }
   const [player, history] = await readPlayer(uid, body, true);
-  const refused =
-    (player.ok && player.value.refreshFailed) || (history.ok && history.value.refreshFailed);
+  const refused = [player, history].some((r) => refreshDidNotHappen(r));
   if (refused) {
     return c.json(
       {

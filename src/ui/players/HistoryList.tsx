@@ -34,6 +34,7 @@ export function HistoryList({ rows, now }: { rows: HistoryRow[]; now: number }) 
           <li key={m.matchUid}>
             <Link
               href={`/game/${encodeURIComponent(m.matchUid)}`}
+              rel="nofollow"
               className="relative flex items-center gap-3 py-2.5 pr-3 pl-4 transition-colors hover:bg-accent/50"
             >
               <span aria-hidden className={cn("absolute inset-y-0 left-0 w-1", result.bar)} />

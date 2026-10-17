@@ -19,7 +19,11 @@ function LoadHeroCard({ uid, hero }: { uid: Uid; hero: Hero }) {
       >
         {form.pending ? "Loading…" : "Hero stats · 10 credits"}
       </button>
-      {form.errors.intent && <span className="text-xs text-live">{form.errors.intent}</span>}
+      {form.errors.intent && (
+        <span role="alert" className="text-xs text-live">
+          {form.errors.intent}
+        </span>
+      )}
     </Form>
   );
 }

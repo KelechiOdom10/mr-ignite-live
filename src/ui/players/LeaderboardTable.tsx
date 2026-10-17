@@ -13,7 +13,7 @@ function percent(rate: number | null): string {
 export function LeaderboardTable({ rows, now }: { rows: LeaderboardRow[]; now: number }) {
   const hydrated = useHydrated();
   return (
-    <div className="overflow-hidden rounded-lg border">
+    <div className="overflow-x-auto rounded-lg border">
       <table className="w-full text-sm">
         <thead className="bg-card text-left text-xs text-muted-foreground">
           <tr>
@@ -43,9 +43,10 @@ export function LeaderboardTable({ rows, now }: { rows: LeaderboardRow[]; now: n
               <td className="px-3 py-2 text-right font-mono text-muted-foreground tabular-nums">
                 {r.position}
               </td>
-              <td className="px-3 py-2">
+              <td className="w-full max-w-0 px-3 py-2">
                 <Link
                   href={`/player/${r.uid}`}
+                  rel="nofollow"
                   className="flex min-w-0 items-center gap-2 font-medium hover:underline"
                 >
                   <PlayerAvatar iconUrl={r.iconUrl} name={r.name} size={24} />

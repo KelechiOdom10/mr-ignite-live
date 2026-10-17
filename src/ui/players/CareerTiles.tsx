@@ -2,18 +2,18 @@ import type { Career } from "@/domain/player";
 import { cn } from "@/lib/utils";
 
 function compact(n: number): string {
-  return new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(
+  return new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(
     n,
   );
 }
 
 function hours(seconds: number): string {
-  return `${Math.round(seconds / 3600).toLocaleString()}h`;
+  return `${Math.round(seconds / 3600).toLocaleString("en-US")}h`;
 }
 
 export function CareerTiles({ career }: { career: Career }) {
   const tiles = [
-    { label: "Matches", value: career.matches.toLocaleString() },
+    { label: "Matches", value: career.matches.toLocaleString("en-US") },
     {
       label: "Win rate",
       value: career.winRate === null ? "–" : `${(career.winRate * 100).toFixed(1)}%`,

@@ -95,6 +95,7 @@ export default function PlayerPage({
                       ? `/player/${uid}`
                       : `/player/${uid}?category=${c.value}`
                   }
+                  rel="nofollow"
                   aria-current={c.value === query.category ? "page" : undefined}
                   className={cn(
                     "rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
@@ -111,9 +112,10 @@ export default function PlayerPage({
               <HistoryList rows={history.value.rows} now={now} />
               <div className="flex items-center justify-between">
                 <Freshness freshness={history.value.freshness} now={now} />
-                {history.value.hasMore && (
+                {history.value.hasMore && query.page < 50 && (
                   <Link
                     href={`/player/${uid}?category=${query.category}&page=${query.page + 1}`}
+                    rel="nofollow"
                     className="text-sm text-muted-foreground hover:text-foreground"
                   >
                     Older matches · 10 credits

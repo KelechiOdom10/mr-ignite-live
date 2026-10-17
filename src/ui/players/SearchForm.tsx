@@ -32,7 +32,7 @@ export function SearchForm() {
         </button>
       </div>
       {form.errors.name ? (
-        <p id="player-name-error" className="text-sm text-live">
+        <p id="player-name-error" role="alert" className="text-sm text-live">
           {form.errors.name}
         </p>
       ) : (
