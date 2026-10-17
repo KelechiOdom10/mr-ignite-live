@@ -5,7 +5,7 @@ export default defineConfig({
     compatibility_date: "2026-02-24",
   },
   head: {
-    titleTemplate: "%s · Ignite Live",
+    titleTemplate: "%s · Rivals Hub",
     htmlAttrs: { lang: "en", class: "dark" },
     meta: [
       { charset: "utf-8" },

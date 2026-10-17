@@ -1,6 +1,6 @@
-# Ignite Live
+# Rivals Hub
 
-Live Marvel Rivals Ignite scores, brackets and results. A cron pulls Liquipedia every minute into one KV snapshot and pushes a change signal to open pages over `void/live`. See [README.md](README.md) for the data flow.
+A personal Marvel Rivals site, local-only. The esports section has live Ignite scores, brackets and results. A cron pulls Liquipedia every minute into one KV snapshot and pushes a change signal to open pages over `void/live`. See [README.md](README.md) for the data flow.
 
 ## Commands
 

@@ -110,7 +110,7 @@ export function AppShell({
           <div className="flex min-w-0 items-center gap-6">
             <Link href="/" className="flex items-center gap-2 font-semibold">
               <Zap className="size-5 fill-primary text-primary" aria-hidden />
-              <span>Ignite Live</span>
+              <span>Rivals Hub</span>
             </Link>
             <nav aria-label="Main" className="hidden items-center gap-1 sm:flex">
               {NAV.map(({ href, label, icon: Icon }) => {

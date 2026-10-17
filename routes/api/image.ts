@@ -17,7 +17,7 @@ export const GET = defineHandler(async (c) => {
   if (cached) return cached;
 
   const upstream = await fetch(source, {
-    headers: { "User-Agent": "MRIgniteLive/0.1 (personal live score tracker)" },
+    headers: { "User-Agent": "RivalsHub/0.1 (personal Marvel Rivals site)" },
     redirect: "manual",
   });
   const contentType = upstream.headers.get("Content-Type") ?? "";

@@ -1,6 +1,6 @@
-# Ignite Live
+# Rivals Hub
 
-Live Marvel Rivals Ignite 2026 scores, brackets and results, built on [Void](https://void.cloud) with [beUI](https://beui.dev) components.
+A personal Marvel Rivals site. Its esports section has live Ignite 2026 scores, brackets and results, built on [Void](https://void.cloud) with [beUI](https://beui.dev) components.
 
 ## How it stays live
 
