@@ -1,10 +1,12 @@
-import { BarChart3 } from "lucide-react";
+import { Link } from "@void/react";
+import { BarChart3, UserSearch } from "lucide-react";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/motion/tabs";
 import type { MatchView } from "@/domain/matchView";
 import type { Match, Snapshot } from "@/domain/model";
+import { searchableName } from "@/domain/player";
 import {
   MatchStatsSchema,
   type Hero,
@@ -195,6 +197,7 @@ function StatsTable({
                 <th scope="row" className="px-3 py-2 text-left font-medium">
                   <span className="inline-flex items-center gap-2">
                     {p.name}
+                    <RankedLookup name={p.name} />
                     {combined ? (
                       <>
                         {p.mvpCount > 0 && <AwardBadge award="MVP" count={p.mvpCount} />}
@@ -252,6 +255,26 @@ function asRows(team: TeamMapStats): Row[] {
   return team.players.map((p) => ({ ...p, mvpCount: p.isMvp ? 1 : 0, svpCount: p.isSvp ? 1 : 0 }));
 }
 
+/**
+ * A lookup, not a link to a profile: mrvl names aren't tied to ranked accounts, and names repeat.
+ * It opens the player search prefilled, so the reader decides whether to search.
+ */
+function RankedLookup({ name }: { name: string }) {
+  const query = searchableName(name);
+  if (!query) return null;
+  return (
+    <Link
+      href={`/players?name=${encodeURIComponent(query)}`}
+      rel="nofollow"
+      aria-label={`Look up ${name} among ranked players`}
+      title="Look up this name among ranked players"
+      className="inline-flex size-6 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+    >
+      <UserSearch className="size-3.5" aria-hidden />
+    </Link>
+  );
+}
+
 export function StatsPanel({
   match,
   view,
@@ -289,50 +312,58 @@ export function StatsPanel({
           MVP, SVP, heroes and player stats appear a minute or two after each map ends.
         </p>
       ) : (
-        <Tabs defaultValue="all" variant="underline">
-          <div className="-mx-4 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:px-0">
-            <TabsList aria-label="Map">
-              <TabsTrigger value="all" className="whitespace-nowrap">
-                All maps
-              </TabsTrigger>
-              {stats.maps.map((m) => (
-                <TabsTrigger key={m.index} value={String(m.index)} className="whitespace-nowrap">
-                  Map {m.index} · {m.map}
+        <>
+          <p className="text-xs text-muted-foreground">
+            Names come from mrvl.net and aren&apos;t tied to ranked accounts, so one name can belong
+            to several players.{" "}
+            <UserSearch className="inline size-3.5 align-text-bottom" aria-hidden /> looks a name up
+            on Players.
+          </p>
+          <Tabs defaultValue="all" variant="underline">
+            <div className="-mx-4 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:px-0">
+              <TabsList aria-label="Map">
+                <TabsTrigger value="all" className="whitespace-nowrap">
+                  All maps
                 </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
-          <TabsContent value="all">
-            <div className="space-y-6">
-              {([0, 1] as const).map((side) => (
-                <StatsTable
-                  key={side}
-                  team={side === 0 ? match.team1 : match.team2}
-                  rows={combine(stats.maps.map((m) => m.teams[side]))}
-                  bans={[]}
-                  snapshot={snapshot}
-                  combined
-                />
-              ))}
+                {stats.maps.map((m) => (
+                  <TabsTrigger key={m.index} value={String(m.index)} className="whitespace-nowrap">
+                    Map {m.index} · {m.map}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
             </div>
-          </TabsContent>
-          {stats.maps.map((m) => (
-            <TabsContent key={m.index} value={String(m.index)}>
+            <TabsContent value="all">
               <div className="space-y-6">
                 {([0, 1] as const).map((side) => (
                   <StatsTable
                     key={side}
                     team={side === 0 ? match.team1 : match.team2}
-                    rows={asRows(m.teams[side])}
-                    bans={m.teams[side].bans}
+                    rows={combine(stats.maps.map((m) => m.teams[side]))}
+                    bans={[]}
                     snapshot={snapshot}
-                    combined={false}
+                    combined
                   />
                 ))}
               </div>
             </TabsContent>
-          ))}
-        </Tabs>
+            {stats.maps.map((m) => (
+              <TabsContent key={m.index} value={String(m.index)}>
+                <div className="space-y-6">
+                  {([0, 1] as const).map((side) => (
+                    <StatsTable
+                      key={side}
+                      team={side === 0 ? match.team1 : match.team2}
+                      rows={asRows(m.teams[side])}
+                      bans={m.teams[side].bans}
+                      snapshot={snapshot}
+                      combined={false}
+                    />
+                  ))}
+                </div>
+              </TabsContent>
+            ))}
+          </Tabs>
+        </>
       )}
     </section>
   );

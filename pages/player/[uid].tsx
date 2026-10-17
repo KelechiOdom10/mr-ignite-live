@@ -8,6 +8,7 @@ import { HeroesPanel } from "@/ui/players/HeroesPanel";
 import { HistoryList } from "@/ui/players/HistoryList";
 import { FavouriteButton, PlayerHeader, RefreshButton } from "@/ui/players/PlayerHeader";
 import { ProblemNotice } from "@/ui/players/ProblemNotice";
+import { useRememberPlayer } from "@/ui/players/recentPlayers";
 import { useLiveSnapshot } from "@/ui/useLiveSnapshot";
 
 import type { Props } from "./[uid].server";
@@ -27,6 +28,7 @@ export default function PlayerPage({
   isFavourite,
 }: Props) {
   const { snapshot, connection, now } = useLiveSnapshot(initial, { view: "events" });
+  useRememberPlayer(uid && player?.ok ? { uid, name: player.value.profile.name } : null);
   if (!uid || !player || !history || !heroes) {
     return (
       <AppShell snapshot={snapshot} connection={connection} now={now}>

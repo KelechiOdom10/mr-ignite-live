@@ -3,6 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   groupBySeason,
   MIN_MATCHES_FOR_WIN_RATE,
+  parseRecentPlayers,
+  RECENT_PLAYERS_LIMIT,
+  rememberPlayer,
+  searchableName,
   recentHeroes,
   seasonRecord,
   UidSchema,
@@ -136,5 +140,34 @@ describe("groupBySeason", () => {
       ["10.5", ["a"]],
       ["10.0", ["b", "c"]],
     ]);
+  });
+});
+
+describe("recent players", () => {
+  it("drops malformed storage instead of trusting it", () => {
+    expect(parseRecentPlayers("not json")).toEqual([]);
+    expect(parseRecentPlayers('{"uid":"1"}')).toEqual([]);
+    expect(
+      parseRecentPlayers('[{"uid":"670067075","name":"Sypeh"},{"uid":"0","name":"bad uid"},7]'),
+    ).toEqual([{ uid: me, name: "Sypeh" }]);
+  });
+
+  it("moves a revisited player to the front without duplicating, capped", () => {
+    const many = Array.from({ length: RECENT_PLAYERS_LIMIT }, (_, i) => ({
+      uid: UidSchema.parse(String(i + 1)),
+      name: `p${i + 1}`,
+    }));
+    const next = rememberPlayer(many, { uid: UidSchema.parse("3"), name: "p3 renamed" });
+    expect(next).toHaveLength(RECENT_PLAYERS_LIMIT);
+    expect(next[0]).toEqual({ uid: "3", name: "p3 renamed" });
+    expect(next.filter((p) => p.uid === "3")).toHaveLength(1);
+  });
+});
+
+describe("searchableName", () => {
+  it("only offers names RivalsIsland's exact search accepts", () => {
+    expect(searchableName(" Sypeh ")).toBe("Sypeh");
+    expect(searchableName("")).toBeNull();
+    expect(searchableName("a".repeat(17))).toBeNull();
   });
 });

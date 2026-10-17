@@ -291,3 +291,41 @@ export function groupBySeason(rows: readonly HistoryRow[]): SeasonGroup[] {
   }
   return groups;
 }
+
+export const RecentPlayerSchema = z.object({ uid: UidSchema, name: z.string().min(1).max(64) });
+export type RecentPlayer = z.infer<typeof RecentPlayerSchema>;
+
+export const RECENT_PLAYERS_LIMIT = 8;
+
+/** Players opened in this browser, newest first; anything malformed is dropped rather than trusted. */
+export function parseRecentPlayers(raw: string | null): RecentPlayer[] {
+  if (!raw) return [];
+  try {
+    const parsed = z.array(z.unknown()).safeParse(JSON.parse(raw));
+    if (!parsed.success) return [];
+    return parsed.data
+      .flatMap((item) => {
+        const player = RecentPlayerSchema.safeParse(item);
+        return player.success ? [player.data] : [];
+      })
+      .slice(0, RECENT_PLAYERS_LIMIT);
+  } catch {
+    return [];
+  }
+}
+
+export function rememberPlayer(
+  list: readonly RecentPlayer[],
+  player: RecentPlayer,
+): RecentPlayer[] {
+  return [player, ...list.filter((p) => p.uid !== player.uid)].slice(0, RECENT_PLAYERS_LIMIT);
+}
+
+/** RivalsIsland's search takes an exact in-game name of up to 16 characters. */
+export const PlayerNameQuerySchema = z.string().trim().min(1).max(16);
+
+/** A name worth offering as a ranked lookup; esports names can be longer than an in-game name. */
+export function searchableName(name: string): string | null {
+  const parsed = PlayerNameQuerySchema.safeParse(name);
+  return parsed.success ? parsed.data : null;
+}

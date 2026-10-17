@@ -14,6 +14,7 @@ import { LiveIsland } from "./LiveIsland";
 import { MatchStrip } from "./MatchStrip";
 import { scoreToasts } from "./scoreToasts";
 import { SearchPalette } from "./SearchPalette";
+import { isPlayersPath } from "./sections";
 import { SpoilerToggle, useSpoilersHidden } from "./spoilers";
 import { formatRelative, useHydrated } from "./time";
 import type { Connection } from "./useLiveSnapshot";
@@ -103,6 +104,7 @@ export function AppShell({
   const [searchOpen, setSearchOpen] = useState(false);
   const router = useRouter();
   const path = router.path;
+  const playersPage = isPlayersPath(path);
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -119,7 +121,7 @@ export function AppShell({
                   href === "/"
                     ? path === "/" || path.startsWith("/match")
                     : href === "/players"
-                      ? /^\/(player|leaderboard|game)/.test(path)
+                      ? isPlayersPath(path)
                       : path.startsWith(href.slice(0, -1));
                 return (
                   <Link
@@ -160,24 +162,41 @@ export function AppShell({
           </div>
         </div>
       </header>
-      <MatchStrip snapshot={snapshot} now={now} />
+      {!playersPage && <MatchStrip snapshot={snapshot} now={now} />}
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 pb-24 sm:px-6 sm:pb-8">
         {children}
       </main>
       <footer className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 border-t px-4 py-5 pb-24 text-xs text-muted-foreground sm:px-6 sm:pb-5">
-        <SyncStatus snapshot={snapshot} connection={connection} now={now} />
-        <span>
-          Data from{" "}
-          <a
-            className="underline hover:text-foreground"
-            href="https://liquipedia.net/marvelrivals/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Liquipedia
-          </a>{" "}
-          (CC BY-SA). Not affiliated with NetEase or Marvel.
-        </span>
+        {playersPage ? (
+          <span>
+            Player data from{" "}
+            <a
+              className="underline hover:text-foreground"
+              href="https://api.rivalsisland.com/docs"
+              target="_blank"
+              rel="noreferrer"
+            >
+              RivalsIsland
+            </a>
+            . Live scores from Liquipedia (CC BY-SA). Not affiliated with NetEase or Marvel.
+          </span>
+        ) : (
+          <>
+            <SyncStatus snapshot={snapshot} connection={connection} now={now} />
+            <span>
+              Data from{" "}
+              <a
+                className="underline hover:text-foreground"
+                href="https://liquipedia.net/marvelrivals/"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Liquipedia
+              </a>{" "}
+              (CC BY-SA). Not affiliated with NetEase or Marvel.
+            </span>
+          </>
+        )}
       </footer>
       <nav
         aria-label="Main"
