@@ -4,6 +4,8 @@ import { mrvlFixture } from "./fixtures";
 
 /** mrvl's id for FlyQuest vs 100 Thieves, the series recorded in `page-fly-100t.json`. */
 export const FLY_100T_MRVL_ID = "js72wqatvzmfw26ffhc1fynh4n8gcxsw";
+/** mrvl's id for the live Liquid Citadel vs Swamp Gaming series in `live.json`. */
+export const TLC_SWAMP_MRVL_ID = "js7d3e97gbkfsnm3fycnean4p58gd5sy";
 
 const SummarySchema = z.looseObject({ id: z.string(), updatedAt: z.unknown().optional() });
 const ListEnvelopeSchema = z.looseObject({ value: z.array(SummarySchema) });

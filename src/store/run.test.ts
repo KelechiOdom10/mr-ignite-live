@@ -11,7 +11,12 @@ import {
   PACIFIC,
   RECORDED_TITLES,
 } from "../../test/fakeLiquipedia";
-import { fakeMrvl, FLY_100T_MRVL_ID, type MrvlFakeOptions } from "../../test/fakeMrvl";
+import {
+  fakeMrvl,
+  FLY_100T_MRVL_ID,
+  type MrvlFakeOptions,
+  TLC_SWAMP_MRVL_ID,
+} from "../../test/fakeMrvl";
 import { memoryKvStore } from "../../test/memoryKv";
 import { syncOnce } from "./run";
 import { readStored } from "./snapshot";
@@ -126,5 +131,24 @@ describe("syncOnce on match day", () => {
     expect(refetched.map((r) => r.args.id)).toEqual([FLY_100T_MRVL_ID]);
     expect(day.store.putCounts()).toEqual({ "stats-index:v2": 1 });
     expect(outcome.changed).toBe(false);
+  });
+
+  it("doesn't let one failing mrvl series page hold back the others, and retries it next run", async () => {
+    const day = matchDay({ mrvl: { failingPages: [TLC_SWAMP_MRVL_ID] } });
+
+    await day.sync();
+
+    expect(day.store.putCounts()).toEqual({
+      snapshot: 1,
+      [`stats:v2:${FLY_100T}`]: 1,
+      "stats-index:v2": 1,
+    });
+    day.mrvl.settings.failingPages = [];
+    const earlierRequests = day.mrvl.requests.length;
+    await day.sync();
+    const fetched = day.mrvl.requests
+      .slice(earlierRequests)
+      .filter((r) => r.path === "matches:getPageData");
+    expect(fetched.map((r) => r.args.id)).toEqual([TLC_SWAMP_MRVL_ID]);
   });
 });

@@ -4,7 +4,12 @@ import { matchState } from "@/domain/matchState";
 import type { MapOverride, Match, Snapshot } from "@/domain/model";
 import { MatchStatsSchema, type MatchStats } from "@/domain/stats";
 import { findMrvlMatch, toMapOverrides, toMatchStats } from "@/mrvl/align";
-import type { MrvlClient } from "@/mrvl/client";
+import {
+  type MrvlClient,
+  MrvlHttpError,
+  type MrvlMatchPage,
+  MrvlResponseError,
+} from "@/mrvl/client";
 
 import type { KvStore } from "./kv";
 import { statsChanged } from "./plan";
@@ -47,6 +52,17 @@ export function statsCandidates(snapshot: Snapshot, now: number): Match[] {
   });
 }
 
+/** Null when mrvl fails for this series only; it stays out of the index, so the next run retries. */
+async function seriesPage(mrvl: MrvlClient, id: string): Promise<MrvlMatchPage | null> {
+  try {
+    return await mrvl.matchPage(id);
+  } catch (error) {
+    if (!(error instanceof MrvlHttpError || error instanceof MrvlResponseError)) throw error;
+    console.warn("Skipping an mrvl series page until the next sync", { id, error: error.message });
+    return null;
+  }
+}
+
 export interface StatsChanges {
   /** Stats whose maps differ from what is stored. */
   updated: MatchStats[];
@@ -81,29 +97,28 @@ export async function fetchStatsChanges({
   const index = await readIndex(store);
   const updated: MatchStats[] = [];
   const mapOverrides: Record<string, MapOverride[]> = {};
-  let pagesFetched = 0;
+  let pagesRequested = 0;
+  let indexChanged = false;
 
   for (const match of candidates) {
-    if (pagesFetched >= MAX_PAGES_PER_SYNC) break;
+    if (pagesRequested >= MAX_PAGES_PER_SYNC) break;
     const summary = findMrvlMatch(match, summaries);
     if (!summary) continue;
     const sourceUpdatedAt = String(summary.updatedAt ?? "");
     if (index[match.id]?.sourceUpdatedAt === sourceUpdatedAt) continue;
 
-    pagesFetched++;
-    const stats = toMatchStats(
-      match,
-      await mrvl.matchPage(summary.id),
-      sourceUpdatedAt,
-      new Date(now),
-    );
+    pagesRequested++;
+    const page = await seriesPage(mrvl, summary.id);
+    if (!page) continue;
+    const stats = toMatchStats(match, page, sourceUpdatedAt, new Date(now));
     index[match.id] = { sourceMatchId: summary.id, sourceUpdatedAt };
+    indexChanged = true;
     if (stats.maps.length === 0) continue;
     mapOverrides[match.id] = toMapOverrides(stats);
     if (statsChanged(await readMatchStats(store, match.id), stats)) updated.push(stats);
   }
 
-  return { updated, mapOverrides, index: pagesFetched > 0 ? index : null };
+  return { updated, mapOverrides, index: indexChanged ? index : null };
 }
 
 export async function writeMatchStats(store: KvStore, stats: MatchStats[]): Promise<void> {
