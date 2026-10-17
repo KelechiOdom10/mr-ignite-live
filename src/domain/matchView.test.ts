@@ -124,6 +124,16 @@ describe("bracketFeeders", () => {
     expect([hiddenView(semi1).side1.short, hiddenView(semi1).side2.short]).toEqual(["FLY", "100T"]);
   });
 
+  it("says where a team came from when its previous series has no recorded winner", () => {
+    const walkoverSemi = { ...semi1, maps: [], markedFinished: true };
+    const feeders = bracketFeeders([walkoverSemi, semi2, upperFinal], NOW);
+    const v = matchView(upperFinal, matchState(upperFinal, NOW), true, feeders.get(upperFinal.id));
+    expect([v.side1.name, v.side1.short]).toEqual([
+      "From Upper Bracket Semifinals",
+      "From UB Semifinals",
+    ]);
+  });
+
   it("orders by round when start times are missing", () => {
     const undated = bracket.map((m) => ({ ...m, startsAt: null }));
     const feeders = bracketFeeders(undated, NOW).get("kOK_R4M1");

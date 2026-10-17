@@ -68,10 +68,11 @@ export function matchView(
     const outcome = winner === null ? "open" : winner === n ? "won" : "lost";
     const feeder = hidden ? feeders[n] : undefined;
     if (team && feeder) {
+      const lead = feeder.result === "From" ? "From" : `${feeder.result} of`;
       return {
         team: null,
-        name: `${feeder.result} of ${feeder.round}`,
-        short: `${feeder.result} of ${abbreviateRound(feeder.round)}`,
+        name: `${lead} ${feeder.round}`,
+        short: `${lead} ${abbreviateRound(feeder.round)}`,
         score,
         outcome,
       };
