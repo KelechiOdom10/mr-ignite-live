@@ -6,7 +6,7 @@ MVP/SVP, heroes, bans and per-player stats exist only in NetEase's per-game reco
 
 ## Decision
 
-Read stats from mrvl's Convex queries (`matches:listSummary`, `matches:getPageData`). Link a Liquipedia series to mrvl's by start time (±3h) and team-name variants. Each sync makes three small list calls, and fetches full match pages only when mrvl's `updatedAt` changed, capped at six per run. Map winners mrvl has before Liquipedia fill in as `mapOverrides`; Liquipedia always wins once it records a map. Credit mrvl on the match page.
+Read stats from mrvl's Convex queries (`matches:listSummary`, `matches:getPageData`). Link a Liquipedia series to mrvl's by start time (±3h) and team-name variants. Each sync makes three small list calls, and fetches full match pages only when mrvl's `updatedAt` changed, capped at six per run. Each map keeps its draft timeline (bans and protects in step order). Series indexed before that was kept get one refetch while still in the 12-hour lookback, inside the same cap and after changed series; the index marks them so they aren't fetched again. Map winners mrvl has before Liquipedia fill in as `mapOverrides`; Liquipedia always wins once it records a map. Credit mrvl on the match page.
 
 ## Consequences
 

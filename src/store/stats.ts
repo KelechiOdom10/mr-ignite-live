@@ -120,14 +120,20 @@ export async function fetchStatsChanges({
   let pagesRequested = 0;
   let indexChanged = false;
 
-  for (const match of candidates) {
-    if (pagesRequested >= MAX_PAGES_PER_SYNC) break;
-    const summary = findMrvlMatch(match, summaries);
-    if (!summary) continue;
-    const sourceUpdatedAt = String(summary.updatedAt ?? "");
-    const backfill = fetchedBeforeDraftOrder(index[match.id]);
-    if (index[match.id]?.sourceUpdatedAt === sourceUpdatedAt && !backfill) continue;
+  // Series mrvl changed go first, so a draft-order backfill never delays a live score.
+  const work = candidates
+    .flatMap((match) => {
+      const summary = findMrvlMatch(match, summaries);
+      if (!summary) return [];
+      const sourceUpdatedAt = String(summary.updatedAt ?? "");
+      const changed = index[match.id]?.sourceUpdatedAt !== sourceUpdatedAt;
+      if (!changed && !fetchedBeforeDraftOrder(index[match.id])) return [];
+      return [{ match, summary, sourceUpdatedAt, changed }];
+    })
+    .sort((a, b) => Number(b.changed) - Number(a.changed));
 
+  for (const { match, summary, sourceUpdatedAt } of work) {
+    if (pagesRequested >= MAX_PAGES_PER_SYNC) break;
     pagesRequested++;
     const page = await seriesPage(mrvl, summary.id);
     if (!page) continue;

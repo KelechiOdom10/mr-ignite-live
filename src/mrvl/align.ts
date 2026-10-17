@@ -163,9 +163,11 @@ function toDraft(aligned: [MrvlScoreboardTeam, MrvlScoreboardTeam]): DraftAction
     for (const step of team.draftTimeline ?? []) {
       if (!isDraftKind(step.kind)) continue;
       if ((step.teamCamp ?? team.camp) !== team.camp) continue;
-      if (step.phaseIndex == null) return null;
+      const phase = step.phaseIndex;
+      if (phase == null || !Number.isInteger(phase) || phase < 0) return null;
+      if (!Number.isInteger(team.camp)) return null;
       actions.push({
-        phase: step.phaseIndex,
+        phase,
         side: i === 0 ? 1 : 2,
         camp: team.camp,
         kind: step.kind,

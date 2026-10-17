@@ -1,10 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { MatchStatsSchema } from "@/domain/stats";
+
 import { aMatch } from "../../test/builders";
 import { mrvlFixture } from "../../test/fixtures";
 import { findMrvlMatch, toMapOverrides, toMatchStats } from "./align";
-import { MrvlMatchPageSchema, MrvlMatchSummarySchema, type MrvlMatchPage } from "./client";
+import {
+  MrvlMatchPageSchema,
+  MrvlMatchSummarySchema,
+  type MrvlMatchPage,
+  type MrvlScoreboardTeam,
+} from "./client";
 
 const Summaries = z.object({ value: z.array(MrvlMatchSummarySchema) });
 const page = z
@@ -121,6 +128,48 @@ describe("toMatchStats on a recorded series", () => {
     const maps = toMatchStats(flyVs100t, untimed, "u1", new Date("2026-10-17T00:00:00Z")).maps;
     expect(maps.map((m) => m.draft)).toEqual([null, null, null, null]);
     expect(maps[0]?.teams[0].bans).toHaveLength(5);
+  });
+
+  function withTimelines(
+    edit: (team: MrvlScoreboardTeam, i: number) => MrvlScoreboardTeam["draftTimeline"],
+  ): MrvlMatchPage {
+    return {
+      match: {
+        ...page.match,
+        games: page.match.games.map((game) => ({
+          ...game,
+          scoreboard: game.scoreboard && {
+            ...game.scoreboard,
+            teams: game.scoreboard.teams.map((team, i) => ({
+              ...team,
+              draftTimeline: edit(team, i),
+            })),
+          },
+        })),
+      },
+    };
+  }
+
+  it("stores no draft, but keeps the stats readable, when a step number isn't a whole step", () => {
+    const odd = withTimelines((team) =>
+      (team.draftTimeline ?? []).map((step, j) => (j === 0 ? { ...step, phaseIndex: -1 } : step)),
+    );
+    const parsed = MatchStatsSchema.safeParse(
+      toMatchStats(flyVs100t, odd, "u1", new Date("2026-10-17T00:00:00Z")),
+    );
+    expect(parsed.success).toBe(true);
+    expect(parsed.data?.maps.map((m) => m.draft)).toEqual([null, null, null, null]);
+    expect(parsed.data?.maps[0]?.teams[0].bans).toHaveLength(5);
+  });
+
+  it("ignores the other team's steps if mrvl repeats them in a team's timeline", () => {
+    const merged = withTimelines((team, i) => {
+      const game = page.match.games.find((g) => g.scoreboard?.teams.includes(team));
+      const other = game?.scoreboard?.teams[1 - i];
+      return [...(team.draftTimeline ?? []), ...(other?.draftTimeline ?? [])];
+    });
+    const repeated = toMatchStats(flyVs100t, merged, "u1", new Date("2026-10-17T00:00:00Z"));
+    expect(repeated.maps.map((m) => m.draft)).toEqual(stats.maps.map((m) => m.draft));
   });
 
   it("drops a map whose scoreboard names match neither Liquipedia team instead of guessing the order", () => {
