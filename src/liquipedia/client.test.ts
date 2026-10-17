@@ -25,6 +25,12 @@ const json =
   () =>
     new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
+/** A fetch over a dead connection: it never settles unless its signal aborts. */
+const hangingFetch: typeof fetch = (_input, init) =>
+  new Promise((_resolve, reject) => {
+    init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+  });
+
 const noWait = async () => {};
 const unlimited = { maxRequests: Infinity, deadlineAt: Infinity };
 
@@ -140,5 +146,12 @@ describe("createLiquipediaClient", () => {
       .startRun(unlimited)
       .listPages("x");
     await expect(call).rejects.toBeInstanceOf(LiquipediaResponseError);
+  });
+
+  it("gives up on a request that never answers, so a dead connection can't stall every later sync", async () => {
+    const call = createLiquipediaClient({ fetch: hangingFetch, wait: noWait, timeoutMs: 20 })
+      .startRun(unlimited)
+      .listPages("x");
+    await expect(call).rejects.toMatchObject({ name: "TimeoutError" });
   });
 });

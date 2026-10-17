@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const MRVL_QUERY_URL = "https://bold-walrus-4.convex.cloud/api/query";
 const USER_AGENT = "RivalsHub/0.1 (personal Marvel Rivals site)";
+const DEFAULT_TIMEOUT_MS = 10_000;
 
 export class MrvlHttpError extends Error {
   override name = "MrvlHttpError";
@@ -10,6 +11,19 @@ export class MrvlHttpError extends Error {
     readonly path: string,
   ) {
     super(`mrvl returned HTTP ${status} for ${path}`);
+  }
+}
+
+/** The request timed out or the connection failed, so no HTTP status came back. */
+export class MrvlUnreachableError extends Error {
+  override name = "MrvlUnreachableError";
+  constructor(
+    readonly path: string,
+    override readonly cause: unknown,
+  ) {
+    super(
+      `mrvl was unreachable for ${path}: ${cause instanceof Error ? cause.message : String(cause)}`,
+    );
   }
 }
 
@@ -115,25 +129,36 @@ const EnvelopeSchema = z.object({
 
 export interface MrvlClientOptions {
   fetch?: typeof fetch;
+  timeoutMs?: number;
 }
 
 export type MrvlClient = ReturnType<typeof createMrvlClient>;
 
 export function createMrvlClient(options: MrvlClientOptions = {}) {
   const doFetch = options.fetch ?? fetch;
+  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
   async function query<S extends z.ZodType>(
     schema: S,
     path: string,
     args: Record<string, unknown>,
   ): Promise<z.infer<S>> {
-    const res = await doFetch(MRVL_QUERY_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
-      body: JSON.stringify({ path, args, format: "json" }),
-    });
-    if (!res.ok) throw new MrvlHttpError(res.status, path);
-    const envelope = EnvelopeSchema.safeParse(await res.json());
+    let body: unknown;
+    try {
+      const res = await doFetch(MRVL_QUERY_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
+        body: JSON.stringify({ path, args, format: "json" }),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      if (!res.ok) throw new MrvlHttpError(res.status, path);
+      body = await res.json();
+    } catch (error) {
+      if (error instanceof MrvlHttpError) throw error;
+      if (error instanceof SyntaxError) throw new MrvlResponseError(path, "not JSON");
+      throw new MrvlUnreachableError(path, error);
+    }
+    const envelope = EnvelopeSchema.safeParse(body);
     if (!envelope.success) throw new MrvlResponseError(path, "not a Convex envelope");
     if (envelope.data.status !== "success") {
       throw new MrvlResponseError(path, envelope.data.errorMessage ?? envelope.data.status);

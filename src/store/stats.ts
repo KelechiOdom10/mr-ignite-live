@@ -9,6 +9,7 @@ import {
   MrvlHttpError,
   type MrvlMatchPage,
   MrvlResponseError,
+  MrvlUnreachableError,
 } from "@/mrvl/client";
 
 import type { KvStore } from "./kv";
@@ -51,7 +52,14 @@ async function seriesPage(mrvl: MrvlClient, id: string): Promise<MrvlMatchPage |
   try {
     return await mrvl.matchPage(id);
   } catch (error) {
-    if (!(error instanceof MrvlHttpError || error instanceof MrvlResponseError)) throw error;
+    if (
+      !(
+        error instanceof MrvlHttpError ||
+        error instanceof MrvlResponseError ||
+        error instanceof MrvlUnreachableError
+      )
+    )
+      throw error;
     console.warn("Skipping an mrvl series page until the next sync", { id, error: error.message });
     return null;
   }

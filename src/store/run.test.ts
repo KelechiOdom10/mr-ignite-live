@@ -44,7 +44,7 @@ function matchDay({ mrvl: mrvlOptions }: { mrvl?: MrvlFakeOptions } = {}) {
       now: clock.now,
       wait: async (ms) => clock.advance(ms),
     }),
-    mrvl: createMrvlClient({ fetch: mrvl.fetch }),
+    mrvl: createMrvlClient({ fetch: mrvl.fetch, timeoutMs: 20 }),
     now: clock.now,
   };
   return {
@@ -200,5 +200,17 @@ describe("syncOnce on match day", () => {
       .slice(earlierRequests)
       .filter((r) => r.path === "matches:getPageData");
     expect(fetched.map((r) => r.args.id)).toEqual([TLC_SWAMP_MRVL_ID]);
+  });
+
+  it("skips an mrvl series page that never answers instead of dropping every series' stats", async () => {
+    const day = matchDay({ mrvl: { hangingPages: [TLC_SWAMP_MRVL_ID] } });
+
+    await day.sync();
+
+    expect(day.store.putCounts()).toEqual({
+      snapshot: 1,
+      [`stats:v2:${FLY_100T}`]: 1,
+      "stats-index:v2": 1,
+    });
   });
 });
