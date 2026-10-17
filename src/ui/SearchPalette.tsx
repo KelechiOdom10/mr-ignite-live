@@ -1,5 +1,14 @@
 import { useRouter } from "@void/react";
-import { CalendarDays, ListOrdered, Swords, Trophy, UserRound, UserSearch } from "lucide-react";
+import {
+  CalendarDays,
+  Clapperboard,
+  ListOrdered,
+  ShieldBan,
+  Swords,
+  Trophy,
+  UserRound,
+  UserSearch,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { CommandPalette, type CommandItem } from "@/components/motion/command-palette";
@@ -10,10 +19,11 @@ import { searchableName } from "@/domain/player";
 import { eventSlug } from "@/domain/scope";
 
 import { useRecentPlayers } from "./players/recentPlayers";
+import { GO_TO_ROUTES } from "./sections";
 import { useSpoilersHidden } from "./spoilers";
 import { formatDay } from "./time";
 
-const PLACEHOLDER = "Search teams, matches, events and players";
+const PLACEHOLDER = "Search teams, matches, events, players and pages";
 
 /**
  * The vendored palette keeps its query to itself; this reads what's typed into our palette's
@@ -126,7 +136,36 @@ export function SearchPalette({
         onSelect: () => void router.visit("/leaderboard"),
       },
     ];
-    return [...matches, ...players, ...events];
+    const pages: CommandItem[] = [
+      {
+        id: "page:drafts",
+        label: "Pro drafts",
+        group: "Go to",
+        hint: "Picks, bans and protects",
+        icon: ShieldBan,
+        keywords: ["drafts", "bans", "protects", "picks", "pro"],
+        onSelect: () => void router.visit(GO_TO_ROUTES.drafts),
+      },
+      {
+        id: "page:simulator",
+        label: "Draft simulator",
+        group: "Go to",
+        hint: "Practise a draft",
+        icon: ShieldBan,
+        keywords: ["drafts", "practise", "practice", "ban", "protect"],
+        onSelect: () => void router.visit(GO_TO_ROUTES.simulator),
+      },
+      {
+        id: "page:review",
+        label: "Review a recording",
+        group: "Go to",
+        hint: "Your own footage",
+        icon: Clapperboard,
+        keywords: ["review", "vod", "recording", "deaths", "practice"],
+        onSelect: () => void router.visit(GO_TO_ROUTES.review),
+      },
+    ];
+    return [...pages, ...matches, ...players, ...events];
   }, [snapshot, now, router, hidden, recent, lookup]);
 
   return (

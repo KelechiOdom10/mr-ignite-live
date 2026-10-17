@@ -1,5 +1,5 @@
 import { Link, useRouter } from "@void/react";
-import { CalendarDays, Search, Trophy, Users, Zap } from "lucide-react";
+import { CalendarDays, Clapperboard, Search, ShieldBan, Trophy, Users, Zap } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import {
@@ -14,7 +14,7 @@ import { LiveIsland } from "./LiveIsland";
 import { MatchStrip } from "./MatchStrip";
 import { scoreToasts } from "./scoreToasts";
 import { SearchPalette } from "./SearchPalette";
-import { isPlayersPath } from "./sections";
+import { NAV_SECTIONS, sectionOf, showsFixtureStrip, type Section } from "./sections";
 import { SpoilerToggle, useSpoilersHidden } from "./spoilers";
 import { formatRelative, useHydrated } from "./time";
 import type { Connection } from "./useLiveSnapshot";
@@ -83,11 +83,15 @@ function SyncStatus({
   );
 }
 
-const NAV = [
-  { href: "/", label: "Matches", icon: CalendarDays },
-  { href: "/events", label: "Events", icon: Trophy },
-  { href: "/players", label: "Players", icon: Users },
-] as const;
+const ICONS: Record<Section, typeof Users> = {
+  matches: CalendarDays,
+  events: Trophy,
+  drafts: ShieldBan,
+  players: Users,
+  review: Clapperboard,
+};
+
+const NAV = NAV_SECTIONS.map((item) => ({ ...item, icon: ICONS[item.section] }));
 
 export function AppShell({
   snapshot,
@@ -104,43 +108,42 @@ export function AppShell({
   const [searchOpen, setSearchOpen] = useState(false);
   const router = useRouter();
   const path = router.path;
-  const playersPage = isPlayersPath(path);
+  const section = sectionOf(path);
 
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur-xl">
-        <div className="mx-auto grid h-14 max-w-7xl grid-cols-[1fr_auto] items-center md:grid-cols-[1fr_auto_1fr] gap-3 px-4 sm:px-6">
+        <div className="mx-auto grid h-14 max-w-7xl grid-cols-[1fr_auto] items-center lg:grid-cols-[auto_minmax(0,1fr)_auto] gap-3 px-4 sm:px-6">
           <div className="flex min-w-0 items-center gap-6">
-            <Link href="/" className="flex items-center gap-2 font-semibold">
+            <Link
+              href="/"
+              className="flex shrink-0 items-center gap-2 font-semibold whitespace-nowrap"
+            >
               <Zap className="size-5 fill-primary text-primary" aria-hidden />
               <span>Rivals Hub</span>
             </Link>
             <nav aria-label="Main" className="hidden items-center gap-1 sm:flex">
-              {NAV.map(({ href, label, icon: Icon }) => {
-                const active =
-                  href === "/"
-                    ? path === "/" || path.startsWith("/match")
-                    : href === "/players"
-                      ? isPlayersPath(path)
-                      : path.startsWith(href.slice(0, -1));
+              {NAV.map(({ href, label, icon: Icon, section: target }) => {
+                const active = target === section;
                 return (
                   <Link
                     key={href}
                     href={href}
                     aria-current={active ? "page" : undefined}
+                    title={label}
                     className={cn(
                       "inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
                       active && "text-foreground",
                     )}
                   >
                     <Icon className="size-4" aria-hidden />
-                    {label}
+                    <span className="sr-only xl:not-sr-only">{label}</span>
                   </Link>
                 );
               })}
             </nav>
           </div>
-          <div className="hidden justify-center md:flex">
+          <div className="hidden min-w-0 justify-center lg:flex">
             <LiveIsland snapshot={snapshot} now={now} />
           </div>
           <div className="flex items-center justify-end gap-2">
@@ -150,25 +153,46 @@ export function AppShell({
               className="inline-flex h-9 items-center gap-2 rounded-md border px-3 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
             >
               <Search className="size-4" aria-hidden />
-              <span className="hidden lg:inline">Search</span>
-              <kbd className="hidden rounded bg-muted px-1.5 font-mono text-[0.7rem] lg:inline">
+              <span className="hidden xl:inline">Search</span>
+              <kbd className="hidden rounded bg-muted px-1.5 font-mono text-[0.7rem] xl:inline">
                 ⌘K
               </kbd>
-              <span className="sr-only lg:hidden">Search</span>
+              <span className="sr-only xl:hidden">Search</span>
             </button>
-            <div className="hidden sm:block">
+            <div className="hidden sm:block xl:hidden">
+              <SpoilerToggle compact />
+            </div>
+            <div className="sm:hidden xl:block">
               <SpoilerToggle />
             </div>
           </div>
         </div>
       </header>
-      {!playersPage && <MatchStrip snapshot={snapshot} now={now} />}
+      {showsFixtureStrip(section) && <MatchStrip snapshot={snapshot} now={now} />}
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 pb-24 sm:px-6 sm:pb-8">
         {children}
       </main>
       <footer className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 border-t px-4 py-5 pb-24 text-xs text-muted-foreground sm:px-6 sm:pb-5">
         <SyncStatus snapshot={snapshot} connection={connection} now={now} />
-        {playersPage ? (
+        {section === "review" ? (
+          <span>
+            Recordings and notes stay in this browser; live scores from Liquipedia (CC BY-SA). Not
+            affiliated with NetEase or Marvel.
+          </span>
+        ) : section === "drafts" ? (
+          <span>
+            Draft data from{" "}
+            <a
+              className="underline hover:text-foreground"
+              href="https://www.mrvl.net"
+              target="_blank"
+              rel="noreferrer"
+            >
+              mrvl.net
+            </a>
+            ; live scores from Liquipedia (CC BY-SA). Not affiliated with NetEase or Marvel.
+          </span>
+        ) : section === "players" ? (
           <span>
             Player data from{" "}
             <a
@@ -198,22 +222,22 @@ export function AppShell({
       </footer>
       <nav
         aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl sm:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl sm:hidden"
       >
-        {NAV.map(({ href, label, icon: Icon }) => (
+        {NAV.map(({ href, label, icon: Icon, section: target }) => (
           <Link
             key={href}
             href={href}
-            className="flex h-14 flex-col items-center justify-center gap-0.5 text-[0.7rem] text-muted-foreground"
+            aria-current={target === section ? "page" : undefined}
+            className={cn(
+              "flex h-14 flex-col items-center justify-center gap-0.5 text-[0.7rem] text-muted-foreground",
+              target === section && "text-foreground",
+            )}
           >
             <Icon className="size-5" aria-hidden />
             {label}
           </Link>
         ))}
-        <div className="flex h-14 flex-col items-center justify-center gap-0.5 text-[0.7rem] text-muted-foreground">
-          <SpoilerToggle compact />
-          Spoilers
-        </div>
       </nav>
       <SearchPalette snapshot={snapshot} now={now} open={searchOpen} onOpenChange={setSearchOpen} />
       <AnimatedToastStack
