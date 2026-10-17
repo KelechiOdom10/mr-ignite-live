@@ -51,15 +51,15 @@ None. The site is local-only and has no accounts.
 
 Use Synara's in-app browser (`browser_*` tools): `browser_open`, then `browser_resize` to 1440×900 and later 390×844. Assert text with `browser_run` reading `innerText`. Server HTML from curl splits strings with React comment nodes (`season (<!-- -->10.5`), so plain text matching on it fails. Without a browser tool, strip comments and tags first (`sed -E 's/<!-- -->//g; s/<[^>]+>/ /g'`) and say the proof is server-render only.
 
-| Handle                                                                        | Where                                                                       |
-| ----------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `/player/670067075`                                                           | Sypeh: recorded career, 20 competitive matches across seasons 10.5 and 10.0 |
-| `/player/1364513129`                                                          | NAVI TrqstMe: recorded career, **private** match history                    |
-| `/players`, `/players?name=Sypeh`                                             | Search and favourites; the `name` query prefills without searching          |
-| `/leaderboard`                                                                | Recorded top 100 (PC)                                                       |
-| `/game/5513337_1791844040_1311009_11001_12`                                   | The one recorded ranked match                                               |
-| `/`, `/events`, `/match/<id>`                                                 | Esports pages from the live Liquipedia snapshot                             |
-| ⌘K (`role=combobox`, placeholder "Search teams, matches, events and players") | Global search                                                               |
+| Handle                                                                               | Where                                                                       |
+| ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| `/player/670067075`                                                                  | Sypeh: recorded career, 20 competitive matches across seasons 10.5 and 10.0 |
+| `/player/1364513129`                                                                 | NAVI TrqstMe: recorded career, **private** match history                    |
+| `/players`, `/players?name=Sypeh`                                                    | Search and favourites; the `name` query prefills without searching          |
+| `/leaderboard`                                                                       | Recorded top 100 (PC)                                                       |
+| `/game/5513337_1791844040_1311009_11001_12`                                          | The one recorded ranked match                                               |
+| `/`, `/events`, `/match/<id>`                                                        | Esports pages from the live Liquipedia snapshot                             |
+| ⌘K (`role=combobox`, placeholder "Search teams, matches, events, players and pages") | Global search                                                               |
 
 Searching any name other than `Sypeh`, `NAVI TrqstMe` or `zzqxnoplayer77` in fixtures mode answers "No player is named …", as the API does for an unknown name.
 
@@ -82,6 +82,7 @@ Leave `.void/` (git-ignored) and the screenshots.
 - `bun run check` is format, lint (warnings fail), boundaries, typecheck and tests. Run it before every commit; it needs `.void/` from `bunx void prepare`.
 - If your clone excludes `.claude/` (for example in `.git/info/exclude`), `oxfmt .` skips these skill files locally but CI checks them. After editing them, run `bunx oxfmt .claude/skills/verify/SKILL.md .claude/skills/verify/features/*.md`.
 - Don't edit `src/components/` or `src/lib/` (vendored beUI).
+- Restart the dev server after switching to a branch that adds or removes pages. Vite keeps the old route table and answers 404, and an open tab may need a full reload.
 - Cron triggers don't fire under Vite. The esports snapshot syncs on read at most once a minute.
 - Dates in fixtures are fixed (recorded 2026-10-17), so "N days ago" grows over time; assert on seasons and counts, not relative dates.
 

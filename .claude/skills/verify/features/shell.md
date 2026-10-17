@@ -8,14 +8,18 @@ Every page.
 
 ## How to drive it
 
-1. Open `/` and `/player/670067075` at 1440, then at 390.
+1. Open `/`, `/drafts`, `/player/670067075` and `/review` at 1440, then at 390. Also check 1024 for header fit.
 
 ## What proves it works
 
-- `/`: the fixture strip of live and upcoming chips shows under the header. The footer shows "Live updates on · Liquipedia updated …".
-- `/player/…`, `/players`, `/leaderboard`, `/game/…`: no fixture strip; the live island still shows when a match is live. The footer keeps the live status ("Live updates on · Liquipedia updated …") and reads "Player data from RivalsIsland; live scores from Liquipedia…". The Players nav item is current.
-- At 390 the bottom nav shows Matches, Events, Players and Spoilers, with no horizontal overflow.
+- The nav lists Matches, Events, Drafts, Players and Review. `scripts/routes.test.ts` fails if any nav or Go to link has no page. The current section's item has `aria-current="page"`: `/match/…` → Matches, `/event/…` → Events, `/drafts/simulator` → Drafts, `/game/…` and `/leaderboard` → Players.
+- Nav labels, the Search label and the full "Hide spoilers" label show from 1280 (`xl`). Below that, items are icons with screen-reader labels and a hover title, and the header stays on one line at 1024 even with the live island showing. The island shows from 1024 (`lg`); below that, live games are in the fixture strip on esports pages.
+- `/`, `/events`, `/drafts`: the fixture strip of live and upcoming chips shows under the header. The footer shows "Live updates on · Liquipedia updated …", and `/drafts` credits "Draft data from mrvl.net".
+- `/player/…`, `/players`, `/leaderboard`, `/game/…`, `/review`: no fixture strip, but the live island still shows when a match is live, and the footer keeps the live status.
+  - Player pages credit "Player data from RivalsIsland; live scores from Liquipedia…".
+  - `/review` reads "Recordings and notes stay in this browser…".
+- At 390 the bottom nav shows the five sections with the current one highlighted. The Hide spoilers switch sits in the header. Nothing overflows horizontally.
 
 ## Owning code
 
-`src/ui/AppShell.tsx`, `src/ui/sections.ts` (`isPlayersPath`).
+`src/ui/AppShell.tsx`, `src/ui/sections.ts` (`sectionOf`, `showsFixtureStrip`).

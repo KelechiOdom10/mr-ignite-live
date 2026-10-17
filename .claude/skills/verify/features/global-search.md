@@ -17,7 +17,7 @@ The Search button in the header, or ⌘K on any page.
 
 - After typing, the options are exactly "Sypeh · Recently viewed" and "Search ranked players for “Sypeh” · Exact in-game name".
 - Choosing the lookup lands on `/players?name=Sypeh&focus=name`. The name field holds `Sypeh` and has focus, and **nothing was searched**. `/api/credits` `spent` doesn't move until Search is pressed.
-- An empty query lists "Find a player by name" and "Leaderboard" under Players.
+- An empty query lists "Find a player by name" and "Leaderboard" under Players, and "Pro drafts", "Draft simulator" and "Review a recording" under Go to, which is listed first.
 
 ## Owning code
 
