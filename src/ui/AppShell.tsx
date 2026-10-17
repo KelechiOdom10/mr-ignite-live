@@ -196,7 +196,13 @@ export function AppShell({
         </div>
       </nav>
       <SearchPalette snapshot={snapshot} now={now} open={searchOpen} onOpenChange={setSearchOpen} />
-      <AnimatedToastStack toasts={toasts} onDismiss={dismissToast} position="bottom-right" fixed />
+      <AnimatedToastStack
+        toasts={toasts}
+        onDismiss={dismissToast}
+        position="bottom-right"
+        fixed
+        className="bottom-[calc(3.5rem+env(safe-area-inset-bottom)+0.75rem)] sm:bottom-6"
+      />
     </div>
   );
 }
