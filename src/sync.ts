@@ -4,6 +4,7 @@ import { createMrvlClient } from "@/mrvl/client";
 import { toSnapshot, withMapOverrides } from "@/store/plan";
 import { readStored, syncFromLiquipedia, writeStored } from "@/store/snapshot";
 import { syncStats } from "@/store/stats";
+import { voidKvStore } from "@/store/voidKv";
 
 import { live, SCORES_TOPIC } from "./live";
 
@@ -17,10 +18,15 @@ let lastFailureAt = Number.NEGATIVE_INFINITY;
 
 async function withStats(stored: StoredSnapshot, now: Date) {
   try {
-    const result = await syncStats(mrvl, toSnapshot(stored, now), now.getTime());
+    const result = await syncStats({
+      store: voidKvStore,
+      mrvl,
+      snapshot: toSnapshot(stored, now),
+      now: now.getTime(),
+    });
     const next = withMapOverrides(stored, result.mapOverrides);
     if (!next) return { stored, updatedStats: result.updatedMatchIds.length };
-    await writeStored(next);
+    await writeStored(voidKvStore, next);
     return { stored: next, updatedStats: result.updatedMatchIds.length };
   } catch (error) {
     console.error("mrvl stats sync failed; scores still come from Liquipedia", error);
@@ -30,7 +36,7 @@ async function withStats(stored: StoredSnapshot, now: Date) {
 
 async function runSync(): Promise<Snapshot> {
   const started = Date.now();
-  const result = await syncFromLiquipedia(liquipedia);
+  const result = await syncFromLiquipedia(liquipedia, voidKvStore);
   const { stored, updatedStats } = await withStats(result.stored, new Date());
   const snapshot = toSnapshot(stored, new Date());
   if (result.changedPages > 0 || result.removedPages > 0 || updatedStats > 0) {
@@ -72,7 +78,7 @@ export class SyncBackoffError extends Error {
 
 // Cron triggers don't fire under `vite dev`, so reads drive syncing locally.
 export async function currentSnapshot(): Promise<Snapshot> {
-  const stored = await readStored();
+  const stored = await readStored(voidKvStore);
   const devDue = import.meta.env.DEV && Date.now() - lastDevSync > DEV_SYNC_INTERVAL_MS;
   if (stored && !devDue) return toSnapshot(stored, new Date());
   // Without this, every request after a failed first sync would refetch all of Liquipedia.

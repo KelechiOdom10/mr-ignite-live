@@ -1,4 +1,3 @@
-import { kv } from "void/kv";
 import { z } from "zod";
 
 import { matchState } from "@/domain/matchState";
@@ -7,7 +6,9 @@ import { MatchStatsSchema, type MatchStats } from "@/domain/stats";
 import { findMrvlMatch, toMapOverrides, toMatchStats } from "@/mrvl/align";
 import type { MrvlClient } from "@/mrvl/client";
 
+import type { KvStore } from "./kv";
 import { statsChanged } from "./plan";
+import { voidKvStore } from "./voidKv";
 
 const STATS_PREFIX = "stats:v2:";
 const INDEX_KEY = "stats-index:v2";
@@ -22,13 +23,18 @@ const StatsIndexSchema = z.record(
 );
 type StatsIndex = z.infer<typeof StatsIndexSchema>;
 
-export async function readStats(matchId: string): Promise<MatchStats | null> {
-  const parsed = MatchStatsSchema.safeParse(await kv.get<unknown>(STATS_PREFIX + matchId));
+export async function readMatchStats(store: KvStore, matchId: string): Promise<MatchStats | null> {
+  const parsed = MatchStatsSchema.safeParse(await store.get(STATS_PREFIX + matchId));
   return parsed.success ? parsed.data : null;
 }
 
-async function readIndex(): Promise<StatsIndex> {
-  const parsed = StatsIndexSchema.safeParse(await kv.get<unknown>(INDEX_KEY));
+/** For route and page loaders, which always read the deployed KV. */
+export function readStats(matchId: string): Promise<MatchStats | null> {
+  return readMatchStats(voidKvStore, matchId);
+}
+
+async function readIndex(store: KvStore): Promise<StatsIndex> {
+  const parsed = StatsIndexSchema.safeParse(await store.get(INDEX_KEY));
   return parsed.success ? parsed.data : {};
 }
 
@@ -46,11 +52,17 @@ export interface StatsSyncResult {
   mapOverrides: Record<string, MapOverride[]>;
 }
 
-export async function syncStats(
-  mrvl: MrvlClient,
-  snapshot: Snapshot,
-  now: number,
-): Promise<StatsSyncResult> {
+export async function syncStats({
+  store,
+  mrvl,
+  snapshot,
+  now,
+}: {
+  store: KvStore;
+  mrvl: MrvlClient;
+  snapshot: Snapshot;
+  now: number;
+}): Promise<StatsSyncResult> {
   const candidates = statsCandidates(snapshot, now);
   if (candidates.length === 0) return { updatedMatchIds: [], mapOverrides: {} };
 
@@ -60,7 +72,7 @@ export async function syncStats(
     ...(await mrvl.listMatches("recent", RECENT_LIMIT)),
     ...(await mrvl.listMatches("upcoming", LIVE_LIMIT)),
   ];
-  const index = await readIndex();
+  const index = await readIndex(store);
   const updatedMatchIds: string[] = [];
   const mapOverrides: Record<string, MapOverride[]> = {};
   let indexChanged = false;
@@ -82,12 +94,13 @@ export async function syncStats(
     );
     index[match.id] = { sourceMatchId: summary.id, sourceUpdatedAt };
     indexChanged = true;
-    if (stats.maps.length === 0 || !statsChanged(await readStats(match.id), stats)) continue;
-    await kv.put(STATS_PREFIX + match.id, stats);
+    if (stats.maps.length === 0 || !statsChanged(await readMatchStats(store, match.id), stats))
+      continue;
+    await store.put(STATS_PREFIX + match.id, stats);
     updatedMatchIds.push(match.id);
     mapOverrides[match.id] = toMapOverrides(stats);
   }
 
-  if (indexChanged) await kv.put(INDEX_KEY, index);
+  if (indexChanged) await store.put(INDEX_KEY, index);
   return { updatedMatchIds, mapOverrides };
 }
