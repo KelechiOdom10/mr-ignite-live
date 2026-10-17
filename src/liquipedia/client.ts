@@ -3,7 +3,7 @@ import { z } from "zod";
 export const LIQUIPEDIA_API = "https://liquipedia.net/marvelrivals/api.php";
 // Liquipedia's API terms require an identifying User-Agent and gzip, and ask for ≤1 query per 2s.
 export const LIQUIPEDIA_USER_AGENT =
-  "RivalsHub/0.1 (personal Marvel Rivals site; contact via github.com/kelechiodom)";
+  "RivalsHub/0.1 (personal Marvel Rivals site; contact via github.com/KelechiOdom10)";
 const DEFAULT_MIN_GAP_MS = 2100;
 const TITLES_PER_QUERY = 50;
 
