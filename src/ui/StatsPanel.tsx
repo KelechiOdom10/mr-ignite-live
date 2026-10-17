@@ -189,6 +189,9 @@ function StatsTable({
                   Acc.
                 </th>
               )}
+              <th scope="col" className="w-8 px-1 py-2">
+                <span className="sr-only">Ranked lookup</span>
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -197,7 +200,6 @@ function StatsTable({
                 <th scope="row" className="px-3 py-2 text-left font-medium">
                   <span className="inline-flex items-center gap-2">
                     {p.name}
-                    <RankedLookup name={p.name} />
                     {combined ? (
                       <>
                         {p.mvpCount > 0 && <AwardBadge award="MVP" count={p.mvpCount} />}
@@ -242,6 +244,9 @@ function StatsTable({
                     {p.accuracy === null ? "–" : `${Math.round(p.accuracy)}%`}
                   </td>
                 )}
+                <td className="px-1 py-2 text-right">
+                  <RankedLookup name={p.name} />
+                </td>
               </tr>
             ))}
           </tbody>
@@ -265,7 +270,6 @@ function RankedLookup({ name }: { name: string }) {
   return (
     <Link
       href={`/players?name=${encodeURIComponent(query)}`}
-      rel="nofollow"
       aria-label={`Look up ${name} among ranked players`}
       title="Look up this name among ranked players"
       className="inline-flex size-6 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"

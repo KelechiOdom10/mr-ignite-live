@@ -167,6 +167,7 @@ export function AppShell({
         {children}
       </main>
       <footer className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 border-t px-4 py-5 pb-24 text-xs text-muted-foreground sm:px-6 sm:pb-5">
+        <SyncStatus snapshot={snapshot} connection={connection} now={now} />
         {playersPage ? (
           <span>
             Player data from{" "}
@@ -178,24 +179,21 @@ export function AppShell({
             >
               RivalsIsland
             </a>
-            . Live scores from Liquipedia (CC BY-SA). Not affiliated with NetEase or Marvel.
+            ; live scores from Liquipedia (CC BY-SA). Not affiliated with NetEase or Marvel.
           </span>
         ) : (
-          <>
-            <SyncStatus snapshot={snapshot} connection={connection} now={now} />
-            <span>
-              Data from{" "}
-              <a
-                className="underline hover:text-foreground"
-                href="https://liquipedia.net/marvelrivals/"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Liquipedia
-              </a>{" "}
-              (CC BY-SA). Not affiliated with NetEase or Marvel.
-            </span>
-          </>
+          <span>
+            Data from{" "}
+            <a
+              className="underline hover:text-foreground"
+              href="https://liquipedia.net/marvelrivals/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Liquipedia
+            </a>{" "}
+            (CC BY-SA). Not affiliated with NetEase or Marvel.
+          </span>
         )}
       </footer>
       <nav

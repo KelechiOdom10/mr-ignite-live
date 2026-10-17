@@ -329,3 +329,13 @@ export function searchableName(name: string): string | null {
   const parsed = PlayerNameQuerySchema.safeParse(name);
   return parsed.success ? parsed.data : null;
 }
+
+/**
+ * What /players prefills from its query. A name is never searched automatically: a search can
+ * cost credits, so the reader presses Search.
+ */
+export function searchPrefill(name: string | undefined, focus: string | undefined) {
+  const parsed = PlayerNameQuerySchema.safeParse(name ?? "");
+  const prefilled = parsed.success ? parsed.data : "";
+  return { name: prefilled, focus: prefilled !== "" || focus === "name" };
+}

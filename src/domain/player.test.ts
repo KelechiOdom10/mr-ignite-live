@@ -7,6 +7,7 @@ import {
   RECENT_PLAYERS_LIMIT,
   rememberPlayer,
   searchableName,
+  searchPrefill,
   recentHeroes,
   seasonRecord,
   UidSchema,
@@ -169,5 +170,18 @@ describe("searchableName", () => {
     expect(searchableName(" Sypeh ")).toBe("Sypeh");
     expect(searchableName("")).toBeNull();
     expect(searchableName("a".repeat(17))).toBeNull();
+  });
+});
+
+describe("searchPrefill", () => {
+  it("prefills and focuses a valid name, and drops a blank or over-long one", () => {
+    expect(searchPrefill(" Sypeh ", undefined)).toEqual({ name: "Sypeh", focus: true });
+    expect(searchPrefill("   ", undefined)).toEqual({ name: "", focus: false });
+    expect(searchPrefill("a".repeat(17), undefined)).toEqual({ name: "", focus: false });
+  });
+
+  it("focuses an empty field only when global search asked for it", () => {
+    expect(searchPrefill(undefined, "name")).toEqual({ name: "", focus: true });
+    expect(searchPrefill(undefined, "other")).toEqual({ name: "", focus: false });
   });
 });
