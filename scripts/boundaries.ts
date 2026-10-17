@@ -42,7 +42,7 @@ export const RULES: readonly BoundaryRule[] = [
     allow: "any",
   },
   { name: "test helpers", files: /^test\//, allow: "any" },
-  { name: "D1 schema", files: /^db\//, allow: ["void/schema-d1", "void/db"] },
+  { name: "D1 schema", files: /^db\//, allow: ["void/schema-d1"] },
   { name: "scripts", files: /^scripts\//, allow: "any" },
   { name: "root config", files: /^[^/]+\.ts$/, allow: "any" },
 ];

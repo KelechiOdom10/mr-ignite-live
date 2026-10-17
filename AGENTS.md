@@ -20,7 +20,7 @@ A personal Marvel Rivals site, local-only. The esports section has live Ignite s
 | `src/liquipedia/`                                       | API client, wikitext parser, team templates                                        | `domain`                                                      |
 | `src/mrvl/`                                             | mrvl.net Convex client and Liquipedia↔mrvl linking (stats, early map results)      | `domain`                                                      |
 | `src/store/`                                            | Sync planning (pure, `plan.ts`), one sync run (`run.ts`), KV I/O through `KvStore` | `domain`, `liquipedia`, `mrvl`; `void/kv` only in `voidKv.ts` |
-| `db/`, `src/store/d1.ts`                                | D1 schema, migrations and the player-data store (favourites)                       | `void/db` and `@schema` only in `src/store/d1.ts`             |
+| `db/`, `src/store/d1.ts`                                | D1 schema, migrations and the player-data store (favourites)                       | within `src/store/`, `void/db` and `@schema` only in `d1.ts`  |
 | `src/players.ts`                                        | Binds the players section to D1                                                    | everything                                                    |
 | `src/sync.ts`, `crons/`, `routes/`, `pages/*.server.ts` | Runtime shell                                                                      | everything                                                    |
 | `src/ui/`, `pages/*.tsx`                                | React views                                                                        | `domain`, `components`, `lib`                                 |

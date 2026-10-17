@@ -6,7 +6,7 @@ ADR 2 keeps esports data in one KV snapshot and says to move to D1 if favourites
 
 ## Decision
 
-Use D1 through `void/db` (Drizzle, bundled with Void) for player data only. Tables live in `db/schema.ts` with committed migrations in `db/migrations/`. Only `src/store/d1.ts` imports `void/db`; the rest of the store reaches D1 through interfaces such as `FavouriteStore`. Esports stays on KV.
+Use D1 through `void/db` (Drizzle, bundled with Void) for player data only. Tables live in `db/schema.ts` with committed migrations in `db/migrations/`. Within `src/store/`, only `d1.ts` imports `void/db`; the rest of the store reaches D1 through interfaces such as `FavouriteStore`. Esports stays on KV.
 
 ## Consequences
 
