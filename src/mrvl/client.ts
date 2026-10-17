@@ -14,6 +14,19 @@ export class MrvlHttpError extends Error {
   }
 }
 
+/** The request timed out or the connection failed, so no HTTP status came back. */
+export class MrvlUnreachableError extends Error {
+  override name = "MrvlUnreachableError";
+  constructor(
+    readonly path: string,
+    override readonly cause: unknown,
+  ) {
+    super(
+      `mrvl was unreachable for ${path}: ${cause instanceof Error ? cause.message : String(cause)}`,
+    );
+  }
+}
+
 export class MrvlResponseError extends Error {
   override name = "MrvlResponseError";
   constructor(
@@ -130,14 +143,22 @@ export function createMrvlClient(options: MrvlClientOptions = {}) {
     path: string,
     args: Record<string, unknown>,
   ): Promise<z.infer<S>> {
-    const res = await doFetch(MRVL_QUERY_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
-      body: JSON.stringify({ path, args, format: "json" }),
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-    if (!res.ok) throw new MrvlHttpError(res.status, path);
-    const envelope = EnvelopeSchema.safeParse(await res.json());
+    let body: unknown;
+    try {
+      const res = await doFetch(MRVL_QUERY_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
+        body: JSON.stringify({ path, args, format: "json" }),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      if (!res.ok) throw new MrvlHttpError(res.status, path);
+      body = await res.json();
+    } catch (error) {
+      if (error instanceof MrvlHttpError) throw error;
+      if (error instanceof SyntaxError) throw new MrvlResponseError(path, "not JSON");
+      throw new MrvlUnreachableError(path, error);
+    }
+    const envelope = EnvelopeSchema.safeParse(body);
     if (!envelope.success) throw new MrvlResponseError(path, "not a Convex envelope");
     if (envelope.data.status !== "success") {
       throw new MrvlResponseError(path, envelope.data.errorMessage ?? envelope.data.status);

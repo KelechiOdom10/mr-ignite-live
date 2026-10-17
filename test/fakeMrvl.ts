@@ -42,6 +42,8 @@ export interface MrvlFakeOptions {
   down?: boolean;
   /** Series ids whose page request fails with HTTP 502. */
   failingPages?: string[];
+  /** Series ids whose page request never answers, like a dead connection, until it is aborted. */
+  hangingPages?: string[];
   /** mrvl re-saved these series: their `updatedAt` moves on with nothing else changed. */
   resaved?: string[];
 }
@@ -64,6 +66,11 @@ export function fakeMrvl(options: MrvlFakeOptions = {}) {
     const request = RequestSchema.parse(JSON.parse(String(init?.body)));
     requests.push(request);
     const id = request.args.id ?? "";
+    if (settings.hangingPages?.includes(id)) {
+      return new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+      });
+    }
     if (settings.down || settings.failingPages?.includes(id)) {
       return new Response("Bad Gateway", { status: 502 });
     }

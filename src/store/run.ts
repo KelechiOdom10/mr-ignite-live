@@ -15,7 +15,8 @@ import {
 
 // The 2s gap is per isolate, and the cron fires every 60s whether or not the last run finished.
 // Stopping new Liquipedia requests at 30s, after at most 8, keeps runs in different isolates
-// from overlapping; anything left over is still changed in KV, so the next run picks it up.
+// from overlapping in the usual case; anything left over is still changed in KV, so the next run
+// picks it up. Requests that hang until their 10s timeout can still stretch a run past 60s.
 const LIQUIPEDIA_REQUESTS_PER_RUN = 8;
 const LIQUIPEDIA_RUN_WINDOW_MS = 30_000;
 

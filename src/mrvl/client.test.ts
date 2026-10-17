@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { mrvlFixture } from "../../test/fixtures";
-import { createMrvlClient, MrvlHttpError, MrvlResponseError } from "./client";
+import { createMrvlClient, MrvlHttpError, MrvlResponseError, MrvlUnreachableError } from "./client";
 
 function respondWith(body: unknown, status = 200) {
   const calls: RequestInit[] = [];
@@ -46,6 +46,6 @@ describe("createMrvlClient", () => {
 
   it("gives up on a request that never answers, so a dead connection can't stall the sync", async () => {
     const call = createMrvlClient({ fetch: hangingFetch, timeoutMs: 20 }).matchPage("x");
-    await expect(call).rejects.toMatchObject({ name: "TimeoutError" });
+    await expect(call).rejects.toBeInstanceOf(MrvlUnreachableError);
   });
 });
