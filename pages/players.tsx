@@ -1,7 +1,9 @@
+import { Link } from "@void/react";
 import { Star } from "lucide-react";
 
 import { AppShell } from "@/ui/AppShell";
 import { PlayersTabs } from "@/ui/players/PlayersTabs";
+import { SearchForm } from "@/ui/players/SearchForm";
 import { useLiveSnapshot } from "@/ui/useLiveSnapshot";
 
 import type { Props } from "./players.server";
@@ -17,7 +19,10 @@ export default function PlayersPage({ snapshot: initial, favourites }: Props) {
       <div className="mt-6">
         <PlayersTabs current="/players" />
       </div>
-      <section aria-labelledby="favourites" className="mt-6 space-y-3">
+      <div className="mt-6 max-w-xl">
+        <SearchForm />
+      </div>
+      <section aria-labelledby="favourites" className="mt-8 space-y-3">
         <h2 id="favourites" className="text-lg font-semibold">
           Favourites
         </h2>
@@ -29,9 +34,14 @@ export default function PlayersPage({ snapshot: initial, favourites }: Props) {
         ) : (
           <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {favourites.map((f) => (
-              <li key={f.uid} className="rounded-lg border bg-card p-3">
-                <span className="font-medium">{f.name}</span>
-                <span className="ml-2 font-mono text-xs text-muted-foreground">{f.uid}</span>
+              <li key={f.uid}>
+                <Link
+                  href={`/player/${f.uid}`}
+                  className="flex items-baseline justify-between gap-2 rounded-lg border bg-card p-3 transition-colors hover:bg-accent/50"
+                >
+                  <span className="truncate font-medium">{f.name}</span>
+                  <span className="font-mono text-xs text-muted-foreground">{f.uid}</span>
+                </Link>
               </li>
             ))}
           </ul>

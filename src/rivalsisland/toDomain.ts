@@ -1,4 +1,15 @@
-import { UidSchema, type Freshness, type Leaderboard, type Uid } from "@/domain/player";
+import { heroDisplayName } from "@/domain/heroes";
+import {
+  HeroRoleSchema,
+  UidSchema,
+  type Career,
+  type Freshness,
+  type Hero,
+  type HistoryPage,
+  type Leaderboard,
+  type PlayerProfile,
+  type Uid,
+} from "@/domain/player";
 
 import type { ResponseOf } from "./endpoints";
 
@@ -28,6 +39,108 @@ export function toLeaderboard(res: ResponseOf<"leaderboard">, freshness: Freshne
         },
       ];
     }),
+    freshness,
+  };
+}
+
+export type HeroCatalogue = ReadonlyMap<number, Hero>;
+
+export function toHeroCatalogue(res: ResponseOf<"heroes">): HeroCatalogue {
+  return new Map(
+    res.heroes.map((h) => [
+      h.id,
+      {
+        id: h.id,
+        name: heroDisplayName(h.name),
+        role: HeroRoleSchema.safeParse(h.role).data ?? null,
+        iconUrl: h.icon,
+      },
+    ]),
+  );
+}
+
+/** A hero from a response, filled in from the catalogue when it's missing a name, role or icon. */
+export function toHero(
+  ref: { id: number; name: string | null; icon?: string | null },
+  catalogue: HeroCatalogue,
+): Hero {
+  const known = catalogue.get(ref.id);
+  return {
+    id: ref.id,
+    name: ref.name ? heroDisplayName(ref.name) : (known?.name ?? `Hero ${ref.id}`),
+    role: known?.role ?? null,
+    iconUrl: ref.icon ?? known?.iconUrl ?? null,
+  };
+}
+
+function isoFromSeconds(seconds: number | null): string | null {
+  return seconds === null ? null : new Date(seconds * 1000).toISOString();
+}
+
+export function toProfile(res: ResponseOf<"career">, catalogue: HeroCatalogue): PlayerProfile {
+  const { player } = res;
+  const rank = player.rank;
+  return {
+    uid: player.uid,
+    name: player.name,
+    level: player.account_level,
+    club: player.club?.tag ?? null,
+    iconUrl: player.head_icon?.image ?? null,
+    signatureHero: player.display_hero ? toHero(player.display_hero, catalogue) : null,
+    season: rank?.season ?? null,
+    rank: { name: rank?.rank ?? null, level: rank?.rank_level ?? null, score: rank?.rs ?? null },
+    peakRank: {
+      name: rank?.peak_rank ?? null,
+      level: rank?.peak_rank_level ?? null,
+      score: rank?.peak_rs ?? null,
+    },
+    seasonWins: rank?.wins ?? null,
+    seasonMatches: rank?.matches ?? null,
+    lastOnline: isoFromSeconds(player.last_online),
+  };
+}
+
+export function toCareer(res: ResponseOf<"career">): Career {
+  const c = res.career;
+  return {
+    matches: c.matches,
+    wins: c.wins,
+    winRate: c.win_rate,
+    playSeconds: c.play_time.seconds,
+    kills: c.kills,
+    deaths: c.deaths,
+    assists: c.assists,
+    kda: c.kda,
+    accuracy: c.accuracy,
+    damage: c.damage,
+    healing: c.healing,
+    mvp: c.mvp,
+    svp: c.svp,
+  };
+}
+
+export function toHistoryPage(res: ResponseOf<"history">, freshness: Freshness): HistoryPage {
+  return {
+    rows: res.matches.map((m) => ({
+      matchUid: m.match_uid,
+      playedAt: m.played_at,
+      mode: m.game_mode,
+      map: m.map.name,
+      category: m.category?.name ?? null,
+      result: m.result,
+      score: m.score ? { us: m.score.player, them: m.score.opponent } : null,
+      kills: m.player.kills,
+      deaths: m.player.deaths,
+      assists: m.player.assists,
+      kda: m.player.kda,
+      mvp: m.player.mvp,
+      svp: m.player.svp,
+      leftGame: m.player.left_game,
+      rankChange: m.player.rank?.change ?? null,
+      durationSeconds: m.duration.seconds,
+    })),
+    page: res.pagination.page,
+    hasMore: res.pagination.has_more,
     freshness,
   };
 }

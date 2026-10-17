@@ -29,6 +29,39 @@ export const PlayerProblemSchema = z.enum([
 ]);
 export type PlayerProblem = z.infer<typeof PlayerProblemSchema>;
 
+export const PROBLEM_MESSAGES: Record<PlayerProblem, { title: string; detail: string }> = {
+  history_private: {
+    title: "Match history is private",
+    detail: "This player hides their matches. Rank and career stats still show.",
+  },
+  career_private: {
+    title: "Career is private",
+    detail: "This player hides their career stats.",
+  },
+  not_found: { title: "Not found", detail: "RivalsIsland has no record of this." },
+  budget_reached: {
+    title: "Credit budget reached",
+    detail: "Rivals Hub has used its RivalsIsland credit budget. Cached data still shows.",
+  },
+  out_of_credits: {
+    title: "Out of RivalsIsland credits",
+    detail: "The API key has no credits left.",
+  },
+  not_configured: {
+    title: "RivalsIsland isn't set up",
+    detail: "Add RIVALSISLAND_API_KEY and RIVALSISLAND_MODE=live to .env.",
+  },
+  unavailable: {
+    title: "RivalsIsland is unavailable",
+    detail: "It didn't answer as expected. Try again in a few minutes.",
+  },
+};
+
+export function problemMessage(problem: PlayerProblem): string {
+  const { title, detail } = PROBLEM_MESSAGES[problem];
+  return `${title}. ${detail}`;
+}
+
 export const FreshnessSchema = z.object({ fetchedAt: z.number().int(), stale: z.boolean() });
 export type Freshness = z.infer<typeof FreshnessSchema>;
 
@@ -58,3 +91,78 @@ export const LeaderboardSchema = z.object({
   freshness: FreshnessSchema,
 });
 export type Leaderboard = z.infer<typeof LeaderboardSchema>;
+
+export const HeroRoleSchema = z.enum(["Vanguard", "Duelist", "Strategist"]);
+export type HeroRole = z.infer<typeof HeroRoleSchema>;
+
+export const HeroSchema = z.object({
+  id: z.number().int(),
+  name: z.string(),
+  role: HeroRoleSchema.nullable(),
+  iconUrl: z.string().nullable(),
+});
+export type Hero = z.infer<typeof HeroSchema>;
+
+export const PlayerProfileSchema = z.object({
+  uid: UidSchema,
+  name: z.string(),
+  level: z.number().int().nullable(),
+  club: z.string().nullable(),
+  iconUrl: z.string().nullable(),
+  signatureHero: HeroSchema.nullable(),
+  season: z.string().nullable(),
+  rank: RankSchema,
+  peakRank: RankSchema,
+  seasonWins: z.number().int().nullable(),
+  seasonMatches: z.number().int().nullable(),
+  lastOnline: z.iso.datetime().nullable(),
+});
+export type PlayerProfile = z.infer<typeof PlayerProfileSchema>;
+
+export const CareerSchema = z.object({
+  matches: z.number().int(),
+  wins: z.number().int(),
+  winRate: z.number().nullable(),
+  playSeconds: z.number(),
+  kills: z.number().int(),
+  deaths: z.number().int(),
+  assists: z.number().int(),
+  kda: z.number().nullable(),
+  accuracy: z.number().nullable(),
+  damage: z.number(),
+  healing: z.number(),
+  mvp: z.number().int(),
+  svp: z.number().int(),
+});
+export type Career = z.infer<typeof CareerSchema>;
+
+export const ResultSchema = z.enum(["win", "loss", "draw", "abandoned"]);
+export type Result = z.infer<typeof ResultSchema>;
+
+export const HistoryRowSchema = z.object({
+  matchUid: z.string(),
+  playedAt: z.iso.datetime(),
+  mode: z.string().nullable(),
+  map: z.string().nullable(),
+  category: z.string().nullable(),
+  result: ResultSchema,
+  score: z.object({ us: z.number(), them: z.number() }).nullable(),
+  kills: z.number(),
+  deaths: z.number(),
+  assists: z.number(),
+  kda: z.number().nullable(),
+  mvp: z.boolean(),
+  svp: z.boolean(),
+  leftGame: z.boolean(),
+  rankChange: z.number().nullable(),
+  durationSeconds: z.number(),
+});
+export type HistoryRow = z.infer<typeof HistoryRowSchema>;
+
+export const HistoryPageSchema = z.object({
+  rows: z.array(HistoryRowSchema),
+  page: z.number().int(),
+  hasMore: z.boolean(),
+  freshness: FreshnessSchema,
+});
+export type HistoryPage = z.infer<typeof HistoryPageSchema>;
