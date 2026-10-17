@@ -1,5 +1,6 @@
 import { Link } from "@void/react";
-import { useEffect, useState } from "react";
+import { useReducedMotion } from "motion/react";
+import { useEffect, useState, type FocusEvent } from "react";
 
 import { DynamicIsland, DynamicIslandView } from "@/components/motion/dynamic-island";
 import { matchState } from "@/domain/matchState";
@@ -22,10 +23,11 @@ function IslandMatch({
   now: number;
   position: string | null;
 }) {
-  const { side1, side2 } = useMatchView(match, now);
+  const { side1, side2, summary } = useMatchView(match, now);
   return (
     <Link
       href={`/match/${match.id}`}
+      aria-label={summary}
       className="flex h-9 items-center gap-2.5 px-4 text-xs font-medium whitespace-nowrap"
     >
       <LiveDot />
@@ -52,29 +54,49 @@ function IslandMatch({
 export function LiveIsland({ snapshot, now }: { snapshot: Snapshot; now: number }) {
   const live = snapshot.matches.filter((m) => matchState(m, now).status === "live");
   const [index, setIndex] = useState(0);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const reduceMotion = useReducedMotion() === true;
+  const paused = hovered || focused || reduceMotion;
 
   useEffect(() => {
-    if (live.length < 2) return;
+    if (live.length < 2 || paused) return;
     const timer = setInterval(() => setIndex((i) => i + 1), ROTATE_MS);
     return () => clearInterval(timer);
-  }, [live.length]);
+  }, [live.length, paused]);
+
+  const onBlur = (e: FocusEvent<HTMLDivElement>) => {
+    if (!e.currentTarget.contains(e.relatedTarget)) setFocused(false);
+  };
 
   if (live.length === 0) return null;
   const current = live[index % live.length];
   if (!current) return null;
 
   return (
-    <DynamicIsland view={current.id} className="bg-black text-foreground ring-1 ring-border-strong">
-      {live.map((m) => (
-        <DynamicIslandView key={m.id} id={m.id} className="p-0">
-          <IslandMatch
-            match={m}
-            snapshot={snapshot}
-            now={now}
-            position={live.length > 1 ? `${(index % live.length) + 1}/${live.length}` : null}
-          />
-        </DynamicIslandView>
-      ))}
-    </DynamicIsland>
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onFocus={() => setFocused(true)}
+      onBlur={onBlur}
+    >
+      <DynamicIsland
+        view={current.id}
+        className="bg-black text-foreground ring-1 ring-border-strong"
+      >
+        {live.map((m) => (
+          <DynamicIslandView key={m.id} id={m.id} className="p-0">
+            <div aria-live="off">
+              <IslandMatch
+                match={m}
+                snapshot={snapshot}
+                now={now}
+                position={live.length > 1 ? `${(index % live.length) + 1}/${live.length}` : null}
+              />
+            </div>
+          </DynamicIslandView>
+        ))}
+      </DynamicIsland>
+    </div>
   );
 }
