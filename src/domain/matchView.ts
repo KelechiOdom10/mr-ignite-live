@@ -103,6 +103,10 @@ export function matchView(
   };
 }
 
+export function matchTitle(view: MatchView): string {
+  return `${view.side1.short} vs ${view.side2.short}`;
+}
+
 function statusTextOf(state: MatchState, revealed: boolean): StatusText {
   if (state.status === "live") return "Live";
   if (state.status === "upcoming") return null;

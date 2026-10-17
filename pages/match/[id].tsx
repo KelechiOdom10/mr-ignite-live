@@ -229,10 +229,12 @@ function MatchDetail({
 }) {
   const stats = useMatchStats(match.id, initialStats, snapshot.servedAt);
   const hydrated = useHydrated();
-  const view = useMatchView(match, now);
+  const view = useMatchView(match, now, snapshot.matches);
   const event: IgniteEvent | undefined = snapshot.events.find((e) => e.id === match.eventId);
+  const team1 = view.side1.team;
+  const team2 = view.side2.team;
   const h2h = snapshot.matches
-    .filter((m) => m.id !== match.id && involves(m, match.team1) && involves(m, match.team2))
+    .filter((m) => m.id !== match.id && involves(m, team1) && involves(m, team2))
     .toReversed();
 
   return (
@@ -353,12 +355,12 @@ function MatchDetail({
         <StatsPanel match={match} view={view} stats={stats} snapshot={snapshot} />
 
         <div className="grid gap-8 lg:grid-cols-2">
-          {(match.team1 || match.team2) && (
+          {(team1 || team2) && (
             <section aria-labelledby="form-heading" className="space-y-4">
               <h2 id="form-heading" className="text-lg font-semibold">
                 Recent form
               </h2>
-              {[match.team1, match.team2].map((team) =>
+              {[team1, team2].map((team) =>
                 team ? (
                   <TeamForm key={team.name} team={team} snapshot={snapshot} now={now} />
                 ) : null,

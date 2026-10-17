@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { aMap, aMatch } from "../../test/builders";
 import { matchState } from "./matchState";
-import { formView, matchView } from "./matchView";
+import { formView, matchTitle, matchView } from "./matchView";
 import type { Match } from "./model";
 
 const NOW = Date.parse("2026-10-16T23:00:00.000Z");
@@ -113,6 +113,13 @@ describe("matchView in a hidden bracket", () => {
       "Winner of UB Semifinals",
     ]);
     expect(v.summary).not.toMatch(/FLY|TLC/);
+  });
+
+  it("doesn't name the semifinal winners in a hidden upper-final page title", () => {
+    expect(matchTitle(viewIn(upperFinal, bracket))).toBe(
+      "Winner of UB Semifinals vs Winner of UB Semifinals",
+    );
+    expect(matchTitle(viewIn(upperFinal, bracket, false))).toBe("FLY vs TLC");
   });
 
   it("names a dropped team as the loser of its upper-bracket round, though ids share a round number", () => {

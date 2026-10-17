@@ -1,5 +1,7 @@
 import { defineHandler, defineHead, type InferProps } from "void";
 
+import { matchState } from "@/domain/matchState";
+import { matchTitle, matchView } from "@/domain/matchView";
 import { scopeSnapshot } from "@/domain/scope";
 
 import { readStats } from "../../src/store/stats";
@@ -26,8 +28,11 @@ export const loader = defineHandler(async (c) => {
   };
 });
 
-export const head = defineHead<Props>((_c, props) => {
+export const head = defineHead<Props>((c, props) => {
   const m = props.snapshot.matches.find((x) => x.id === props.matchId);
   if (!m) return { title: "Match not found" };
-  return { title: `${m.team1?.short ?? "TBD"} vs ${m.team2?.short ?? "TBD"}` };
+  const now = Date.parse(props.snapshot.servedAt);
+  const hidden = c.get("shared").spoilersHidden;
+  const bracket = { matches: props.snapshot.matches, now };
+  return { title: matchTitle(matchView(m, matchState(m, now), hidden, bracket)) };
 });
