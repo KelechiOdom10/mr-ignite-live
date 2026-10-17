@@ -9,6 +9,8 @@ import {
   summariseDrafts,
   toTeamDrafts,
 } from "@/domain/draft";
+import { type SimMove, applyMove, currentTurn, moveProblem, outcome } from "@/domain/draftSim";
+import { HERO_ROSTER } from "@/domain/heroRoster";
 
 import { aMatch } from "../../test/builders";
 import { mrvlFixture } from "../../test/fixtures";
@@ -72,5 +74,35 @@ describe("draftCoverage on the recorded series", () => {
       oldestFetchedAt: "2026-10-17T00:00:00.000Z",
       newestFetchedAt: "2026-10-17T00:00:00.000Z",
     });
+  });
+});
+
+describe("the simulator on recorded drafts", () => {
+  it("accepts every recorded map's draft move for move and ends with the same bans", () => {
+    for (const map of stats.maps) {
+      let moves: SimMove[] = [];
+      for (const a of map.draft ?? []) {
+        const camp = a.camp === 0 ? 0 : 1;
+        expect(moveProblem(IGNITE_2026, moves, camp, a.hero.id)).toBeNull();
+        moves = applyMove(IGNITE_2026, moves, camp, a.hero.id);
+      }
+      expect(currentTurn(IGNITE_2026, moves)).toBeNull();
+      const bySide = (side: 1 | 2) =>
+        (map.draft ?? []).find((a) => a.side === side)?.camp === 0 ? 0 : 1;
+      const [first, second] = outcome(moves);
+      const sideOf = { 0: first, 1: second };
+      expect(sideOf[bySide(1)].bans).toEqual(map.teams[0].bans.map((h) => h.id));
+      expect(sideOf[bySide(2)].bans).toEqual(map.teams[1].bans.map((h) => h.id));
+    }
+  });
+});
+
+describe("HERO_ROSTER", () => {
+  it("uses mrvl's id for every hero the recorded series played or banned", () => {
+    const ids = new Set(HERO_ROSTER.map((h) => h.id));
+    const seen = stats.maps.flatMap((m) =>
+      m.teams.flatMap((t) => [...t.bans, ...t.players.flatMap((p) => p.heroes)]),
+    );
+    expect(seen.filter((h) => !ids.has(h.id)).map((h) => h.id)).toEqual([]);
   });
 });

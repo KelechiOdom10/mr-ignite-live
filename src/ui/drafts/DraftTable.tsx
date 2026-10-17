@@ -57,7 +57,9 @@ export function DraftTable({ summary }: { summary: DraftSummary }) {
             <tr key={r.hero.id} className="transition-colors hover:bg-accent/50">
               <th scope="row" className="px-2 py-2 sm:px-3 text-left font-medium">
                 <span className="inline-flex items-center gap-2 [overflow-wrap:anywhere] sm:whitespace-nowrap">
-                  <HeroPortrait hero={r.hero} size={28} />
+                  <span aria-hidden="true">
+                    <HeroPortrait hero={r.hero} size={28} />
+                  </span>
                   {r.hero.name}
                 </span>
               </th>
