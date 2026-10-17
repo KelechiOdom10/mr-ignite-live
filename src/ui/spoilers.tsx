@@ -2,6 +2,9 @@ import { useShared } from "@void/react";
 import { useSyncExternalStore } from "react";
 
 import { Switch } from "@/components/motion/switch";
+import { matchState } from "@/domain/matchState";
+import { matchView, type MatchView } from "@/domain/matchView";
+import type { Match } from "@/domain/model";
 
 import { SPOILER_COOKIE, spoilerCookie, spoilersHiddenIn } from "./spoilerCookie";
 
@@ -37,6 +40,10 @@ function write(hidden: boolean) {
 export function useSpoilersHidden(): boolean {
   const { spoilersHidden } = useShared();
   return useSyncExternalStore(subscribe, read, () => spoilersHidden);
+}
+
+export function useMatchView(match: Match, now: number): MatchView {
+  return matchView(match, matchState(match, now), useSpoilersHidden());
 }
 
 export function SpoilerToggle({ compact = false }: { compact?: boolean }) {

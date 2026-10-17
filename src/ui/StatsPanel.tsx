@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { z } from "zod";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/motion/tabs";
+import type { MatchView } from "@/domain/matchView";
 import type { Match, Snapshot } from "@/domain/model";
 import {
   MatchStatsSchema,
@@ -15,7 +16,6 @@ import { cn } from "@/lib/utils";
 
 import { AwardBadge } from "./AwardBadge";
 import { proxiedImage } from "./images";
-import { useSpoilersHidden } from "./spoilers";
 import { TeamLogo } from "./TeamMark";
 
 const StatsResponseSchema = z.object({ stats: MatchStatsSchema.nullable() });
@@ -254,21 +254,22 @@ function asRows(team: TeamMapStats): Row[] {
 
 export function StatsPanel({
   match,
+  view,
   stats,
   snapshot,
 }: {
   match: Match;
+  view: MatchView;
   stats: MatchStats | null;
   snapshot: Snapshot;
 }) {
-  const hidden = useSpoilersHidden();
   return (
     <section aria-labelledby="stats-heading" className="space-y-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 id="stats-heading" className="flex items-center gap-2 text-lg font-semibold">
           <BarChart3 className="size-4 text-primary" aria-hidden /> Player stats
         </h2>
-        {stats && (
+        {view.revealed && stats && (
           <a
             href={`https://www.mrvl.net/matches/${stats.sourceMatchId}`}
             target="_blank"
@@ -279,7 +280,7 @@ export function StatsPanel({
           </a>
         )}
       </div>
-      {hidden ? (
+      {!view.revealed ? (
         <p className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">
           Stats are hidden while Hide spoilers is on.
         </p>

@@ -3,16 +3,53 @@ import { useEffect, useState } from "react";
 
 import { DynamicIsland, DynamicIslandView } from "@/components/motion/dynamic-island";
 import { matchState } from "@/domain/matchState";
-import type { Snapshot } from "@/domain/model";
+import type { Match, Snapshot } from "@/domain/model";
 
-import { useSpoilersHidden } from "./spoilers";
+import { useMatchView } from "./spoilers";
 import { LiveDot } from "./StatusLabel";
 import { TeamLogo } from "./TeamMark";
 
 const ROTATE_MS = 5_000;
 
+function IslandMatch({
+  match,
+  snapshot,
+  now,
+  position,
+}: {
+  match: Match;
+  snapshot: Snapshot;
+  now: number;
+  position: string | null;
+}) {
+  const { side1, side2 } = useMatchView(match, now);
+  return (
+    <Link
+      href={`/match/${match.id}`}
+      className="flex h-9 items-center gap-2.5 px-4 text-xs font-medium whitespace-nowrap"
+    >
+      <LiveDot />
+      <TeamLogo
+        team={side1.team}
+        info={side1.team ? snapshot.teams[side1.team.name] : undefined}
+        size={16}
+      />
+      <span>{side1.short}</span>
+      <span className="font-mono tabular-nums">
+        {side1.score === null || side2.score === null ? "vs" : `${side1.score}–${side2.score}`}
+      </span>
+      <span>{side2.short}</span>
+      <TeamLogo
+        team={side2.team}
+        info={side2.team ? snapshot.teams[side2.team.name] : undefined}
+        size={16}
+      />
+      {position && <span className="text-muted-foreground">{position}</span>}
+    </Link>
+  );
+}
+
 export function LiveIsland({ snapshot, now }: { snapshot: Snapshot; now: number }) {
-  const hidden = useSpoilersHidden();
   const live = snapshot.matches.filter((m) => matchState(m, now).status === "live");
   const [index, setIndex] = useState(0);
 
@@ -28,39 +65,16 @@ export function LiveIsland({ snapshot, now }: { snapshot: Snapshot; now: number 
 
   return (
     <DynamicIsland view={current.id} className="bg-black text-foreground ring-1 ring-border-strong">
-      {live.map((m) => {
-        const s = matchState(m, now);
-        return (
-          <DynamicIslandView key={m.id} id={m.id} className="p-0">
-            <Link
-              href={`/match/${m.id}`}
-              className="flex h-9 items-center gap-2.5 px-4 text-xs font-medium whitespace-nowrap"
-            >
-              <LiveDot />
-              <TeamLogo
-                team={m.team1}
-                info={m.team1 ? snapshot.teams[m.team1.name] : undefined}
-                size={16}
-              />
-              <span>{m.team1?.short}</span>
-              <span className="font-mono tabular-nums">
-                {hidden ? "vs" : `${s.wins1}–${s.wins2}`}
-              </span>
-              <span>{m.team2?.short}</span>
-              <TeamLogo
-                team={m.team2}
-                info={m.team2 ? snapshot.teams[m.team2.name] : undefined}
-                size={16}
-              />
-              {live.length > 1 && (
-                <span className="text-muted-foreground">
-                  {(index % live.length) + 1}/{live.length}
-                </span>
-              )}
-            </Link>
-          </DynamicIslandView>
-        );
-      })}
+      {live.map((m) => (
+        <DynamicIslandView key={m.id} id={m.id} className="p-0">
+          <IslandMatch
+            match={m}
+            snapshot={snapshot}
+            now={now}
+            position={live.length > 1 ? `${(index % live.length) + 1}/${live.length}` : null}
+          />
+        </DynamicIslandView>
+      ))}
     </DynamicIsland>
   );
 }

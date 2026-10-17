@@ -1,11 +1,12 @@
 import { Link } from "@void/react";
 
 import { matchState } from "@/domain/matchState";
+import type { SideView } from "@/domain/matchView";
 import type { Match, Snapshot } from "@/domain/model";
 import { cn } from "@/lib/utils";
 
 import { RegionTag } from "./RegionTag";
-import { useSpoilersHidden } from "./spoilers";
+import { useMatchView } from "./spoilers";
 import { StatusLabel } from "./StatusLabel";
 import { TeamLogo } from "./TeamMark";
 
@@ -28,37 +29,37 @@ export function stripMatches(snapshot: Snapshot, now: number): Match[] {
 }
 
 function Chip({ match, snapshot, now }: { match: Match; snapshot: Snapshot; now: number }) {
-  const state = matchState(match, now);
-  const hidden = useSpoilersHidden();
+  const view = useMatchView(match, now);
   const event = snapshot.events.find((e) => e.id === match.eventId);
-  const showScore = state.status !== "upcoming" && !hidden;
-  const row = (side: 1 | 2) => {
-    const team = side === 1 ? match.team1 : match.team2;
-    const wins = side === 1 ? state.wins1 : state.wins2;
-    const lost = !hidden && state.winner !== 0 && state.winner !== side;
-    return (
-      <div className={cn("flex items-center gap-2", lost && "text-muted-foreground")}>
-        <TeamLogo team={team} info={team ? snapshot.teams[team.name] : undefined} size={16} />
-        <span className="min-w-0 flex-1 truncate text-xs font-medium" title={team?.name}>
-          {team?.short ?? "TBD"}
-        </span>
-        <span className="font-mono text-xs tabular-nums">{showScore ? wins : ""}</span>
-      </div>
-    );
-  };
+  const row = (side: SideView) => (
+    <div
+      className={cn("flex items-center gap-2", side.outcome === "lost" && "text-muted-foreground")}
+    >
+      <TeamLogo
+        team={side.team}
+        info={side.team ? snapshot.teams[side.team.name] : undefined}
+        size={16}
+      />
+      <span className="min-w-0 flex-1 truncate text-xs font-medium" title={side.name}>
+        {side.short}
+      </span>
+      <span className="font-mono text-xs tabular-nums">{side.score ?? ""}</span>
+    </div>
+  );
   return (
     <Link
       href={`/match/${match.id}`}
+      aria-label={view.summary}
       className={cn(
         "flex w-44 shrink-0 snap-start flex-col gap-1.5 rounded-lg border bg-card px-3 py-2 transition-colors hover:bg-accent",
       )}
     >
       <div className="flex items-center justify-between gap-2">
-        <StatusLabel match={match} state={state} now={now} className="text-[0.7rem]" />
+        <StatusLabel match={match} view={view} now={now} className="text-[0.7rem]" />
         <RegionTag event={event} />
       </div>
-      {row(1)}
-      {row(2)}
+      {row(view.side1)}
+      {row(view.side2)}
     </Link>
   );
 }

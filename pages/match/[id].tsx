@@ -4,8 +4,8 @@ import { ExternalLink, Play } from "lucide-react";
 import { Card } from "@/components/motion/card";
 import { NotFoundGlitch } from "@/components/motion/not-found";
 import { mapInfo } from "@/domain/maps";
-import { matchState, type MatchState } from "@/domain/matchState";
-import type { IgniteEvent, MapResult, Match, Snapshot, Team } from "@/domain/model";
+import type { MapSlotView, MatchView, SideView } from "@/domain/matchView";
+import type { IgniteEvent, Match, Snapshot, Team } from "@/domain/model";
 import { eventSlug } from "@/domain/scope";
 import type { MatchStats, PlayerStats } from "@/domain/stats";
 import { cn } from "@/lib/utils";
@@ -14,7 +14,7 @@ import { AwardBadge } from "@/ui/AwardBadge";
 import { EventIcon } from "@/ui/EventRow";
 import { proxiedImage } from "@/ui/images";
 import { MatchCard } from "@/ui/MatchCard";
-import { useSpoilersHidden } from "@/ui/spoilers";
+import { useMatchView } from "@/ui/spoilers";
 import { HeroPortrait, StatsPanel, useMatchStats } from "@/ui/StatsPanel";
 import { LiveDot } from "@/ui/StatusLabel";
 import { TeamForm } from "@/ui/TeamForm";
@@ -55,14 +55,9 @@ function involves(match: Match, team: Team | null): boolean {
   return team !== null && (match.team1?.name === team.name || match.team2?.name === team.name);
 }
 
-function emptyMap(index: number): MapResult {
-  return { index, map: "", score1: null, score2: null, winner: 0, vod: null };
-}
-
-function ScoreCenter({ match, state, now }: { match: Match; state: MatchState; now: number }) {
+function ScoreCenter({ match, view, now }: { match: Match; view: MatchView; now: number }) {
   const hydrated = useHydrated();
-  const hidden = useSpoilersHidden();
-  if (state.status === "upcoming") {
+  if (view.status === "upcoming") {
     return (
       <div className="text-center">
         <div className="text-3xl font-semibold text-muted-foreground sm:text-4xl">vs</div>
@@ -76,13 +71,13 @@ function ScoreCenter({ match, state, now }: { match: Match; state: MatchState; n
   }
   return (
     <div className="text-center">
-      {state.status === "live" && (
+      {view.status === "live" && (
         <span className="mb-1 inline-flex items-center gap-1.5 rounded-md bg-live/15 px-2 py-0.5 text-xs font-semibold tracking-wide text-live uppercase">
           <LiveDot /> Live
         </span>
       )}
       <div className="font-mono text-4xl font-semibold tabular-nums sm:text-5xl">
-        {hidden ? "– : –" : `${state.wins1} : ${state.wins2}`}
+        {view.side1.score ?? "–"} : {view.side2.score ?? "–"}
       </div>
       <div className="mt-1 text-xs text-muted-foreground">Bo{match.bestOf}</div>
     </div>
@@ -90,30 +85,29 @@ function ScoreCenter({ match, state, now }: { match: Match; state: MatchState; n
 }
 
 function TeamSide({
-  team,
+  side,
   snapshot,
   align,
-  dim,
 }: {
-  team: Team | null;
+  side: SideView;
   snapshot: Snapshot;
   align: "start" | "end";
-  dim: boolean;
 }) {
+  const { team } = side;
   return (
     <div
       className={cn(
         "flex min-w-0 flex-col items-center gap-3 sm:flex-row",
         align === "end" && "sm:flex-row-reverse",
-        dim && "opacity-60",
+        side.outcome === "lost" && "opacity-60",
       )}
     >
       <TeamLogo team={team} info={team ? snapshot.teams[team.name] : undefined} size={64} />
       <div
         className={cn("min-w-0 text-center", align === "end" ? "sm:text-right" : "sm:text-left")}
       >
-        <div className="truncate text-lg font-semibold sm:text-2xl" title={team?.name}>
-          {team?.name ?? "TBD"}
+        <div className="truncate text-lg font-semibold sm:text-2xl" title={side.name}>
+          {side.name}
         </div>
         <div className="text-xs text-muted-foreground">{team?.short ?? "To be decided"}</div>
       </div>
@@ -122,30 +116,26 @@ function TeamSide({
 }
 
 function MapCard({
-  map,
-  match,
+  slot,
+  view,
   snapshot,
-  current,
   mvp,
 }: {
-  map: MapResult;
-  match: Match;
+  slot: MapSlotView;
+  view: MatchView;
   snapshot: Snapshot;
-  current: boolean;
   mvp: PlayerStats | undefined;
 }) {
-  const hidden = useSpoilersHidden();
-  if (hidden) return <HiddenMapCard index={map.index} />;
-  const winner = map.winner === 0 ? null : map.winner === 1 ? match.team1 : match.team2;
-  const winnerScore = map.winner === 1 ? map.score1 : map.score2;
-  const loserScore = map.winner === 1 ? map.score2 : map.score1;
-  const info = map.map ? mapInfo(map.map) : null;
+  if (slot.kind === "hidden") return <HiddenMapCard index={slot.index} />;
+  const winner = slot.kind === "played" ? (slot.winner === 1 ? view.side1 : view.side2).team : null;
+  const info = slot.map ? mapInfo(slot.map) : null;
   const art = proxiedImage(info?.imageUrl);
+  const vod = view.vods.find((v) => v.index === slot.index);
   return (
     <div
       className={cn(
         "relative flex min-h-36 flex-col justify-between overflow-hidden rounded-xl border bg-card p-4",
-        current && "border-live/50",
+        slot.kind === "current" && "border-live/50",
       )}
     >
       {art && (
@@ -164,10 +154,12 @@ function MapCard({
       )}
       <div className="relative">
         <div className="text-xs text-muted-foreground uppercase">
-          Map {map.index}
+          Map {slot.index}
           {info && <span className="normal-case"> · {info.mode}</span>}
         </div>
-        <div className="mt-1 font-medium">{map.map || (current ? "Picking…" : "TBD")}</div>
+        <div className="mt-1 font-medium">
+          {slot.map ?? (slot.kind === "current" ? "Picking…" : "TBD")}
+        </div>
         {mvp && (
           <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
             {mvp.hero && <HeroPortrait hero={mvp.hero} size={22} />}
@@ -180,24 +172,24 @@ function MapCard({
         )}
       </div>
       <div className="relative mt-3 flex flex-wrap items-center justify-between gap-2">
-        {current ? (
+        {slot.kind === "current" ? (
           <span className="inline-flex items-center gap-1.5 text-xs font-medium text-live">
             <LiveDot /> In progress
           </span>
-        ) : winner ? (
+        ) : slot.kind === "played" && winner ? (
           <span className="inline-flex min-w-0 items-center gap-2 rounded-md bg-win/10 px-2 py-1 text-xs font-medium text-win">
             <TeamLogo team={winner} info={snapshot.teams[winner.name]} size={16} />
             <span className="truncate">{winner.short}</span>
             <span className="font-mono tabular-nums">
-              {winnerScore ?? "?"}-{loserScore ?? "?"}
+              {slot.winnerScore ?? "?"}-{slot.loserScore ?? "?"}
             </span>
           </span>
         ) : (
           <span className="text-xs text-muted-foreground">Not played</span>
         )}
-        {map.vod && (
+        {vod && (
           <a
-            href={map.vod}
+            href={vod.url}
             target="_blank"
             rel="noreferrer"
             className="inline-flex min-h-8 items-center gap-1 text-xs text-primary hover:underline"
@@ -235,15 +227,11 @@ function MatchDetail({
 }) {
   const stats = useMatchStats(match.id, initialStats, snapshot.servedAt);
   const hydrated = useHydrated();
-  const hidden = useSpoilersHidden();
+  const view = useMatchView(match, now);
   const event: IgniteEvent | undefined = snapshot.events.find((e) => e.id === match.eventId);
-  const state = matchState(match, now);
-  const currentIndex = state.status === "live" ? state.playedMaps.length + 1 : -1;
-  const slots = Array.from({ length: match.bestOf }, (_, i) => i + 1);
   const h2h = snapshot.matches
     .filter((m) => m.id !== match.id && involves(m, match.team1) && involves(m, match.team2))
     .toReversed();
-  const vods = match.maps.filter((m) => m.vod);
 
   return (
     <AppShell snapshot={snapshot} connection={connection} now={now}>
@@ -272,19 +260,9 @@ function MatchDetail({
             )}
           </div>
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 px-5 py-8 sm:gap-8 sm:px-8 sm:py-10">
-            <TeamSide
-              team={match.team1}
-              snapshot={snapshot}
-              align="end"
-              dim={!hidden && state.winner === 2}
-            />
-            <ScoreCenter match={match} state={state} now={now} />
-            <TeamSide
-              team={match.team2}
-              snapshot={snapshot}
-              align="start"
-              dim={!hidden && state.winner === 1}
-            />
+            <TeamSide side={view.side1} snapshot={snapshot} align="end" />
+            <ScoreCenter match={match} view={view} now={now} />
+            <TeamSide side={view.side2} snapshot={snapshot} align="start" />
           </div>
         </Card>
 
@@ -301,7 +279,7 @@ function MatchDetail({
                   rel="noreferrer"
                   className={cn(
                     "inline-flex h-10 items-center gap-2 rounded-lg px-4 text-sm font-medium",
-                    state.status === "live" ? "bg-live text-white" : "border hover:bg-accent",
+                    view.status === "live" ? "bg-live text-white" : "border hover:bg-accent",
                   )}
                 >
                   <Play className="size-4" aria-hidden /> Twitch · {match.twitch}
@@ -328,30 +306,19 @@ function MatchDetail({
             <h2 id="vods-heading" className="text-lg font-semibold">
               VODs
             </h2>
-            {vods.length === 0 ? (
+            {view.vods.length === 0 ? (
               <p className="text-sm text-muted-foreground">Not yet available.</p>
-            ) : hidden && vods[0] ? (
-              <a
-                href={vods[0].vod ?? undefined}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex h-10 items-center gap-2 rounded-lg border px-4 text-sm hover:bg-accent"
-              >
-                Watch from map {vods[0].index}
-                <ExternalLink className="size-3.5" aria-hidden />
-                <span className="sr-only">(opens in a new tab)</span>
-              </a>
             ) : (
               <div className="flex flex-wrap gap-2">
-                {vods.map((m) => (
+                {view.vods.map((v) => (
                   <a
-                    key={m.index}
-                    href={m.vod ?? undefined}
+                    key={v.index}
+                    href={v.url}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex h-10 items-center gap-2 rounded-lg border px-4 text-sm hover:bg-accent"
                   >
-                    Map {m.index}
+                    {v.label}
                     <ExternalLink className="size-3.5" aria-hidden />
                     <span className="sr-only">(opens in a new tab)</span>
                   </a>
@@ -366,15 +333,14 @@ function MatchDetail({
             Maps
           </h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            {slots.map((i) => (
+            {view.maps.map((slot) => (
               <MapCard
-                key={i}
-                map={match.maps.find((m) => m.index === i) ?? emptyMap(i)}
-                match={match}
+                key={slot.index}
+                slot={slot}
+                view={view}
                 snapshot={snapshot}
-                current={i === currentIndex}
                 mvp={stats?.maps
-                  .find((m) => m.index === i)
+                  .find((m) => m.index === slot.index)
                   ?.teams.flatMap((team) => team.players)
                   .find((p) => p.isMvp)}
               />
@@ -382,7 +348,7 @@ function MatchDetail({
           </div>
         </section>
 
-        <StatsPanel match={match} stats={stats} snapshot={snapshot} />
+        <StatsPanel match={match} view={view} stats={stats} snapshot={snapshot} />
 
         <div className="grid gap-8 lg:grid-cols-2">
           {(match.team1 || match.team2) && (
