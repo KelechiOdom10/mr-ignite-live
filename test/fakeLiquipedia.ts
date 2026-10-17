@@ -50,7 +50,9 @@ export interface LiquipediaRequest {
 /**
  * Answers Liquipedia API calls from the recorded fixtures. Revision ids are test inputs (only
  * Americas' was recorded), so a test can move a page's revision; contents always come from the
- * recording. Image lookups answer "missing", the recorded shape of an unknown title.
+ * recording. Image lookups answer "missing", the recorded shape of an unknown title, unless the
+ * test lists the file in `settings.images`. No image lookup was recorded, so a found file is the
+ * recorded page entry plus the `imageinfo` the client reads.
  */
 export function fakeLiquipedia({
   clock,
@@ -60,14 +62,24 @@ export function fakeLiquipedia({
   revids: Record<string, number>;
 }) {
   const requests: LiquipediaRequest[] = [];
-  /** How long each response takes on the fake clock. */
-  const settings = { latencyMs: 0 };
+  const settings: {
+    /** How long each response takes on the fake clock. */
+    latencyMs: number;
+    /** Image URLs Liquipedia has, by file name. */
+    images: Record<string, string>;
+  } = { latencyMs: 0, images: {} };
   const titlesOf = (params: URLSearchParams) => (params.get("titles") ?? "").split("|");
 
   function body(params: URLSearchParams): unknown {
     if (params.get("action") === "expandtemplates") return liquipediaFixture("teamshort.json");
     if (params.get("prop") === "imageinfo") {
-      return { query: { pages: titlesOf(params).map((title) => ({ ...recordedMissing, title })) } };
+      const pages = titlesOf(params).map((title) => {
+        const url = settings.images[title.replace(/^File:/, "")];
+        return url
+          ? { ...recordedPage, title, revisions: undefined, imageinfo: [{ url, thumburl: url }] }
+          : { ...recordedMissing, title };
+      });
+      return { query: { pages } };
     }
     if (params.get("rvprop") === "content") {
       const wanted = new Set(titlesOf(params));

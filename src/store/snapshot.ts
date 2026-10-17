@@ -12,10 +12,12 @@ const SNAPSHOT_KEY = "snapshot";
 const TITLES_KEY = "titles:v1";
 const TITLES_TTL_SECONDS = 30 * 60;
 const PAGE_PREFIX = "MR Ignite/2026";
-// Sized so a run's worst case fits its request budget: one contents and one icon request for the
-// pages, one template expansion and at most two logo lookups for the teams.
+// Sized so a run's worst case fits its request budget: one contents request for the pages, one
+// template expansion and at most two logo lookups for the teams, one lookup for event icons.
 const PAGES_PER_RUN = 50;
 const TEAMS_PER_RUN = 40;
+const ICONS_PER_RUN = 50;
+const EVENT_ICON_WIDTH_PX = 64;
 
 export async function writeStored(store: KvStore, stored: StoredSnapshot): Promise<void> {
   await store.put(SNAPSHOT_KEY, StoredSnapshotSchema.parse(stored));
@@ -40,23 +42,6 @@ async function pageTitles(liquipedia: LiquipediaRun, store: KvStore): Promise<st
   return titles;
 }
 
-const EVENT_ICON_WIDTH_PX = 64;
-
-async function resolveEventIcons(
-  liquipedia: LiquipediaRun,
-  pages: Record<string, PageData>,
-): Promise<void> {
-  const events = Object.values(pages).flatMap((p) => (p.event?.iconFile ? [p.event] : []));
-  if (events.length === 0) return;
-  const urls = await liquipedia.imageUrls(
-    [...new Set(events.map((e) => e.iconFile ?? ""))],
-    EVENT_ICON_WIDTH_PX,
-  );
-  for (const event of events) {
-    event.iconUrl = event.iconFile ? (urls.get(event.iconFile) ?? null) : null;
-  }
-}
-
 async function unlessBudgetSpent<T>(work: () => Promise<T>, deferred: T): Promise<T> {
   try {
     return await work();
@@ -66,26 +51,60 @@ async function unlessBudgetSpent<T>(work: () => Promise<T>, deferred: T): Promis
   }
 }
 
-// Icons are only looked up when a page's revision changes, so a page commits with its icon or
-// not at all; committing it without one would leave the icon missing until the next edit.
 async function fetchPages(
   liquipedia: LiquipediaRun,
   titles: string[],
   revisions: ReadonlyMap<string, Revision>,
+  prevPages: StoredSnapshot["pages"],
 ): Promise<Record<string, PageData>> {
   const updates: Record<string, PageData> = {};
   for (const [title, text] of await liquipedia.fetchContents(titles)) {
     const rev = revisions.get(title);
     if (!rev) continue;
+    const event = parseEventInfo(title, text, rev.timestamp);
+    const known = prevPages[title]?.event;
+    if (event && known?.iconUrl && known.iconFile === event.iconFile) event.iconUrl = known.iconUrl;
     updates[title] = {
       revid: rev.revid,
       updatedAt: rev.timestamp,
-      event: parseEventInfo(title, text, rev.timestamp),
+      event,
       matches: parsePageMatches(title, text),
     };
   }
-  await resolveEventIcons(liquipedia, updates);
   return updates;
+}
+
+/**
+ * Looks up event icons still pending (a file but no URL), so pages commit as soon as their
+ * contents arrive and a run cut short only delays the icon. A file Liquipedia doesn't have is
+ * cleared so it isn't looked up every run; the page's next edit re-parses it and tries again.
+ */
+async function resolvePendingIcons(
+  liquipedia: LiquipediaRun,
+  pages: StoredSnapshot["pages"],
+): Promise<Record<string, PageData>> {
+  const pending = Object.entries(pages).filter(([, p]) => p.event?.iconFile && !p.event.iconUrl);
+  const files = [...new Set(pending.map(([, p]) => p.event?.iconFile ?? ""))].slice(
+    0,
+    ICONS_PER_RUN,
+  );
+  if (files.length === 0) return {};
+  const urls = await unlessBudgetSpent(
+    () => liquipedia.imageUrls(files, EVENT_ICON_WIDTH_PX),
+    null,
+  );
+  if (!urls) return {};
+
+  const resolved: Record<string, PageData> = {};
+  for (const [title, page] of pending) {
+    if (!page.event?.iconFile || !files.includes(page.event.iconFile)) continue;
+    const iconUrl = urls.get(page.event.iconFile) ?? null;
+    resolved[title] = {
+      ...page,
+      event: { ...page.event, iconUrl, iconFile: iconUrl ? page.event.iconFile : null },
+    };
+  }
+  return resolved;
 }
 
 export async function fetchLiquipediaChanges({
@@ -99,12 +118,14 @@ export async function fetchLiquipediaChanges({
 }): Promise<LiquipediaChanges> {
   const revisions = await liquipedia.fetchRevisions(await pageTitles(liquipedia, store));
   const plan = planSync(prev.pages, revisions, PAGES_PER_RUN);
-  const updates = await unlessBudgetSpent(
-    () => fetchPages(liquipedia, plan.changed, revisions),
+  const fetched = await unlessBudgetSpent(
+    () => fetchPages(liquipedia, plan.changed, revisions, prev.pages),
     {},
   );
+  const pages = applyPages(prev.pages, plan.removed, fetched);
 
-  const missing = teamsMissingInfo(applyPages(prev.pages, plan.removed, updates), prev.teams);
+  // Teams go before icons: a cut-off icon lookup is retried next run, a cut-off logo lookup isn't.
+  const missing = teamsMissingInfo(pages, prev.teams);
   const teams =
     missing.length > 0
       ? await unlessBudgetSpent(
@@ -112,11 +133,12 @@ export async function fetchLiquipediaChanges({
           {},
         )
       : {};
+  const icons = await resolvePendingIcons(liquipedia, pages);
 
   return {
-    updates,
+    updates: { ...fetched, ...icons },
     removed: plan.removed,
     teams,
-    deferred: [...plan.changed.filter((title) => !updates[title]), ...plan.deferred],
+    deferred: [...plan.changed.filter((title) => !fetched[title]), ...plan.deferred],
   };
 }

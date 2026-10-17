@@ -105,23 +105,54 @@ describe("syncOnce on match day", () => {
     expect(stored?.mapOverrides[FLY_100T]?.map((m) => m.winner)).toEqual([2, 1, 1, 1]);
   });
 
-  it("defers changed pages when Liquipedia is slow instead of running into the next cron run", async () => {
+  it("a slow Liquipedia still commits changed pages within a few runs instead of refetching them forever", async () => {
+    // 16s responses: contents arrive at 32s, so every follow-up lookup misses the 30s window.
     const day = matchDay();
-    day.liquipedia.settings.latencyMs = 20_000;
-    const startsAt = day.clock.now() + 60_000;
+    day.liquipedia.settings.latencyMs = 16_000;
+    const runOffsets: number[][] = [];
+    const runPuts: Record<string, number>[] = [];
+    for (let run = 0; run < 4; run++) {
+      const startsAt = day.clock.now() + 60_000;
+      const before = day.liquipedia.requests.length;
+      day.store.resetPuts();
+      await day.sync();
+      runOffsets.push(day.liquipedia.requests.slice(before).map((r) => r.at - startsAt));
+      runPuts.push(day.store.putCounts());
+    }
 
-    const slow = await day.sync();
+    const stored = await readStored(day.store);
+    expect(Object.keys(stored?.pages ?? {}).sort()).toEqual([...RECORDED_TITLES].sort());
+    expect(stored?.teams["Liquid Citadel"]).toEqual({
+      short: "TLC",
+      logoDark: null,
+      logoLight: null,
+    });
+    const contents = day.liquipedia.requests.filter((r) => r.params.get("rvprop") === "content");
+    expect(contents).toHaveLength(1);
+    expect(runOffsets).toEqual([[0, 16_000], [0, 16_000], [0, 16_000], [0]]);
+    expect(runPuts.map((puts) => puts.snapshot ?? 0)).toEqual([1, 1, 1, 0]);
+  });
 
-    // Revisions at 0s, contents at 20s; the icon lookup would start at 40s, past the 30s window.
-    expect(day.liquipedia.requests.map((r) => r.at - startsAt)).toEqual([0, 20_000]);
-    expect(day.store.putCounts()).toEqual({});
-    expect(slow.deferredPages).toBe(3);
+  it("commits a found event icon with its page and doesn't look it up again on the page's next edit", async () => {
+    const day = matchDay();
+    const iconUrl = "https://liquipedia.net/commons/images/thumb/MRIG_Americas_allmode.png";
+    day.liquipedia.settings.images = { "MRIG Americas allmode.png": iconUrl };
 
-    day.liquipedia.settings.latencyMs = 0;
-    const next = await day.sync();
+    await day.sync();
 
-    expect(next.changedPages).toBe(3);
     expect(day.store.putCounts().snapshot).toBe(1);
+    expect((await readStored(day.store))?.pages[AMERICAS]?.event?.iconUrl).toBe(iconUrl);
+
+    day.liquipedia.revids[AMERICAS] = 60101;
+    const before = day.liquipedia.requests.length;
+    await day.sync();
+
+    const lookups = day.liquipedia.requests
+      .slice(before)
+      .filter((r) => r.params.get("prop") === "imageinfo");
+    expect(lookups).toEqual([]);
+    const americas = (await readStored(day.store))?.pages[AMERICAS];
+    expect([americas?.revid, americas?.event?.iconUrl]).toEqual([60101, iconUrl]);
   });
 
   it("still saves Liquipedia's changes when mrvl is down", async () => {

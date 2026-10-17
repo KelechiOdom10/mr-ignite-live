@@ -1,11 +1,22 @@
 import { type TeamInfo } from "@/domain/model";
 import { teamShortName } from "@/domain/teams";
 
-import type { LiquipediaRun } from "./client";
+import { LiquipediaBudgetSpentError, type LiquipediaRun } from "./client";
 import { parseTeamShortExpansion, TEAM_TEMPLATE_SEPARATOR } from "./parse";
 
 const NAMES_PER_EXPANSION = 40;
 const LOGO_WIDTH_PX = 96;
+
+// A team stored without logos beats expanding the same templates again every run when the logo
+// lookup keeps missing the run's deadline.
+async function logoUrls(client: LiquipediaRun, files: string[]): Promise<Map<string, string>> {
+  try {
+    return await client.imageUrls(files, LOGO_WIDTH_PX);
+  } catch (error) {
+    if (error instanceof LiquipediaBudgetSpentError) return new Map();
+    throw error;
+  }
+}
 
 export async function fetchTeamInfo(
   client: LiquipediaRun,
@@ -22,10 +33,7 @@ export async function fetchTeamInfo(
   }
 
   const files = [...templates.values()].flatMap((t) => [t.logoDarkFile, t.logoLightFile]);
-  const urls = await client.imageUrls(
-    [...new Set(files.filter((f): f is string => f !== null))],
-    LOGO_WIDTH_PX,
-  );
+  const urls = await logoUrls(client, [...new Set(files.filter((f): f is string => f !== null))]);
   const resolve = (file: string | null) =>
     file ? (urls.get(file) ?? urls.get(file.replace(/_/g, " ")) ?? null) : null;
 
