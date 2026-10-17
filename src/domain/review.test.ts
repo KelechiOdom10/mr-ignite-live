@@ -7,6 +7,8 @@ import {
   formatVideoTime,
   mergeLibrary,
   parseExport,
+  startFocus,
+  activeFocus,
   upsertBookmark,
   type Bookmark,
   type PracticeFocus,
@@ -168,6 +170,23 @@ describe("focusProgress", () => {
       before: { deaths: 2, matching: 1, sessions: 1 },
       during: { deaths: 1, matching: 0, sessions: 1 },
     });
+  });
+});
+
+describe("startFocus", () => {
+  it("ends the open focus so new reviews link to the one just started", () => {
+    const next: PracticeFocus = {
+      ...focus,
+      id: ids.c,
+      title: "Track enemy ults",
+      startedAt: 9_000,
+    };
+    const library = startFocus({ sessions: [], focuses: [focus] }, next, 9_000);
+    expect(library.focuses.map((f) => [f.title, f.endedAt])).toEqual([
+      ["Stay behind the tank", 9_000],
+      ["Track enemy ults", null],
+    ]);
+    expect(activeFocus(library)?.id).toBe(ids.c);
   });
 });
 

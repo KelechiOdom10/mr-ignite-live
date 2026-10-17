@@ -2,7 +2,11 @@ import { CircleAlert, Download, Film, Plus, Upload } from "lucide-react";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 
 import {
+  activeFocus,
   EMPTY_MATCH_REF,
+  MAX_BOOKMARKS,
+  ReviewLibrarySchema,
+  startFocus,
   exportLibrary,
   mergeLibrary,
   parseExport,
@@ -34,7 +38,8 @@ function downloadJson(fileName: string, value: unknown) {
   a.href = url;
   a.download = fileName;
   a.click();
-  URL.revokeObjectURL(url);
+  // Some browsers abort a download whose URL is revoked in the same task as the click.
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 async function openLibrary() {
@@ -57,6 +62,8 @@ export function ReviewWorkspace() {
   const [notice, setNotice] = useState<{ tone: "info" | "error"; text: string } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sources, setSources] = useState<ReadonlyMap<string, VideoSource>>(new Map());
+  const openUrls = useRef(new Set<string>());
+  const reviewsHeading = useRef<HTMLHeadingElement>(null);
   const newVideoInput = useRef<HTMLInputElement>(null);
   const importInput = useRef<HTMLInputElement>(null);
 
@@ -69,10 +76,10 @@ export function ReviewWorkspace() {
         latest.current = result.library;
         setLoaded({ kind: "ready", library: result.library });
         setSelectedId(result.library.sessions[0]?.id ?? null);
-        if (result.problem === "unreadable") {
+        if (result.keptAs) {
           setNotice({
             tone: "error",
-            text: `Saved reviews couldn't be read, so they were set aside as “${result.keptAs}” in this browser's storage instead of being overwritten.`,
+            text: `${result.unreadable} saved ${result.unreadable === 1 ? "item" : "items"} couldn't be read. The originals were kept as “${result.keptAs}” in this browser's storage; everything else loaded.`,
           });
         }
       },
@@ -83,6 +90,14 @@ export function ReviewWorkspace() {
     );
     return () => {
       cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const urls = openUrls.current;
+    return () => {
+      for (const url of urls) URL.revokeObjectURL(url);
+      urls.clear();
     };
   }, []);
 
@@ -110,6 +125,15 @@ export function ReviewWorkspace() {
   function commit(update: (current: ReviewLibrary) => ReviewLibrary) {
     if (!latest.current) return;
     const next = update(latest.current);
+    if (!ReviewLibrarySchema.safeParse(next).success) {
+      setNotice({
+        tone: "error",
+        text: next.sessions.some((s) => s.bookmarks.length > MAX_BOOKMARKS)
+          ? `A review holds at most ${MAX_BOOKMARKS} marks, so that one wasn't added.`
+          : "That change wasn't saved because it would make your reviews unreadable.",
+      });
+      return;
+    }
     latest.current = next;
     setLoaded({ kind: "ready", library: next });
     if (!area.current) return;
@@ -129,26 +153,37 @@ export function ReviewWorkspace() {
     }));
   }
 
+  function releaseSource(sessionId: string) {
+    const source = sources.get(sessionId);
+    if (!source) return;
+    URL.revokeObjectURL(source.url);
+    openUrls.current.delete(source.url);
+  }
+
   function deleteSession(id: string) {
-    const source = sources.get(id);
-    if (source) URL.revokeObjectURL(source.url);
+    releaseSource(id);
+    setSources((current) => {
+      const next = new Map(current);
+      next.delete(id);
+      return next;
+    });
     commit((current) => ({ ...current, sessions: current.sessions.filter((s) => s.id !== id) }));
     setSelectedId(library.sessions.find((s) => s.id !== id)?.id ?? null);
+    reviewsHeading.current?.focus();
   }
 
   function saveFocus(focus: PracticeFocus) {
-    commit((current) => ({
-      ...current,
-      focuses: current.focuses.some((f) => f.id === focus.id)
-        ? current.focuses.map((f) => (f.id === focus.id ? focus : f))
-        : [...current.focuses, focus],
-    }));
+    commit((current) =>
+      current.focuses.some((f) => f.id === focus.id)
+        ? { ...current, focuses: current.focuses.map((f) => (f.id === focus.id ? focus : f)) }
+        : startFocus(current, focus, focus.startedAt),
+    );
   }
 
   function attachFile(sessionId: string, file: File) {
-    const previous = sources.get(sessionId);
-    if (previous) URL.revokeObjectURL(previous.url);
+    releaseSource(sessionId);
     const source = { file, url: URL.createObjectURL(file) };
+    openUrls.current.add(source.url);
     setSources((current) => new Map(current).set(sessionId, source));
   }
 
@@ -157,7 +192,7 @@ export function ReviewWorkspace() {
     event.target.value = "";
     if (!file) return;
     const now = Date.now();
-    const activeFocus = library.focuses.find((f) => f.endedAt === null) ?? null;
+    const focus = latest.current ? activeFocus(latest.current) : null;
     const session: ReviewSession = {
       id: crypto.randomUUID(),
       title: titleFromFile(file.name),
@@ -170,7 +205,7 @@ export function ReviewWorkspace() {
         durationSeconds: null,
       },
       match: EMPTY_MATCH_REF,
-      focusId: activeFocus?.id ?? null,
+      focusId: focus?.id ?? null,
       bookmarks: [],
     };
     commit((current) => ({ ...current, sessions: [session, ...current.sessions] }));
@@ -197,10 +232,11 @@ export function ReviewWorkspace() {
   }
 
   function exportAll() {
+    if (!latest.current) return;
     const now = Date.now();
     downloadJson(
       `rivals-hub-review-${new Date(now).toISOString().slice(0, 10)}.json`,
-      exportLibrary(library, now),
+      exportLibrary(latest.current, now),
     );
   }
 
@@ -268,9 +304,31 @@ export function ReviewWorkspace() {
       )}
 
       <div className="grid gap-6 lg:grid-cols-[16rem_minmax(0,1fr)]">
-        <aside className="space-y-6">
+        <div className="min-w-0 lg:col-start-2 lg:row-start-1">
+          {selected ? (
+            <SessionView
+              key={selected.id}
+              session={selected}
+              focuses={library.focuses}
+              source={sources.get(selected.id) ?? null}
+              onAttachFile={(file) => attachFile(selected.id, file)}
+              onChange={(update) => updateSession(selected.id, update)}
+              onDelete={() => deleteSession(selected.id)}
+            />
+          ) : (
+            <div className="grid aspect-video place-items-center rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+              Choose “Review a recording” to open a match video from your computer.
+            </div>
+          )}
+        </div>
+        <aside className="space-y-6 lg:col-start-1 lg:row-start-1">
           <section aria-labelledby="reviews-heading" className="space-y-2">
-            <h2 id="reviews-heading" className="text-sm font-semibold">
+            <h2
+              id="reviews-heading"
+              ref={reviewsHeading}
+              tabIndex={-1}
+              className="text-sm font-semibold focus:outline-none"
+            >
               Reviews
             </h2>
             {library.sessions.length === 0 ? (
@@ -304,22 +362,6 @@ export function ReviewWorkspace() {
           </section>
           <FocusPanel library={library} onSave={saveFocus} />
         </aside>
-
-        {selected ? (
-          <SessionView
-            key={selected.id}
-            session={selected}
-            focuses={library.focuses}
-            source={sources.get(selected.id) ?? null}
-            onAttachFile={(file) => attachFile(selected.id, file)}
-            onChange={(update) => updateSession(selected.id, update)}
-            onDelete={() => deleteSession(selected.id)}
-          />
-        ) : (
-          <div className="grid aspect-video place-items-center rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-            Choose “Review a recording” to open a match video from your computer.
-          </div>
-        )}
       </div>
     </div>
   );

@@ -16,6 +16,8 @@ import {
   type Bookmark,
 } from "@/domain/review";
 
+import { useDraft } from "./useDraft";
+
 const KIND = {
   death: { label: "Death", icon: Skull },
   fight: { label: "Fight", icon: Crosshair },
@@ -99,7 +101,7 @@ export function BookmarkItem({
   onDelete: () => void;
   currentTime: () => number | null;
 }) {
-  const [note, setNote] = useState(bookmark.note);
+  const note = useDraft(bookmark.note);
   const [endError, setEndError] = useState<string | null>(null);
   const { label, icon: Icon } = KIND[bookmark.kind];
   const noteId = useId();
@@ -202,12 +204,14 @@ export function BookmarkItem({
         </label>
         <textarea
           id={noteId}
-          value={note}
+          value={note.text}
           maxLength={2000}
           rows={2}
-          onChange={(e) => setNote(e.target.value)}
+          onChange={(e) => note.edit(e.target.value)}
           onBlur={() => {
-            if (note !== bookmark.note) onChange({ ...bookmark, note });
+            if (!note.dirty) return;
+            note.settle(note.text);
+            onChange({ ...bookmark, note: note.text });
           }}
           placeholder="e.g. Pushed past the corner before Luna had sight of me"
           className="w-full rounded-md border bg-background px-2 py-1.5 text-sm focus-visible:outline-2 focus-visible:outline-ring"

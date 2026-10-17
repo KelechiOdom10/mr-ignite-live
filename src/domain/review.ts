@@ -11,6 +11,8 @@ const SecondsSchema = z.number().finite().min(0);
 const EpochMsSchema = z.number().int().min(0);
 const NoteSchema = z.string().max(2000);
 
+export const MAX_BOOKMARKS = 500;
+
 /** What the reviewer thinks mainly decided a death. `unknown` is a valid answer, not a gap. */
 export const DeathFactorSchema = z.enum([
   "fight_timing",
@@ -153,7 +155,7 @@ export const ReviewSessionSchema = z.object({
   video: VideoRefSchema.nullable(),
   match: MatchRefSchema,
   focusId: IdSchema.nullable(),
-  bookmarks: z.array(BookmarkSchema).max(500),
+  bookmarks: z.array(BookmarkSchema).max(MAX_BOOKMARKS),
 });
 export type ReviewSession = z.infer<typeof ReviewSessionSchema>;
 
@@ -210,7 +212,6 @@ export function removeBookmark(session: ReviewSession, id: string, now: number):
   return { ...session, bookmarks: session.bookmarks.filter((b) => b.id !== id), updatedAt: now };
 }
 
-/** Blank labels for a new bookmark at `at`; the reviewer fills them in afterwards. */
 export function blankBookmark(kind: BookmarkKind, id: string, at: number): Bookmark {
   switch (kind) {
     case "death":
@@ -228,6 +229,27 @@ export function blankBookmark(kind: BookmarkKind, id: string, at: number): Bookm
     case "moment":
       return { id, kind, at, note: "" };
   }
+}
+
+/** Starts a focus and ends any still open, so "the thing you're practising" is always one. */
+export function startFocus(
+  library: ReviewLibrary,
+  focus: PracticeFocus,
+  now: number,
+): ReviewLibrary {
+  const ended = library.focuses.map((f) =>
+    f.endedAt === null ? { ...f, endedAt: Math.max(now, f.startedAt), updatedAt: now } : f,
+  );
+  return { ...library, focuses: [...ended, focus] };
+}
+
+/** The latest open focus; an import can bring in a second open one from another device. */
+export function activeFocus(library: ReviewLibrary): PracticeFocus | null {
+  let latest: PracticeFocus | null = null;
+  for (const f of library.focuses) {
+    if (f.endedAt === null && (!latest || f.startedAt > latest.startedAt)) latest = f;
+  }
+  return latest;
 }
 
 /** Same file as the one a session was made from, judged by what the browser can see of it. */
@@ -316,7 +338,6 @@ export interface FactorCount {
 export interface FocusProgress {
   /** Sessions reviewed before the focus started and not linked to it. */
   before: FactorCount;
-  /** Sessions linked to the focus. */
   during: FactorCount;
 }
 

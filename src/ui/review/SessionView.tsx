@@ -17,6 +17,7 @@ import {
 } from "@/domain/review";
 
 import { BookmarkItem } from "./BookmarkItem";
+import { useDraft } from "./useDraft";
 
 type SessionUpdate = (session: ReviewSession) => ReviewSession;
 
@@ -70,7 +71,7 @@ function MatchField({
   onSave: (value: string | null) => void;
 }) {
   const id = useId();
-  const [draft, setDraft] = useState(value ?? "");
+  const draft = useDraft(value ?? "");
   const [invalid, setInvalid] = useState(false);
   return (
     <div className="space-y-1">
@@ -79,24 +80,28 @@ function MatchField({
       </label>
       <input
         id={id}
-        value={draft}
+        value={draft.text}
         aria-invalid={invalid || undefined}
-        aria-describedby={field.hint ? `${id}-hint` : undefined}
-        onChange={(e) => setDraft(e.target.value)}
+        aria-describedby={invalid ? `${id}-error` : field.hint ? `${id}-hint` : undefined}
+        onChange={(e) => draft.edit(e.target.value)}
         onBlur={() => {
-          const trimmed = draft.trim();
+          if (!draft.dirty) return;
+          const trimmed = draft.text.trim();
           if (trimmed !== "" && !field.valid(trimmed)) {
             setInvalid(true);
             return;
           }
           setInvalid(false);
+          draft.settle(trimmed);
           const next = trimmed === "" ? null : trimmed;
           if (next !== value) onSave(next);
         }}
         className="h-9 w-full rounded-md border bg-background px-2 text-sm focus-visible:outline-2 focus-visible:outline-ring aria-[invalid]:border-destructive"
       />
       {invalid ? (
-        <p className="text-xs text-destructive">That doesn't look like a {field.label}.</p>
+        <p id={`${id}-error`} className="text-xs text-destructive">
+          That doesn't look like a {field.label}. It won't be saved until it's fixed.
+        </p>
       ) : (
         field.hint && (
           <p id={`${id}-hint`} className="text-xs text-muted-foreground">
@@ -125,9 +130,10 @@ export function SessionView({
 }) {
   const video = useRef<HTMLVideoElement>(null);
   const reopenInput = useRef<HTMLInputElement>(null);
+  const marksSection = useRef<HTMLElement>(null);
   const file = source?.file ?? null;
   const url = source?.url ?? null;
-  const [title, setTitle] = useState(session.title);
+  const title = useDraft(session.title);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const titleId = useId();
   const focusId = useId();
@@ -148,7 +154,8 @@ export function SessionView({
   }
 
   const onKey = useEffectEvent((event: KeyboardEvent) => {
-    if (event.metaKey || event.ctrlKey || event.altKey || isTyping(event.target)) return;
+    if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
+    if (isTyping(event.target)) return;
     const found = MARKS.find((m) => m.key === event.key.toLowerCase());
     if (!found || !playable) return;
     event.preventDefault();
@@ -181,14 +188,18 @@ export function SessionView({
           </label>
           <input
             id={titleId}
-            value={title}
+            value={title.text}
             maxLength={120}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => title.edit(e.target.value)}
             onBlur={() => {
-              const next = title.trim();
-              if (next === "") setTitle(session.title);
-              else if (next !== session.title)
-                onChange((s) => ({ ...s, title: next, updatedAt: Date.now() }));
+              if (!title.dirty) return;
+              const next = title.text.trim();
+              if (next === "" || next === session.title) {
+                title.settle();
+                return;
+              }
+              title.settle(next);
+              onChange((s) => ({ ...s, title: next, updatedAt: Date.now() }));
             }}
             className="h-10 w-full rounded-md border bg-background px-3 text-base font-semibold focus-visible:outline-2 focus-visible:outline-ring"
           />
@@ -232,7 +243,8 @@ export function SessionView({
           aria-label={`Recording: ${file?.name ?? session.title}`}
           onLoadedMetadata={(e) => {
             const duration = e.currentTarget.duration;
-            if (!Number.isFinite(duration) || session.video?.durationSeconds === duration) return;
+            if (mismatch || !Number.isFinite(duration)) return;
+            if (session.video?.durationSeconds === duration) return;
             onChange((s) =>
               s.video ? { ...s, video: { ...s.video, durationSeconds: duration } } : s,
             );
@@ -303,7 +315,12 @@ export function SessionView({
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_18rem]">
-        <section aria-label="Marks" className="min-w-0">
+        <section
+          ref={marksSection}
+          tabIndex={-1}
+          aria-label="Marks"
+          className="min-w-0 focus:outline-none"
+        >
           {session.bookmarks.length === 0 ? (
             <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
               No marks yet. Pause on a death or the start of a fight and press D or F.
@@ -317,7 +334,10 @@ export function SessionView({
                   currentTime={currentTime}
                   onJump={jump}
                   onChange={(next) => onChange((s) => upsertBookmark(s, next, Date.now()))}
-                  onDelete={() => onChange((s) => removeBookmark(s, b.id, Date.now()))}
+                  onDelete={() => {
+                    onChange((s) => removeBookmark(s, b.id, Date.now()));
+                    marksSection.current?.focus();
+                  }}
                 />
               ))}
             </ol>

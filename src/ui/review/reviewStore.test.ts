@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { EMPTY_MATCH_REF, type ReviewLibrary } from "@/domain/review";
+import { EMPTY_MATCH_REF, MAX_BOOKMARKS, type ReviewLibrary } from "@/domain/review";
 
-import { LIBRARY_KEY, loadLibrary, saveLibrary, type KeyValueArea } from "./reviewStore";
+import {
+  LIBRARY_KEY,
+  loadLibrary,
+  saveLibrary,
+  UnsavableLibraryError,
+  type KeyValueArea,
+} from "./reviewStore";
 
 // IndexedDB structured-clones what it stores; cloning here keeps a value it couldn't hold failing.
 function memoryArea(initial: Record<string, unknown> = {}) {
@@ -44,21 +50,43 @@ describe("review store", () => {
   it("reads back exactly what it saved", async () => {
     const { area } = memoryArea();
     await saveLibrary(area, library);
-    expect(await loadLibrary(area, 5)).toEqual({ library, problem: null });
+    expect(await loadLibrary(area, 5)).toEqual({ library, keptAs: null, unreadable: 0 });
   });
 
-  it("keeps an unreadable library aside so the next save can't erase it", async () => {
-    const broken = { sessions: [{ title: "half-written" }], focuses: [] };
-    const { area, values } = memoryArea({ [LIBRARY_KEY]: broken });
+  it("keeps readable reviews when one is broken, and sets the broken data aside", async () => {
+    const stored = { sessions: [...library.sessions, { title: "half-written" }], focuses: [] };
+    const { area, values } = memoryArea({ [LIBRARY_KEY]: stored });
 
-    const loaded = await loadLibrary(area, 77);
-    expect(loaded).toEqual({
-      library: { sessions: [], focuses: [] },
-      problem: "unreadable",
+    expect(await loadLibrary(area, 77)).toEqual({
+      library,
       keptAs: "library:unreadable:77",
+      unreadable: 1,
     });
 
     await saveLibrary(area, library);
-    expect(values.get("library:unreadable:77")).toEqual(broken);
+    expect(values.get("library:unreadable:77")).toEqual(stored);
+  });
+
+  it("refuses to save a review the loader would reject, leaving the stored copy intact", async () => {
+    const { area, values } = memoryArea({ [LIBRARY_KEY]: library });
+    const [session] = library.sessions;
+    if (!session) throw new Error("fixture has a session");
+    const [mark] = session.bookmarks;
+    if (!mark) throw new Error("fixture has a mark");
+    const overfull = {
+      ...library,
+      sessions: [
+        {
+          ...session,
+          bookmarks: Array.from({ length: MAX_BOOKMARKS + 1 }, (_, i) => ({
+            ...mark,
+            id: `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`,
+          })),
+        },
+      ],
+    };
+
+    await expect(saveLibrary(area, overfull)).rejects.toThrow(UnsavableLibraryError);
+    expect(values.get(LIBRARY_KEY)).toEqual(library);
   });
 });

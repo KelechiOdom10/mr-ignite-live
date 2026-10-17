@@ -1,4 +1,11 @@
-import { EMPTY_LIBRARY, ReviewLibrarySchema, type ReviewLibrary } from "@/domain/review";
+import { z } from "zod";
+
+import {
+  PracticeFocusSchema,
+  ReviewLibrarySchema,
+  ReviewSessionSchema,
+  type ReviewLibrary,
+} from "@/domain/review";
 
 /** The browser storage a review library lives in. IndexedDB in the app; a Map in tests. */
 export interface KeyValueArea {
@@ -9,25 +16,66 @@ export interface KeyValueArea {
 export const LIBRARY_KEY = "library:v1";
 export const UNREADABLE_PREFIX = "library:unreadable:";
 
-export type LoadedLibrary =
-  | { library: ReviewLibrary; problem: null }
-  | { library: ReviewLibrary; problem: "unreadable"; keptAs: string };
+export interface LoadedLibrary {
+  library: ReviewLibrary;
+  /** Where entries that failed to parse were copied, or null when everything was readable. */
+  keptAs: string | null;
+  unreadable: number;
+}
+
+const StoredShape = z.object({
+  sessions: z.array(z.unknown()),
+  focuses: z.array(z.unknown()),
+});
+
+function partition<T>(items: readonly unknown[], schema: z.ZodType<T>) {
+  const valid: T[] = [];
+  const invalid: unknown[] = [];
+  for (const item of items) {
+    const parsed = schema.safeParse(item);
+    if (parsed.success) valid.push(parsed.data);
+    else invalid.push(item);
+  }
+  return { valid, invalid };
+}
 
 /**
- * Stored data is parsed like any external input. An unreadable library is copied aside before the
- * empty one is returned, so the next save can't silently destroy a user's labels.
+ * Stored data is parsed like any external input, one review at a time, so a single bad entry
+ * can't hide the rest. Anything unreadable is copied aside before it can be overwritten.
  */
 export async function loadLibrary(area: KeyValueArea, now: number): Promise<LoadedLibrary> {
   const raw = await area.get(LIBRARY_KEY);
-  if (raw === undefined || raw === null) return { library: EMPTY_LIBRARY, problem: null };
-  const parsed = ReviewLibrarySchema.safeParse(raw);
-  if (parsed.success) return { library: parsed.data, problem: null };
+  if (raw === undefined || raw === null) {
+    return { library: { sessions: [], focuses: [] }, keptAs: null, unreadable: 0 };
+  }
+  const shape = StoredShape.safeParse(raw);
+  const stored = shape.success ? shape.data : { sessions: [], focuses: [] };
+  const sessions = partition(stored.sessions, ReviewSessionSchema);
+  const focuses = partition(stored.focuses, PracticeFocusSchema);
+  const unreadable = sessions.invalid.length + focuses.invalid.length;
+  if (shape.success && unreadable === 0) {
+    return {
+      library: { sessions: sessions.valid, focuses: focuses.valid },
+      keptAs: null,
+      unreadable,
+    };
+  }
   const keptAs = `${UNREADABLE_PREFIX}${now}`;
   await area.set(keptAs, raw);
-  return { library: EMPTY_LIBRARY, problem: "unreadable", keptAs };
+  return {
+    library: { sessions: sessions.valid, focuses: focuses.valid },
+    keptAs,
+    unreadable: shape.success ? unreadable : 1,
+  };
 }
 
+export class UnsavableLibraryError extends Error {}
+
+/** Refuses anything `loadLibrary` would reject, so the writer can't store what the reader hides. */
 export function saveLibrary(area: KeyValueArea, library: ReviewLibrary): Promise<void> {
+  if (!ReviewLibrarySchema.safeParse(library).success) {
+    return Promise.reject(new UnsavableLibraryError("Review library failed its own schema"));
+  }
   return area.set(LIBRARY_KEY, library);
 }
 
