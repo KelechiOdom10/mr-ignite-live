@@ -24,7 +24,12 @@ const LOOKBACK_MS = 12 * 60 * 60 * 1000;
 
 const StatsIndexSchema = z.record(
   z.string(),
-  z.object({ sourceMatchId: z.string(), sourceUpdatedAt: z.string() }),
+  z.object({
+    sourceMatchId: z.string(),
+    sourceUpdatedAt: z.string(),
+    /** Set once a fetch has kept draft order; earlier entries get one refetch in the lookback. */
+    draftOrder: z.literal(true).optional(),
+  }),
 );
 export type StatsIndex = z.infer<typeof StatsIndexSchema>;
 
@@ -43,6 +48,10 @@ export async function readAllMatchStats(store: KvStore): Promise<MatchStats[]> {
 async function readIndex(store: KvStore): Promise<StatsIndex> {
   const parsed = StatsIndexSchema.safeParse(await store.get(INDEX_KEY));
   return parsed.success ? parsed.data : {};
+}
+
+function fetchedBeforeDraftOrder(entry: StatsIndex[string] | undefined): boolean {
+  return entry !== undefined && entry.draftOrder !== true;
 }
 
 export function statsCandidates(snapshot: Snapshot, now: number): Match[] {
@@ -116,13 +125,14 @@ export async function fetchStatsChanges({
     const summary = findMrvlMatch(match, summaries);
     if (!summary) continue;
     const sourceUpdatedAt = String(summary.updatedAt ?? "");
-    if (index[match.id]?.sourceUpdatedAt === sourceUpdatedAt) continue;
+    const backfill = fetchedBeforeDraftOrder(index[match.id]);
+    if (index[match.id]?.sourceUpdatedAt === sourceUpdatedAt && !backfill) continue;
 
     pagesRequested++;
     const page = await seriesPage(mrvl, summary.id);
     if (!page) continue;
     const stats = toMatchStats(match, page, sourceUpdatedAt, new Date(now));
-    index[match.id] = { sourceMatchId: summary.id, sourceUpdatedAt };
+    index[match.id] = { sourceMatchId: summary.id, sourceUpdatedAt, draftOrder: true };
     indexChanged = true;
     if (stats.maps.length === 0) continue;
     mapOverrides[match.id] = toMapOverrides(stats);
