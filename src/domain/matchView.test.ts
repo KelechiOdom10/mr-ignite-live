@@ -132,13 +132,17 @@ describe("matchView in a hidden bracket", () => {
     expect([v.side1.short, v.side2.short]).toEqual(["FLY", "100T"]);
   });
 
-  it("says where a team came from when its previous series has no recorded winner", () => {
+  it("labels a feeder with no recorded winner like a decided one, so a hidden walkover doesn't stand out", () => {
     const walkoverSemi = { ...semi1, maps: [], markedFinished: true };
     const v = viewIn(upperFinal, [walkoverSemi, semi2, upperFinal]);
     expect([v.side1.name, v.side1.short]).toEqual([
-      "From Upper Bracket Semifinals",
-      "From UB Semifinals",
+      "Winner of Upper Bracket Semifinals",
+      "Winner of UB Semifinals",
     ]);
+    const walkoverSemi2 = { ...semi2, maps: [], markedFinished: true };
+    expect(viewIn(lowerQuarter, [semi1, walkoverSemi2, lowerQuarter]).side1.name).toBe(
+      "Loser of Upper Bracket Semifinals",
+    );
   });
 
   it("orders by round when start times are missing", () => {

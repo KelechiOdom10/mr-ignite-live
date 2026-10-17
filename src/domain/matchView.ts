@@ -47,7 +47,7 @@ export interface MatchView {
 }
 
 interface Feeder {
-  result: "Winner" | "Loser" | "From";
+  result: "Winner" | "Loser";
   round: string;
 }
 
@@ -75,11 +75,10 @@ export function matchView(
     const outcome = winner === null ? "open" : winner === n ? "won" : "lost";
     const feeder = feeders[n];
     if (team && feeder) {
-      const lead = feeder.result === "From" ? "From" : `${feeder.result} of`;
       return {
         team: null,
-        name: `${lead} ${feeder.round}`,
-        short: `${lead} ${abbreviateRound(feeder.round)}`,
+        name: `${feeder.result} of ${feeder.round}`,
+        short: `${feeder.result} of ${abbreviateRound(feeder.round)}`,
         score,
         outcome,
       };
@@ -169,6 +168,10 @@ function playedBefore(earlier: Match, later: Match): boolean {
   return roundNumber(earlier) < roundNumber(later);
 }
 
+function droppedDown(from: Match, to: Match): boolean {
+  return /\bupper\b/i.test(from.round) && /\blower\b/i.test(to.round);
+}
+
 // Read from team history: Liquipedia's slot ids don't say which upper-bracket loser drops
 // into which lower-bracket slot.
 function slotFeeders(match: Match, { matches, now }: BracketContext): SlotFeeders {
@@ -195,9 +198,9 @@ function slotFeeders(match: Match, { matches, now }: BracketContext): SlotFeeder
       );
     if (!previous) continue;
     const side = previous.m.team1?.name === team.name ? 1 : 2;
-    const result =
-      previous.s.winner === 0 ? "From" : previous.s.winner === side ? "Winner" : "Loser";
-    feeders[n] = { result, round: previous.m.round };
+    const advanced =
+      previous.s.winner === 0 ? !droppedDown(previous.m, match) : previous.s.winner === side;
+    feeders[n] = { result: advanced ? "Winner" : "Loser", round: previous.m.round };
   }
   return feeders;
 }
