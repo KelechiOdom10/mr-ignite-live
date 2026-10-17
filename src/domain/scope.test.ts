@@ -92,6 +92,25 @@ describe("scopeSnapshot", () => {
     expect(scoped.matches.map((m) => m.id)).toEqual(["a"]);
   });
 
+  it("keeps a near-term playoff match's earlier bracket series so Hide spoilers can mask who advanced", () => {
+    const daysAgo = (n: number) => new Date(NOW - n * 86_400_000).toISOString();
+    const final = aMatch({ id: "kOK_R4M1", eventId: "current", startsAt: daysAgo(-1) });
+    const semi = aMatch({ id: "kOK_R2M1", eventId: "current", startsAt: daysAgo(4) });
+    const otherBracket = aMatch({ id: "zzz_R2M1", eventId: "current", startsAt: daysAgo(4) });
+    const groupGame = aMatch({
+      id: "kOK_R1M9",
+      eventId: "current",
+      phase: "Group Stage",
+      startsAt: daysAgo(4),
+    });
+    const scoped = scopeSnapshot(
+      aSnapshot([current], [semi, otherBracket, groupGame, final]),
+      { kind: "events" },
+      NOW,
+    );
+    expect(scoped.matches.map((m) => m.id)).toEqual(["kOK_R2M1", "kOK_R4M1"]);
+  });
+
   it("stamps the time it was scoped so the client hydrates with the server's clock", () => {
     expect(scopeSnapshot(snapshot, { kind: "recent" }, NOW).servedAt).toBe(
       new Date(NOW).toISOString(),

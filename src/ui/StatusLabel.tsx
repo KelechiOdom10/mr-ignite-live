@@ -1,4 +1,4 @@
-import type { MatchState } from "@/domain/matchState";
+import type { MatchView } from "@/domain/matchView";
 import type { Match } from "@/domain/model";
 import { cn } from "@/lib/utils";
 
@@ -17,17 +17,17 @@ const DAY_MS = 86_400_000;
 
 export function StatusLabel({
   match,
-  state,
+  view,
   now,
   className,
 }: {
   match: Match;
-  state: MatchState;
+  view: MatchView;
   now: number;
   className?: string;
 }) {
   const hydrated = useHydrated();
-  if (state.status === "live") {
+  if (view.status === "live") {
     return (
       <span
         className={cn(
@@ -35,12 +35,14 @@ export function StatusLabel({
           className,
         )}
       >
-        <LiveDot /> Live
+        <LiveDot /> {view.statusText}
       </span>
     );
   }
-  if (state.status === "finished") {
-    return <span className={cn("text-xs text-muted-foreground", className)}>Final</span>;
+  if (view.statusText) {
+    return (
+      <span className={cn("text-xs text-muted-foreground", className)}>{view.statusText}</span>
+    );
   }
   if (!hydrated || !match.startsAt) {
     return <span className={cn("text-xs text-muted-foreground", className)}>Bo{match.bestOf}</span>;

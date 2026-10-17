@@ -14,7 +14,7 @@ import { useLiveSnapshot } from "@/ui/useLiveSnapshot";
 import type { Props } from "./[...slug].server";
 
 export default function EventPage({ snapshot: initial, eventId }: Props) {
-  const { snapshot, connection, now } = useLiveSnapshot(initial, { event: eventId });
+  const { snapshot, connection, now } = useLiveSnapshot(initial, { event: eventId ?? undefined });
   const hydrated = useHydrated();
   const event = snapshot.events.find((e) => e.id === eventId);
   if (!event) {
@@ -29,7 +29,7 @@ export default function EventPage({ snapshot: initial, eventId }: Props) {
       </AppShell>
     );
   }
-  const matches = matchesOfEvent(snapshot, eventId);
+  const matches = matchesOfEvent(snapshot, event.id);
   const playoffs = matches.filter((m) => m.phase === "Playoffs");
   const groups = matches.filter((m) => m.phase !== "Playoffs");
   const upper = playoffs.filter((m) => /upper/i.test(m.round));

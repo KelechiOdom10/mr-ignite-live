@@ -4,9 +4,11 @@ import { useMemo } from "react";
 
 import { CommandPalette, type CommandItem } from "@/components/motion/command-palette";
 import { matchState } from "@/domain/matchState";
+import { matchView } from "@/domain/matchView";
 import type { Snapshot } from "@/domain/model";
 import { eventSlug } from "@/domain/scope";
 
+import { useSpoilersHidden } from "./spoilers";
 import { formatDay } from "./time";
 
 export function SearchPalette({
@@ -21,6 +23,7 @@ export function SearchPalette({
   onOpenChange: (open: boolean) => void;
 }) {
   const router = useRouter();
+  const hidden = useSpoilersHidden();
   const items = useMemo<CommandItem[]>(() => {
     const events: CommandItem[] = snapshot.events.map((e) => ({
       id: `event:${e.id}`,
@@ -32,6 +35,7 @@ export function SearchPalette({
       onSelect: () => void router.visit(`/event/${eventSlug(e.id)}`),
     }));
     const rank = { live: 0, upcoming: 1, finished: 2 } as const;
+    const bracket = { matches: snapshot.matches, now };
     const matches: CommandItem[] = snapshot.matches
       .filter((m) => m.team1 && m.team2)
       .map((m) => ({ m, status: matchState(m, now).status }))
@@ -42,18 +46,19 @@ export function SearchPalette({
         return a.status === "finished" ? -order : order;
       })
       .map(({ m, status }) => {
+        const { side1, side2 } = matchView(m, matchState(m, now), hidden, bracket);
         return {
           id: `match:${m.id}`,
-          label: `${m.team1?.name} vs ${m.team2?.name}`,
+          label: `${side1.name} vs ${side2.name}`,
           group: status === "live" ? "Live" : status === "upcoming" ? "Upcoming" : "Results",
           hint: m.startsAt ? formatDay(m.startsAt, now) : m.round,
           icon: status === "upcoming" ? CalendarDays : Swords,
-          keywords: [m.team1?.short ?? "", m.team2?.short ?? "", m.round],
+          keywords: [side1.team?.short ?? "", side2.team?.short ?? "", m.round],
           onSelect: () => void router.visit(`/match/${m.id}`),
         };
       });
     return [...matches, ...events];
-  }, [snapshot, now, router]);
+  }, [snapshot, now, router, hidden]);
 
   return (
     <CommandPalette

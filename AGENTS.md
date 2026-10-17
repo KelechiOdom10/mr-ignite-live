@@ -32,7 +32,7 @@ Rules:
 - mrvl is a courtesy source: keep its request volume where `src/store/stats.ts` caps it, and never let its failure break the Liquipedia sync. Liquipedia map results always win over mrvl overrides.
 - Bump `STORED_SNAPSHOT_VERSION` when the stored shape changes; an old value then fails the schema and is rebuilt.
 - Every match surface (cards, strip chips, bracket slots, search results) links to `/match/:id`. Reuse `MatchCard` rather than drawing a new match tile.
-- Respect Hide spoilers (`useSpoilersHidden`) anywhere a score, winner or result toast appears.
+- Render every match surface (score, winner, team names, maps, VODs, toasts) through `useMatchView` / `matchView` in `src/domain/matchView.ts`, passing the snapshot's matches; it applies Hide spoilers, so components don't check `useSpoilersHidden` themselves.
 - Times render in the reader's zone after hydration (`useNow`, `useHydrated`) so server HTML matches the client.
 - Tests sit next to the code and name the bug they catch. Fake only `fetch` and KV (`test/memoryKv.ts`); use recorded fixtures in `test/fixtures/` (see its `NOTES.md`), never hand-edited.
 - Conventional Commits, no AI attribution.

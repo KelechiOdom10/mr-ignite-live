@@ -1,67 +1,45 @@
 import { Link } from "@void/react";
 
 import { Card, CARD_TARGET_CLASS } from "@/components/motion/card";
-import { matchState, type MatchState } from "@/domain/matchState";
-import type { IgniteEvent, Match, Snapshot, Team } from "@/domain/model";
+import type { SideView } from "@/domain/matchView";
+import type { IgniteEvent, Match, Snapshot } from "@/domain/model";
 import { cn } from "@/lib/utils";
 
 import { proxiedImage } from "./images";
 import { RegionTag } from "./RegionTag";
-import { useSpoilersHidden } from "./spoilers";
+import { useMatchView } from "./spoilers";
 import { StatusLabel } from "./StatusLabel";
 import { TeamLogo } from "./TeamMark";
 
-function TeamLine({
-  team,
-  score,
-  outcome,
-  snapshot,
-  showScore,
-}: {
-  team: Team | null;
-  score: number;
-  outcome: "won" | "lost" | "open";
-  snapshot: Snapshot;
-  showScore: boolean;
-}) {
+function TeamLine({ side, snapshot }: { side: SideView; snapshot: Snapshot }) {
   return (
     <div className="flex min-w-0 items-center gap-2.5">
-      <TeamLogo team={team} info={team ? snapshot.teams[team.name] : undefined} size={22} />
+      <TeamLogo
+        team={side.team}
+        info={side.team ? snapshot.teams[side.team.name] : undefined}
+        size={22}
+      />
       <span
-        title={team?.name}
+        title={side.name}
         className={cn(
           "min-w-0 flex-1 truncate text-sm",
-          outcome === "won" ? "font-semibold" : "font-medium",
-          outcome === "lost" && "text-muted-foreground",
-          !team && "text-muted-foreground",
+          side.outcome === "won" ? "font-semibold" : "font-medium",
+          (side.outcome === "lost" || !side.team) && "text-muted-foreground",
         )}
       >
-        {team?.short ?? "TBD"}
+        {side.short}
       </span>
       <span
         className={cn(
           "w-4 text-right font-mono text-sm tabular-nums",
-          outcome === "won" && "font-semibold text-win",
-          outcome === "lost" && "text-muted-foreground",
+          side.outcome === "won" && "font-semibold text-win",
+          side.outcome === "lost" && "text-muted-foreground",
         )}
       >
-        {showScore ? score : "–"}
+        {side.score ?? "–"}
       </span>
     </div>
   );
-}
-
-function outcomeOf(state: MatchState, side: 1 | 2, spoilersHidden: boolean) {
-  if (spoilersHidden || state.winner === 0) return "open";
-  return state.winner === side ? "won" : "lost";
-}
-
-function accessibleSummary(match: Match, state: MatchState, spoilersHidden: boolean) {
-  const t1 = match.team1?.name ?? "TBD";
-  const t2 = match.team2?.name ?? "TBD";
-  if (state.status === "upcoming" || spoilersHidden) return `${t1} vs ${t2}, ${match.round}`;
-  const status = state.status === "live" ? "live" : "final";
-  return `${t1} ${state.wins1}, ${t2} ${state.wins2}, ${status}, ${match.round}`;
 }
 
 export function MatchCard({
@@ -79,40 +57,26 @@ export function MatchCard({
   footer?: "event" | "round" | "none";
   className?: string;
 }) {
-  const state = matchState(match, now);
-  const spoilersHidden = useSpoilersHidden();
-  const showScore = state.status !== "upcoming" && !spoilersHidden;
+  const view = useMatchView(match, now, snapshot.matches);
   return (
     <Card
       interactive
       className={cn(
         "gap-0 rounded-xl bg-card py-0",
-        state.status === "live" && "bg-live/[0.04]",
+        view.status === "live" && "bg-live/[0.04]",
         className,
       )}
     >
       <Link
         href={`/match/${match.id}`}
-        aria-label={accessibleSummary(match, state, spoilersHidden)}
+        aria-label={view.summary}
         className={cn("grid grid-cols-[1fr_auto] items-center gap-4 px-4 py-3", CARD_TARGET_CLASS)}
       >
         <div className="min-w-0 space-y-2">
-          <TeamLine
-            team={match.team1}
-            score={state.wins1}
-            outcome={outcomeOf(state, 1, spoilersHidden)}
-            snapshot={snapshot}
-            showScore={showScore}
-          />
-          <TeamLine
-            team={match.team2}
-            score={state.wins2}
-            outcome={outcomeOf(state, 2, spoilersHidden)}
-            snapshot={snapshot}
-            showScore={showScore}
-          />
+          <TeamLine side={view.side1} snapshot={snapshot} />
+          <TeamLine side={view.side2} snapshot={snapshot} />
         </div>
-        <StatusLabel match={match} state={state} now={now} className="min-w-12 text-right" />
+        <StatusLabel match={match} view={view} now={now} className="min-w-12 text-right" />
       </Link>
       {footer !== "none" && (
         <div

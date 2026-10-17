@@ -1,42 +1,13 @@
 import { Link } from "@void/react";
 
 import { Tooltip } from "@/components/motion/tooltip";
-import { matchState } from "@/domain/matchState";
-import type { Match, Snapshot, Team } from "@/domain/model";
+import { formView, type FormResult } from "@/domain/matchView";
+import type { Snapshot, Team } from "@/domain/model";
 import { cn } from "@/lib/utils";
 
 import { useSpoilersHidden } from "./spoilers";
 import { TeamLogo } from "./TeamMark";
 import { formatDay } from "./time";
-
-const FORM_LENGTH = 10;
-
-interface FormResult {
-  match: Match;
-  won: boolean;
-  opponent: Team | null;
-  score: string;
-}
-
-function involves(match: Match, team: Team): boolean {
-  return match.team1?.name === team.name || match.team2?.name === team.name;
-}
-
-export function recentForm(team: Team, matches: Match[], now: number): FormResult[] {
-  return matches
-    .filter((m) => involves(m, team) && m.startsAt)
-    .map((m) => ({ m, s: matchState(m, now) }))
-    .filter(({ s }) => s.status === "finished" && s.winner !== 0)
-    .toSorted((a, b) => (a.m.startsAt ?? "").localeCompare(b.m.startsAt ?? ""))
-    .slice(-FORM_LENGTH)
-    .map(({ m, s }) => {
-      const side = m.team1?.name === team.name ? 1 : 2;
-      const won = s.winner === side;
-      const own = side === 1 ? s.wins1 : s.wins2;
-      const theirs = side === 1 ? s.wins2 : s.wins1;
-      return { match: m, won, opponent: side === 1 ? m.team2 : m.team1, score: `${own}–${theirs}` };
-    });
-}
 
 function streak(results: FormResult[]): string | null {
   const last = results.at(-1);
@@ -47,9 +18,22 @@ function streak(results: FormResult[]): string | null {
 }
 
 export function TeamForm({ team, snapshot, now }: { team: Team; snapshot: Snapshot; now: number }) {
-  const hidden = useSpoilersHidden();
-  const results = recentForm(team, snapshot.matches, now);
-  if (hidden || results.length === 0) return null;
+  const form = formView(team, snapshot.matches, now, useSpoilersHidden());
+  if (form.kind === "hidden") {
+    return (
+      <div className="flex items-center gap-3 rounded-xl border border-dashed p-4">
+        <TeamLogo team={team} info={snapshot.teams[team.name]} size={28} />
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-medium">{team.name}</div>
+          <div className="text-xs text-muted-foreground">
+            Results are hidden while Hide spoilers is on.
+          </div>
+        </div>
+      </div>
+    );
+  }
+  const { results } = form;
+  if (results.length === 0) return null;
   const wins = results.filter((r) => r.won).length;
   const run = streak(results);
   return (
