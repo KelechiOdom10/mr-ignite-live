@@ -3,11 +3,12 @@ import { describe, expect, it } from "vitest";
 import type { PageData, StoredSnapshot } from "@/domain/model";
 import type { MatchStats } from "@/domain/stats";
 
-import { aMatch } from "../../test/builders";
+import { aMap, aMatch } from "../../test/builders";
 import {
   applyPages,
   emptyStored,
   mergeMapOverrides,
+  nextStored,
   planSync,
   statsChanged,
   teamsMissingInfo,
@@ -114,6 +115,46 @@ describe("withMapOverrides", () => {
     const stored = { ...emptyStored(), mapOverrides: { m1: [override] } };
     const next = withMapOverrides(stored, { m2: [{ ...override, index: 2 }] });
     expect(Object.keys(next?.mapOverrides ?? {})).toEqual(["m1", "m2"]);
+  });
+});
+
+describe("nextStored", () => {
+  const builtAt = new Date("2026-10-16T22:31:00Z");
+  const noLiquipediaChanges = { updates: {}, removed: [], teams: {} };
+
+  it("returns null when neither Liquipedia nor mrvl brought anything new, so KV isn't rewritten", () => {
+    const override = { index: 1, map: "Midtown", score1: 3, score2: 1, winner: 1 } as const;
+    const prev = { ...emptyStored(), mapOverrides: { m1: [override] } };
+    expect(
+      nextStored({
+        prev,
+        liquipedia: noLiquipediaChanges,
+        mapOverrides: { m1: [override] },
+        builtAt,
+      }),
+    ).toBeNull();
+  });
+
+  it("keeps Liquipedia's map winner over mrvl's when both arrive in the same write", () => {
+    const title = "MR Ignite/2026/Stage 2/Americas";
+    const match = aMatch({ maps: [aMap(1, 1), aMap(2, 0)] });
+    const next = nextStored({
+      prev: emptyStored(),
+      liquipedia: { ...noLiquipediaChanges, updates: { [title]: aPage(7, { matches: [match] }) } },
+      mapOverrides: {
+        [match.id]: [
+          { index: 1, map: "Map 1", score1: 0, score2: 3, winner: 2 },
+          { index: 2, map: "Midtown", score1: 3, score2: 2, winner: 1 },
+        ],
+      },
+      builtAt,
+    });
+    expect(next?.builtAt).toBe(builtAt.toISOString());
+    const maps = next ? toSnapshot(next, builtAt).matches[0]?.maps : [];
+    expect(maps?.map((m) => [m.index, m.winner])).toEqual([
+      [1, 1],
+      [2, 1],
+    ]);
   });
 });
 

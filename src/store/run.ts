@@ -3,9 +3,15 @@ import type { LiquipediaClient } from "@/liquipedia/client";
 import type { MrvlClient } from "@/mrvl/client";
 
 import type { KvStore } from "./kv";
-import { toSnapshot, withMapOverrides } from "./plan";
-import { syncFromLiquipedia, writeStored } from "./snapshot";
-import { syncStats } from "./stats";
+import { applyLiquipedia, emptyStored, nextStored, toSnapshot } from "./plan";
+import { fetchLiquipediaChanges, readStored, writeStored } from "./snapshot";
+import {
+  fetchStatsChanges,
+  NO_STATS_CHANGES,
+  type StatsChanges,
+  writeMatchStats,
+  writeStatsIndex,
+} from "./stats";
 
 export interface SyncDeps {
   store: KvStore;
@@ -24,34 +30,44 @@ export interface SyncOutcome {
   updatedStats: number;
 }
 
-async function withStats(deps: SyncDeps, stored: StoredSnapshot) {
+async function statsOrNothing(deps: SyncDeps, stored: StoredSnapshot): Promise<StatsChanges> {
   try {
     const now = deps.now();
-    const result = await syncStats({
+    return await fetchStatsChanges({
       store: deps.store,
       mrvl: deps.mrvl,
       snapshot: toSnapshot(stored, new Date(now)),
       now,
     });
-    const next = withMapOverrides(stored, result.mapOverrides);
-    if (!next) return { stored, updatedStats: result.updatedMatchIds.length };
-    await writeStored(deps.store, next);
-    return { stored: next, updatedStats: result.updatedMatchIds.length };
   } catch (error) {
     console.error("mrvl stats sync failed; scores still come from Liquipedia", error);
-    return { stored, updatedStats: 0 };
+    return NO_STATS_CHANGES;
   }
 }
 
 export async function syncOnce(deps: SyncDeps): Promise<SyncOutcome> {
-  const result = await syncFromLiquipedia(deps.liquipedia, deps.store);
-  const { stored, updatedStats } = await withStats(deps, result.stored);
+  const { store } = deps;
+  const prev = (await readStored(store)) ?? emptyStored();
+  const liquipedia = await fetchLiquipediaChanges({ liquipedia: deps.liquipedia, store, prev });
+  const stats = await statsOrNothing(deps, applyLiquipedia(prev, liquipedia));
+  const next = nextStored({
+    prev,
+    liquipedia,
+    mapOverrides: stats.mapOverrides,
+    builtAt: new Date(deps.now()),
+  });
+
+  await writeMatchStats(store, stats.updated);
+  if (next) await writeStored(store, next);
+  // Last, so a run that fails before here refetches those series and re-emits their map results.
+  if (stats.index) await writeStatsIndex(store, stats.index);
+
   return {
-    snapshot: toSnapshot(stored, new Date(deps.now())),
-    changed: result.changedPages > 0 || result.removedPages > 0 || updatedStats > 0,
-    changedPages: result.changedPages,
-    removedPages: result.removedPages,
-    newTeams: result.newTeams,
-    updatedStats,
+    snapshot: toSnapshot(next ?? prev, new Date(deps.now())),
+    changed: next !== null || stats.updated.length > 0,
+    changedPages: Object.keys(liquipedia.updates).length,
+    removedPages: liquipedia.removed.length,
+    newTeams: Object.keys(liquipedia.teams).length,
+    updatedStats: stats.updated.length,
   };
 }

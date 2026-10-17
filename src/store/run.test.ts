@@ -14,8 +14,10 @@ import {
 import { fakeMrvl, FLY_100T_MRVL_ID, type MrvlFakeOptions } from "../../test/fakeMrvl";
 import { memoryKvStore } from "../../test/memoryKv";
 import { syncOnce } from "./run";
+import { readStored } from "./snapshot";
 
 // Liquipedia ids from the recorded Americas bracket.
+const FLY_100T = "kOKqgtPHq4_R2M1";
 const TLC_SWAMP = "kOKqgtPHq4_R2M2";
 
 /**
@@ -63,6 +65,39 @@ describe("syncOnce on match day", () => {
 
     expect(day.store.putCounts()).toEqual({});
     expect(outcome.changed).toBe(false);
+  });
+
+  it("builds a cold store with one snapshot write even when mrvl adds map results", async () => {
+    const day = matchDay();
+
+    const outcome = await day.sync();
+
+    expect(day.store.putCounts()).toEqual({
+      snapshot: 1,
+      [`stats:v2:${FLY_100T}`]: 1,
+      "stats-index:v2": 1,
+    });
+    expect(outcome.changed).toBe(true);
+  });
+
+  it("costs one snapshot write for a changed Liquipedia page plus new mrvl map results", async () => {
+    const day = matchDay({ mrvl: { down: true } });
+    await day.sync();
+    day.store.resetPuts();
+    day.mrvl.settings.down = false;
+    day.liquipedia.revids[AMERICAS] = 60101;
+
+    const outcome = await day.sync();
+
+    expect(day.store.putCounts()).toEqual({
+      snapshot: 1,
+      [`stats:v2:${FLY_100T}`]: 1,
+      "stats-index:v2": 1,
+    });
+    expect(outcome.changedPages).toBe(1);
+    const stored = await readStored(day.store);
+    expect(stored?.pages[AMERICAS]?.revid).toBe(60101);
+    expect(stored?.mapOverrides[FLY_100T]?.map((m) => m.winner)).toEqual([2, 1, 1, 1]);
   });
 
   it("still saves Liquipedia's changes when mrvl is down", async () => {

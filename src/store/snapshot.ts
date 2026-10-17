@@ -6,7 +6,7 @@ import { parseEventInfo, parsePageMatches } from "@/liquipedia/parse";
 import { fetchTeamInfo } from "@/liquipedia/teams";
 
 import type { KvStore } from "./kv";
-import { applyPages, emptyStored, planSync, teamsMissingInfo } from "./plan";
+import { applyPages, type LiquipediaChanges, planSync, teamsMissingInfo } from "./plan";
 
 const SNAPSHOT_KEY = "snapshot";
 const TITLES_KEY = "titles:v1";
@@ -53,26 +53,20 @@ async function resolveEventIcons(
   }
 }
 
-export interface SyncResult {
-  stored: StoredSnapshot;
-  changedPages: number;
-  removedPages: number;
-  newTeams: number;
-}
-
-export async function syncFromLiquipedia(
-  client: LiquipediaClient,
-  store: KvStore,
-): Promise<SyncResult> {
-  const prev = (await readStored(store)) ?? emptyStored();
-  const revisions = await client.fetchRevisions(await pageTitles(client, store));
+export async function fetchLiquipediaChanges({
+  liquipedia,
+  store,
+  prev,
+}: {
+  liquipedia: LiquipediaClient;
+  store: KvStore;
+  prev: StoredSnapshot;
+}): Promise<LiquipediaChanges> {
+  const revisions = await liquipedia.fetchRevisions(await pageTitles(liquipedia, store));
   const plan = planSync(prev.pages, revisions);
-  if (plan.changed.length === 0 && plan.removed.length === 0) {
-    return { stored: prev, changedPages: 0, removedPages: 0, newTeams: 0 };
-  }
 
   const updates: Record<string, PageData> = {};
-  for (const [title, text] of await client.fetchContents(plan.changed)) {
+  for (const [title, text] of await liquipedia.fetchContents(plan.changed)) {
     const rev = revisions.get(title);
     if (!rev) continue;
     updates[title] = {
@@ -82,24 +76,9 @@ export async function syncFromLiquipedia(
       matches: parsePageMatches(title, text),
     };
   }
-  await resolveEventIcons(client, updates);
-  const pages = applyPages(prev.pages, plan.removed, updates);
-  const missing = teamsMissingInfo(pages, prev.teams);
-  const teams = missing.length
-    ? { ...prev.teams, ...(await fetchTeamInfo(client, missing)) }
-    : prev.teams;
+  await resolveEventIcons(liquipedia, updates);
 
-  const stored = StoredSnapshotSchema.parse({
-    ...prev,
-    pages,
-    teams,
-    builtAt: new Date().toISOString(),
-  });
-  await store.put(SNAPSHOT_KEY, stored);
-  return {
-    stored,
-    changedPages: Object.keys(updates).length,
-    removedPages: plan.removed.length,
-    newTeams: missing.length,
-  };
+  const missing = teamsMissingInfo(applyPages(prev.pages, plan.removed, updates), prev.teams);
+  const teams = missing.length > 0 ? await fetchTeamInfo(liquipedia, missing) : {};
+  return { updates, removed: plan.removed, teams };
 }

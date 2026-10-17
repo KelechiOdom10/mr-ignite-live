@@ -6,6 +6,7 @@ import {
   type PageData,
   type Snapshot,
   type StoredSnapshot,
+  type TeamInfo,
 } from "@/domain/model";
 import { STORED_SNAPSHOT_VERSION } from "@/domain/model";
 import type { MatchStats } from "@/domain/stats";
@@ -90,6 +91,50 @@ export function withMapOverrides(
   );
   if (changed.length === 0) return null;
   return { ...stored, mapOverrides: { ...stored.mapOverrides, ...Object.fromEntries(changed) } };
+}
+
+export interface LiquipediaChanges {
+  updates: Record<string, PageData>;
+  removed: string[];
+  teams: Record<string, TeamInfo>;
+}
+
+export function applyLiquipedia(
+  stored: StoredSnapshot,
+  changes: LiquipediaChanges,
+): StoredSnapshot {
+  return {
+    ...stored,
+    pages: applyPages(stored.pages, changes.removed, changes.updates),
+    teams: { ...stored.teams, ...changes.teams },
+  };
+}
+
+function hasLiquipediaChanges(changes: LiquipediaChanges): boolean {
+  return (
+    Object.keys(changes.updates).length > 0 ||
+    changes.removed.length > 0 ||
+    Object.keys(changes.teams).length > 0
+  );
+}
+
+/** The snapshot to write after a sync, or null when nothing in it changed. */
+export function nextStored({
+  prev,
+  liquipedia,
+  mapOverrides,
+  builtAt,
+}: {
+  prev: StoredSnapshot;
+  liquipedia: LiquipediaChanges;
+  mapOverrides: Record<string, MapOverride[]>;
+  builtAt: Date;
+}): StoredSnapshot | null {
+  const fromLiquipedia = hasLiquipediaChanges(liquipedia)
+    ? applyLiquipedia(prev, liquipedia)
+    : null;
+  const next = withMapOverrides(fromLiquipedia ?? prev, mapOverrides) ?? fromLiquipedia;
+  return next && { ...next, builtAt: builtAt.toISOString() };
 }
 
 export function statsChanged(previous: MatchStats | null, next: MatchStats): boolean {

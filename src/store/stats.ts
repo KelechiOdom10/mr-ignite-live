@@ -21,7 +21,7 @@ const StatsIndexSchema = z.record(
   z.string(),
   z.object({ sourceMatchId: z.string(), sourceUpdatedAt: z.string() }),
 );
-type StatsIndex = z.infer<typeof StatsIndexSchema>;
+export type StatsIndex = z.infer<typeof StatsIndexSchema>;
 
 export async function readMatchStats(store: KvStore, matchId: string): Promise<MatchStats | null> {
   const parsed = MatchStatsSchema.safeParse(await store.get(STATS_PREFIX + matchId));
@@ -47,12 +47,18 @@ export function statsCandidates(snapshot: Snapshot, now: number): Match[] {
   });
 }
 
-export interface StatsSyncResult {
-  updatedMatchIds: string[];
+export interface StatsChanges {
+  /** Stats whose maps differ from what is stored. */
+  updated: MatchStats[];
+  /** Map results of every series fetched, changed or not; `nextStored` skips ones already stored. */
   mapOverrides: Record<string, MapOverride[]>;
+  /** Null when no series page was fetched. */
+  index: StatsIndex | null;
 }
 
-export async function syncStats({
+export const NO_STATS_CHANGES: StatsChanges = { updated: [], mapOverrides: {}, index: null };
+
+export async function fetchStatsChanges({
   store,
   mrvl,
   snapshot,
@@ -62,9 +68,9 @@ export async function syncStats({
   mrvl: MrvlClient;
   snapshot: Snapshot;
   now: number;
-}): Promise<StatsSyncResult> {
+}): Promise<StatsChanges> {
   const candidates = statsCandidates(snapshot, now);
-  if (candidates.length === 0) return { updatedMatchIds: [], mapOverrides: {} };
+  if (candidates.length === 0) return NO_STATS_CHANGES;
 
   // mrvl can list a just-finished series under "upcoming" for a while, so search all three lists.
   const summaries = [
@@ -73,9 +79,8 @@ export async function syncStats({
     ...(await mrvl.listMatches("upcoming", LIVE_LIMIT)),
   ];
   const index = await readIndex(store);
-  const updatedMatchIds: string[] = [];
+  const updated: MatchStats[] = [];
   const mapOverrides: Record<string, MapOverride[]> = {};
-  let indexChanged = false;
   let pagesFetched = 0;
 
   for (const match of candidates) {
@@ -93,14 +98,18 @@ export async function syncStats({
       new Date(now),
     );
     index[match.id] = { sourceMatchId: summary.id, sourceUpdatedAt };
-    indexChanged = true;
-    if (stats.maps.length === 0 || !statsChanged(await readMatchStats(store, match.id), stats))
-      continue;
-    await store.put(STATS_PREFIX + match.id, stats);
-    updatedMatchIds.push(match.id);
+    if (stats.maps.length === 0) continue;
     mapOverrides[match.id] = toMapOverrides(stats);
+    if (statsChanged(await readMatchStats(store, match.id), stats)) updated.push(stats);
   }
 
-  if (indexChanged) await store.put(INDEX_KEY, index);
-  return { updatedMatchIds, mapOverrides };
+  return { updated, mapOverrides, index: pagesFetched > 0 ? index : null };
+}
+
+export async function writeMatchStats(store: KvStore, stats: MatchStats[]): Promise<void> {
+  for (const s of stats) await store.put(STATS_PREFIX + s.matchId, s);
+}
+
+export async function writeStatsIndex(store: KvStore, index: StatsIndex): Promise<void> {
+  await store.put(INDEX_KEY, index);
 }
