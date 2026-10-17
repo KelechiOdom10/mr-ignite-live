@@ -1,9 +1,9 @@
-import type { Snapshot, StoredSnapshot } from "@/domain/model";
+import type { Snapshot } from "@/domain/model";
 import { createLiquipediaClient } from "@/liquipedia/client";
 import { createMrvlClient } from "@/mrvl/client";
-import { toSnapshot, withMapOverrides } from "@/store/plan";
-import { readStored, syncFromLiquipedia, writeStored } from "@/store/snapshot";
-import { syncStats } from "@/store/stats";
+import { toSnapshot } from "@/store/plan";
+import { syncOnce } from "@/store/run";
+import { readStored } from "@/store/snapshot";
 import { voidKvStore } from "@/store/voidKv";
 
 import { live, SCORES_TOPIC } from "./live";
@@ -16,46 +16,22 @@ let inFlight: Promise<Snapshot> | null = null;
 let lastDevSync = 0;
 let lastFailureAt = Number.NEGATIVE_INFINITY;
 
-async function withStats(stored: StoredSnapshot, now: Date) {
-  try {
-    const result = await syncStats({
-      store: voidKvStore,
-      mrvl,
-      snapshot: toSnapshot(stored, now),
-      now: now.getTime(),
-    });
-    const next = withMapOverrides(stored, result.mapOverrides);
-    if (!next) return { stored, updatedStats: result.updatedMatchIds.length };
-    await writeStored(voidKvStore, next);
-    return { stored: next, updatedStats: result.updatedMatchIds.length };
-  } catch (error) {
-    console.error("mrvl stats sync failed; scores still come from Liquipedia", error);
-    return { stored, updatedStats: 0 };
-  }
-}
-
 async function runSync(): Promise<Snapshot> {
   const started = Date.now();
-  const result = await syncFromLiquipedia(liquipedia, voidKvStore);
-  const { stored, updatedStats } = await withStats(result.stored, new Date());
-  const snapshot = toSnapshot(stored, new Date());
-  if (result.changedPages > 0 || result.removedPages > 0 || updatedStats > 0) {
+  const { snapshot, changed, ...counts } = await syncOnce({
+    store: voidKvStore,
+    liquipedia,
+    mrvl,
+    now: Date.now,
+  });
+  if (changed) {
     await live.publish(
       SCORES_TOPIC,
       { builtAt: snapshot.builtAt },
       { type: "updated", eventId: `${snapshot.builtAt}:${Date.now()}` },
     );
   }
-  console.info(
-    JSON.stringify({
-      event: "sync",
-      changedPages: result.changedPages,
-      removedPages: result.removedPages,
-      newTeams: result.newTeams,
-      updatedStats,
-      durationMs: Date.now() - started,
-    }),
-  );
+  console.info(JSON.stringify({ event: "sync", ...counts, durationMs: Date.now() - started }));
   return snapshot;
 }
 
