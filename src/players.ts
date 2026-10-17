@@ -1,9 +1,19 @@
 import { env } from "void/env";
 
+import type { Snapshot } from "@/domain/model";
+import type { PlayerProblem } from "@/domain/player";
+import { scopeSnapshot } from "@/domain/scope";
 import { createRivalsIslandClient, type RivalsIslandClient } from "@/rivalsisland/client";
-import { NotConfiguredError } from "@/rivalsisland/errors";
+import { NotConfiguredError, problemOf } from "@/rivalsisland/errors";
 import { d1CreditLedger, d1FavouriteStore, d1PlayerCache } from "@/store/d1";
-import { createPlayerData, type CreditLedger, type PlayerCache } from "@/store/playerData";
+import {
+  createPlayerData,
+  type CreditLedger,
+  type PlayerCache,
+  type PlayerData,
+} from "@/store/playerData";
+
+import { currentSnapshot } from "./sync";
 
 export const favourites = d1FavouriteStore;
 
@@ -56,4 +66,35 @@ export function players() {
 
 export function rivalsIslandMode(): "fixtures" | "live" {
   return env.RIVALSISLAND_MODE;
+}
+
+/** The esports snapshot for the shared header; player pages still render if the Liquipedia sync is down. */
+export async function shellSnapshot(): Promise<Snapshot> {
+  try {
+    return scopeSnapshot(await currentSnapshot(), { kind: "events" }, Date.now());
+  } catch (error) {
+    console.error("Esports snapshot unavailable on a players page", error);
+    const now = new Date().toISOString();
+    return {
+      builtAt: now,
+      servedAt: now,
+      liquipediaUpdatedAt: null,
+      events: [],
+      matches: [],
+      teams: {},
+    };
+  }
+}
+
+export type Loaded<T> = { ok: true; value: T } | { ok: false; problem: PlayerProblem };
+
+/** Runs a player-data read and maps a known RivalsIsland failure to a state the page can show. */
+export async function loadPlayers<T>(read: (data: PlayerData) => Promise<T>): Promise<Loaded<T>> {
+  try {
+    return { ok: true, value: await read(await players()) };
+  } catch (error) {
+    const problem = problemOf(error);
+    if (!problem) throw error;
+    return { ok: false, problem };
+  }
 }

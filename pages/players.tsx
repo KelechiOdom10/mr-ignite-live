@@ -1,6 +1,7 @@
 import { Star } from "lucide-react";
 
 import { AppShell } from "@/ui/AppShell";
+import { PlayersTabs } from "@/ui/players/PlayersTabs";
 import { useLiveSnapshot } from "@/ui/useLiveSnapshot";
 
 import type { Props } from "./players.server";
@@ -13,7 +14,10 @@ export default function PlayersPage({ snapshot: initial, favourites }: Props) {
       <p className="mt-1 text-sm text-muted-foreground">
         Ranked profiles, careers and match history from RivalsIsland.
       </p>
-      <section aria-labelledby="favourites" className="mt-8 space-y-3">
+      <div className="mt-6">
+        <PlayersTabs current="/players" />
+      </div>
+      <section aria-labelledby="favourites" className="mt-6 space-y-3">
         <h2 id="favourites" className="text-lg font-semibold">
           Favourites
         </h2>

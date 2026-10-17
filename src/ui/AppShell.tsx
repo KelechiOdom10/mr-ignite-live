@@ -118,7 +118,9 @@ export function AppShell({
                 const active =
                   href === "/"
                     ? path === "/" || path.startsWith("/match")
-                    : path.startsWith(href.slice(0, -1));
+                    : href === "/players"
+                      ? /^\/(player|leaderboard|game)/.test(path)
+                      : path.startsWith(href.slice(0, -1));
                 return (
                   <Link
                     key={href}

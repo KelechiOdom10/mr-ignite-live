@@ -1,6 +1,6 @@
 import type { z } from "zod";
 
-import type { Uid } from "@/domain/player";
+import type { Device, Uid } from "@/domain/player";
 
 import {
   CareerResponseSchema,
@@ -15,8 +15,6 @@ import {
 const MINUTE = 60;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
-
-export type Device = "pc" | "ps" | "xbox";
 
 /** Competitive, as in each history row's `category.id`. */
 export const COMPETITIVE = 2;
