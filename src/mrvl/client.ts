@@ -72,6 +72,7 @@ const DraftPickSchema = z.object({
   hero: HeroSchema,
   kind: z.string(),
   teamCamp: z.number().nullish(),
+  phaseIndex: z.number().nullish(),
 });
 
 const ScoreboardTeamSchema = z.object({
@@ -82,6 +83,7 @@ const ScoreboardTeamSchema = z.object({
   isWinner: z.boolean().nullish(),
   score: z.number().nullish(),
   bans: z.array(DraftPickSchema).nullish(),
+  draftTimeline: z.array(DraftPickSchema).nullish(),
   players: z.array(ScoreboardPlayerSchema),
 });
 

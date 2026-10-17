@@ -84,6 +84,45 @@ describe("toMatchStats on a recorded series", () => {
     expect(thieves?.bans.map((h) => h.id)).toContain("devil-dinosaur");
   });
 
+  it("keeps map 1's bans and protects in draft order, on Liquipedia's sides", () => {
+    // 100 Thieves (side 2) is lobby camp 0, so it protects first; both sides ban in steps 0, 5 and 10.
+    const steps = stats.maps[0]?.draft?.map((a) => [a.phase, a.side, a.kind, a.hero.id]);
+    expect(steps).toEqual([
+      [0, 1, "ban", "devil-dinosaur"],
+      [0, 2, "ban", "gambit"],
+      [1, 2, "protect", "gambit"],
+      [2, 1, "ban", "emma-frost"],
+      [3, 1, "protect", "loki"],
+      [4, 2, "ban", "devil-dinosaur"],
+      [5, 1, "ban", "rogue"],
+      [5, 2, "ban", "wolverine"],
+      [6, 1, "protect", "emma-frost"],
+      [7, 2, "ban", "ultron"],
+      [8, 2, "protect", "loki"],
+      [9, 1, "ban", "groot"],
+      [10, 1, "ban", "psylocke"],
+      [10, 2, "ban", "elsa-bloodstone"],
+    ]);
+  });
+
+  it("stores no draft when mrvl sends a map without a timeline, rather than an empty one", () => {
+    const untimed: MrvlMatchPage = {
+      match: {
+        ...page.match,
+        games: page.match.games.map((game) => ({
+          ...game,
+          scoreboard: game.scoreboard && {
+            ...game.scoreboard,
+            teams: game.scoreboard.teams.map((team) => ({ ...team, draftTimeline: null })),
+          },
+        })),
+      },
+    };
+    const maps = toMatchStats(flyVs100t, untimed, "u1", new Date("2026-10-17T00:00:00Z")).maps;
+    expect(maps.map((m) => m.draft)).toEqual([null, null, null, null]);
+    expect(maps[0]?.teams[0].bans).toHaveLength(5);
+  });
+
   it("drops a map whose scoreboard names match neither Liquipedia team instead of guessing the order", () => {
     // Guessing mrvl's order would flip map 1's winner, since mrvl lists 100 Thieves first.
     const unnamed: MrvlMatchPage = {
