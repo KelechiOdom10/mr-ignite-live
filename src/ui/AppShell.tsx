@@ -1,5 +1,5 @@
 import { Link, useRouter } from "@void/react";
-import { CalendarDays, Search, Trophy, Zap } from "lucide-react";
+import { CalendarDays, Search, Trophy, Users, Zap } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import {
@@ -85,6 +85,7 @@ function SyncStatus({
 const NAV = [
   { href: "/", label: "Matches", icon: CalendarDays },
   { href: "/events", label: "Events", icon: Trophy },
+  { href: "/players", label: "Players", icon: Users },
 ] as const;
 
 export function AppShell({
@@ -178,7 +179,7 @@ export function AppShell({
       </footer>
       <nav
         aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl sm:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl sm:hidden"
       >
         {NAV.map(({ href, label, icon: Icon }) => (
           <Link

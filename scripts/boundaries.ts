@@ -20,6 +20,11 @@ export const RULES: readonly BoundaryRule[] = [
   { name: "liquipedia", files: /^src\/liquipedia\//, allow: ["zod", "@/domain"] },
   { name: "mrvl", files: /^src\/mrvl\//, allow: ["zod", "@/domain"] },
   { name: "KV binding", files: /^src\/store\/voidKv\.ts$/, allow: ["void/kv"] },
+  {
+    name: "D1 binding",
+    files: /^src\/store\/d1\.ts$/,
+    allow: ["void/db", "@schema", "zod", "@/domain"],
+  },
   { name: "store", files: /^src\/store\//, allow: ["zod", "@/domain", "@/liquipedia", "@/mrvl"] },
   {
     name: "ui",
@@ -37,6 +42,7 @@ export const RULES: readonly BoundaryRule[] = [
     allow: "any",
   },
   { name: "test helpers", files: /^test\//, allow: "any" },
+  { name: "D1 schema", files: /^db\//, allow: ["void/schema-d1", "void/db"] },
   { name: "scripts", files: /^scripts\//, allow: "any" },
   { name: "root config", files: /^[^/]+\.ts$/, allow: "any" },
 ];

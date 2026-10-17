@@ -20,6 +20,8 @@ A personal Marvel Rivals site, local-only. The esports section has live Ignite s
 | `src/liquipedia/`                                       | API client, wikitext parser, team templates                                        | `domain`                                                      |
 | `src/mrvl/`                                             | mrvl.net Convex client and Liquipedia↔mrvl linking (stats, early map results)      | `domain`                                                      |
 | `src/store/`                                            | Sync planning (pure, `plan.ts`), one sync run (`run.ts`), KV I/O through `KvStore` | `domain`, `liquipedia`, `mrvl`; `void/kv` only in `voidKv.ts` |
+| `db/`, `src/store/d1.ts`                                | D1 schema, migrations and the player-data store (favourites)                       | `void/db` and `@schema` only in `src/store/d1.ts`             |
+| `src/players.ts`                                        | Binds the players section to D1                                                    | everything                                                    |
 | `src/sync.ts`, `crons/`, `routes/`, `pages/*.server.ts` | Runtime shell                                                                      | everything                                                    |
 | `src/ui/`, `pages/*.tsx`                                | React views                                                                        | `domain`, `components`, `lib`                                 |
 | `src/components/`, `src/lib/`                           | beUI, copied verbatim from https://beui.dev/r                                      | —                                                             |
@@ -36,6 +38,7 @@ Rules:
 - Render every match surface (score, winner, team names, maps, VODs, toasts) through `useMatchView` / `matchView` in `src/domain/matchView.ts`, passing the snapshot's matches; it applies Hide spoilers, so components don't check `useSpoilersHidden` themselves.
 - Times render in the reader's zone after hydration (`useNow`, `useHydrated`) so server HTML matches the client.
 - Tests sit next to the code and name the bug they catch. Fake only `fetch` and KV (`test/memoryKv.ts`); use recorded fixtures in `test/fixtures/` (see its `NOTES.md`), never hand-edited.
+- After pulling a new `db/migrations/` file, run `bunx void db migrate`.
 - Conventional Commits, no AI attribution.
 
 ## Docs
