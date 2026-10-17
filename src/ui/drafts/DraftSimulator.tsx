@@ -79,11 +79,8 @@ export function DraftSimulator({ format, heroes }: { format: DraftFormat; heroes
 
   return (
     <div className="grid gap-6">
-      <div
-        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card p-4"
-        aria-live="polite"
-      >
-        <p className="font-medium">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card p-4">
+        <p className="font-medium" aria-live="polite">
           {turn && acting !== null
             ? `Step ${turn.step + 1} of ${format.steps.length}: ${TEAM[acting]} ${turn.kind === "ban" ? "bans" : "protects"}`
             : "Draft complete"}
@@ -129,7 +126,11 @@ export function DraftSimulator({ format, heroes }: { format: DraftFormat; heroes
             ))}
           </fieldset>
         )}
-        {problem && <p className="w-full text-sm text-destructive">{problem}</p>}
+        {problem && (
+          <p role="alert" className="w-full text-sm text-destructive">
+            {problem}
+          </p>
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -190,10 +191,10 @@ export function DraftSimulator({ format, heroes }: { format: DraftFormat; heroes
               sides[0].protects.includes(h.id) || sides[1].protects.includes(h.id);
             const outLabel =
               outFor.length === 2
-                ? "Out for both"
+                ? "Out for both teams"
                 : outFor[0] === 0
-                  ? "Out for 1st"
-                  : "Out for 2nd";
+                  ? "Out for first team"
+                  : "Out for second team";
             return (
               <li key={h.id}>
                 <button
@@ -204,10 +205,15 @@ export function DraftSimulator({ format, heroes }: { format: DraftFormat; heroes
                   <span aria-hidden="true">
                     <HeroPortrait hero={h} size={28} />
                   </span>
-                  <span className="min-w-0 flex-1 truncate">{h.name}</span>
-                  <span className="grid justify-items-end text-xs text-muted-foreground">
-                    {outFor.length > 0 && <span>{outLabel}</span>}
-                    {isProtected && <span>Protected</span>}
+                  <span className="grid min-w-0 flex-1">
+                    <span className="truncate">{h.name}</span>
+                    {(outFor.length > 0 || isProtected) && (
+                      <span className="truncate text-xs text-muted-foreground">
+                        {[outFor.length > 0 ? outLabel : null, isProtected ? "Protected" : null]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                    )}
                   </span>
                 </button>
               </li>

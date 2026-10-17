@@ -60,3 +60,46 @@ describe("draft simulator", () => {
     });
   });
 });
+
+describe("draft simulator edges", () => {
+  it("refuses a team banning the same hero twice", () => {
+    const moves = play([
+      [0, "gambit"],
+      [1, "loki"],
+      [0, "mantis"],
+    ]);
+    // Step 3 is the second team's ban; it already banned Loki.
+    expect(moveProblem(IGNITE_2026, moves, 1, "loki")).toEqual({ kind: "repeat" });
+  });
+
+  it("lets a team ban a hero the other team already banned", () => {
+    const moves = play([
+      [0, "gambit"],
+      [1, "gambit"],
+    ]);
+    expect(outcome(moves).map((o) => o.bans)).toEqual([["gambit"], ["gambit"]]);
+  });
+
+  it("returns the turn to the team that undid its move in a both-teams step", () => {
+    const moves = play([
+      [0, "gambit"],
+      [1, "loki"],
+    ]);
+    expect(currentTurn(IGNITE_2026, moves.slice(0, -1))).toEqual({
+      step: 0,
+      kind: "ban",
+      waiting: [1],
+    });
+  });
+
+  it("finishes after all 14 moves and refuses more", () => {
+    let moves: SimMove[] = [];
+    for (let n = 0; n < 40 && currentTurn(IGNITE_2026, moves); n++) {
+      const turn = currentTurn(IGNITE_2026, moves);
+      const camp = turn?.waiting[0] ?? 0;
+      moves = applyMove(IGNITE_2026, moves, camp, `hero-${moves.length}`);
+    }
+    expect(moves).toHaveLength(14);
+    expect(moveProblem(IGNITE_2026, moves, 0, "anyone")).toEqual({ kind: "finished" });
+  });
+});

@@ -15,6 +15,8 @@ export interface DraftFormat {
   banBlocks: "opponent" | "both teams";
   sharedBans: boolean;
   steps: readonly DraftStep[];
+  /** False when the rules come from too few drafts to state as fact. */
+  confirmed: boolean;
   basis: string;
 }
 
@@ -40,6 +42,7 @@ export const IGNITE_2026: DraftFormat = {
     second("ban"),
     both("ban"),
   ],
+  confirmed: true,
   basis:
     "Read from mrvl.net's draft timelines for Ignite 2026 Stage 2 maps in the Americas, EMEA and China, and matched step for step against the broadcast draft screen for FlyQuest vs 100 Thieves on God Quarry.",
 };
@@ -51,6 +54,7 @@ export const RANKED_SEASON_10_OBSERVED: DraftFormat = {
   banBlocks: "both teams",
   sharedBans: false,
   steps: [first("ban"), second("ban"), second("ban"), first("ban"), first("ban"), second("ban")],
+  confirmed: false,
   basis:
     "One recorded Season 10.5 Grandmaster+ match from RivalsIsland: six different heroes, banned in this order, none played. Not confirmed by official notes.",
 };
@@ -107,7 +111,6 @@ export interface TeamDraft {
   map: string;
   mode: GameMode | null;
   team: string;
-  won: boolean;
   bans: Hero[];
   /** Null when the stored map has no draft order, so protects aren't known. */
   protects: Hero[] | null;
@@ -129,7 +132,6 @@ export function toTeamDrafts(stats: readonly MatchStats[]): TeamDraft[] {
           map: map.map,
           mode: mapInfo(map.map)?.mode ?? null,
           team: team.name,
-          won: team.won,
           bans: uniqueHeroes(team.bans),
           protects:
             map.draft &&

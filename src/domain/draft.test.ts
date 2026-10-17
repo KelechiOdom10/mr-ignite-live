@@ -121,3 +121,10 @@ describe("formatDeviations", () => {
     expect(deviations).toContain("step 1: camp 1 made protect, expected no move");
   });
 });
+
+describe("formatDeviations past the end", () => {
+  it("reports a step the format doesn't have", () => {
+    const extra: DraftAction = { phase: 11, side: 1, camp: 0, kind: "ban", hero: hero("x") };
+    expect(formatDeviations([extra], IGNITE_2026)).toContain("step 11 is past the format's end");
+  });
+});

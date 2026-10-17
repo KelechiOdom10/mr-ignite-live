@@ -37,7 +37,7 @@ export default function DraftsPage({
         <DraftFilters options={options} selected={filter} />
       </div>
 
-      <p className="mt-4 text-sm text-muted-foreground" aria-live="polite">
+      <p className="mt-4 text-sm text-muted-foreground">
         {summary.sample.teamDrafts === 0
           ? "No cached maps match these filters."
           : `${summary.sample.maps} maps from ${summary.sample.series} series, ${summary.sample.teamDrafts} team drafts. A team draft is one team's side of one map.`}

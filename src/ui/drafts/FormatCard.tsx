@@ -6,17 +6,19 @@ const ACTOR: Record<DraftStep["actor"], string> = {
   both: "Both teams",
 };
 
+function summary(format: DraftFormat): string {
+  const who = format.banBlocks === "opponent" ? "the other team only" : "both teams";
+  if (format.confirmed) {
+    return `A ban keeps the hero from ${who}; ${format.sharedBans ? "both teams may ban the same hero" : "each hero can be banned once"}.`;
+  }
+  return `In the one recorded match, bans kept the hero from ${who} and ${format.sharedBans ? "both teams banned the same hero" : "no hero was banned twice"}.`;
+}
+
 export function FormatCard({ format }: { format: DraftFormat }) {
   return (
     <section aria-label={format.name} className="rounded-lg border p-4 text-sm">
       <h3 className="font-medium">{format.name}</h3>
-      <p className="mt-1 text-muted-foreground">
-        A ban keeps the hero from{" "}
-        {format.banBlocks === "opponent" ? "the other team only" : "both teams"}
-        {format.sharedBans
-          ? "; both teams may ban the same hero."
-          : "; each hero can be banned once."}
-      </p>
+      <p className="mt-1 text-muted-foreground">{summary(format)}</p>
       <ol className="mt-3 grid gap-1">
         {format.steps.map((step, i) => (
           <li key={`step-${i + 1}`} className="flex gap-2">
