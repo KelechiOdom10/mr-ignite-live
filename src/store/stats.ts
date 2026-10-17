@@ -33,6 +33,13 @@ export async function readMatchStats(store: KvStore, matchId: string): Promise<M
   return parsed.success ? parsed.data : null;
 }
 
+/** Every stored series' stats; a value that no longer parses is skipped like a missing one. */
+export async function readAllMatchStats(store: KvStore): Promise<MatchStats[]> {
+  const ids = Object.keys(await readIndex(store));
+  const stats = await Promise.all(ids.map((id) => readMatchStats(store, id)));
+  return stats.filter((s) => s !== null);
+}
+
 async function readIndex(store: KvStore): Promise<StatsIndex> {
   const parsed = StatsIndexSchema.safeParse(await store.get(INDEX_KEY));
   return parsed.success ? parsed.data : {};

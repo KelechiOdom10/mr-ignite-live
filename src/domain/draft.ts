@@ -232,3 +232,31 @@ export function summariseDrafts(drafts: readonly TeamDraft[]): DraftSummary {
     },
   };
 }
+
+export interface DraftCoverage {
+  series: number;
+  maps: number;
+  mapsWithOrder: number;
+  /** Of the maps with draft order, how many follow the format exactly. */
+  mapsFollowingFormat: number;
+  bans: number;
+  bansBroken: number;
+  oldestFetchedAt: string | null;
+  newestFetchedAt: string | null;
+}
+
+export function draftCoverage(stats: readonly MatchStats[], format: DraftFormat): DraftCoverage {
+  const maps = stats.flatMap((s) => s.maps);
+  const ordered = maps.flatMap((m) => (m.draft ? [m.draft] : []));
+  const fetched = stats.map((s) => s.fetchedAt).sort();
+  return {
+    series: stats.length,
+    maps: maps.length,
+    mapsWithOrder: ordered.length,
+    mapsFollowingFormat: ordered.filter((d) => formatDeviations(d, format).length === 0).length,
+    bans: maps.reduce((n, m) => n + m.teams[0].bans.length + m.teams[1].bans.length, 0),
+    bansBroken: maps.reduce((n, m) => n + bansBroken(m).length, 0),
+    oldestFetchedAt: fetched[0] ?? null,
+    newestFetchedAt: fetched.at(-1) ?? null,
+  };
+}

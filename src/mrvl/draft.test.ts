@@ -4,6 +4,7 @@ import { z } from "zod";
 import {
   IGNITE_2026,
   bansBroken,
+  draftCoverage,
   formatDeviations,
   summariseDrafts,
   toTeamDrafts,
@@ -56,5 +57,20 @@ describe("recorded Ignite 2026 drafts", () => {
     expect(summary.sample).toEqual({ teamDrafts: 8, maps: 4, series: 1, withProtects: 8 });
     const gambit = summary.rows.find((r) => r.hero.id === "gambit");
     expect(gambit?.presentMaps).toBe(4);
+  });
+});
+
+describe("draftCoverage on the recorded series", () => {
+  it("reports every map ordered, following the format, with no ban broken", () => {
+    expect(draftCoverage([stats], IGNITE_2026)).toEqual({
+      series: 1,
+      maps: 4,
+      mapsWithOrder: 4,
+      mapsFollowingFormat: 4,
+      bans: 40,
+      bansBroken: 0,
+      oldestFetchedAt: "2026-10-17T00:00:00.000Z",
+      newestFetchedAt: "2026-10-17T00:00:00.000Z",
+    });
   });
 });
