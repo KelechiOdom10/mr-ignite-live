@@ -37,7 +37,9 @@ async function runSync(): Promise<Snapshot> {
   return snapshot;
 }
 
-// Runs in separate isolates can overlap; both write the same revisions, so last-write-wins is safe.
+// Runs in separate isolates can still overlap after their Liquipedia window, and each writes a
+// whole snapshot built from what it read, so the later write wins. Page revisions converge on the
+// next run, but mrvl map results only the earlier run saw can be lost until mrvl updates the series.
 export function sync(): Promise<Snapshot> {
   inFlight ??= runSync()
     .catch((error: unknown) => {

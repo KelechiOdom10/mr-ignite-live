@@ -66,7 +66,9 @@ export interface StatsChanges {
   index: StatsIndex | null;
 }
 
-export const NO_STATS_CHANGES: StatsChanges = { updated: [], mapOverrides: {}, index: null };
+export function noStatsChanges(): StatsChanges {
+  return { updated: [], mapOverrides: {}, index: null };
+}
 
 export async function fetchStatsChanges({
   store,
@@ -80,7 +82,7 @@ export async function fetchStatsChanges({
   now: number;
 }): Promise<StatsChanges> {
   const candidates = statsCandidates(snapshot, now);
-  if (candidates.length === 0) return NO_STATS_CHANGES;
+  if (candidates.length === 0) return noStatsChanges();
 
   // mrvl can list a just-finished series under "upcoming" for a while, so search all three lists.
   const summaries = [

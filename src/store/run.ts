@@ -7,7 +7,7 @@ import { applyLiquipedia, emptyStored, nextStored, toSnapshot } from "./plan";
 import { fetchLiquipediaChanges, readStored, writeStored } from "./snapshot";
 import {
   fetchStatsChanges,
-  NO_STATS_CHANGES,
+  noStatsChanges,
   type StatsChanges,
   writeMatchStats,
   writeStatsIndex,
@@ -48,7 +48,7 @@ async function statsOrNothing(deps: SyncDeps, stored: StoredSnapshot): Promise<S
     });
   } catch (error) {
     console.error("mrvl stats sync failed; scores still come from Liquipedia", error);
-    return NO_STATS_CHANGES;
+    return noStatsChanges();
   }
 }
 
