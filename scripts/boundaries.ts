@@ -19,13 +19,18 @@ export const RULES: readonly BoundaryRule[] = [
   { name: "domain", files: /^src\/domain\//, allow: ["zod"] },
   { name: "liquipedia", files: /^src\/liquipedia\//, allow: ["zod", "@/domain"] },
   { name: "mrvl", files: /^src\/mrvl\//, allow: ["zod", "@/domain"] },
+  { name: "rivalsisland", files: /^src\/rivalsisland\//, allow: ["zod", "@/domain"] },
   { name: "KV binding", files: /^src\/store\/voidKv\.ts$/, allow: ["void/kv"] },
   {
     name: "D1 binding",
     files: /^src\/store\/d1\.ts$/,
     allow: ["void/db", "@schema", "zod", "@/domain"],
   },
-  { name: "store", files: /^src\/store\//, allow: ["zod", "@/domain", "@/liquipedia", "@/mrvl"] },
+  {
+    name: "store",
+    files: /^src\/store\//,
+    allow: ["zod", "@/domain", "@/liquipedia", "@/mrvl", "@/rivalsisland"],
+  },
   {
     name: "ui",
     files: /^src\/ui\//,
@@ -49,8 +54,9 @@ export const RULES: readonly BoundaryRule[] = [
 
 const TEST_ONLY = ["vitest", "test"];
 
-const IMPORT =
-  /(?:\bfrom\s+|\bimport\s*\(?\s*|\brequire\(\s*|\bimport\.meta\.glob\(\s*)["'`]([^"'`]+)["'`]/g;
+const STATIC_IMPORT = /(?:\bfrom\s+|\bimport\s+|\brequire\(\s*)["']([^"']+)["']/g;
+
+const DYNAMIC_IMPORT = /(?:\bimport\s*\(\s*|\bimport\.meta\.glob\(\s*)["'`]([^"'`]+)["'`]/g;
 
 const COMPUTED_IMPORT = /\bimport\s*\((?!\s*["'`])/;
 
@@ -92,7 +98,10 @@ export function findViolations(files: readonly SourceFile[], rules = RULES): str
     const allow = /\.test\.tsx?$/.test(path) ? [...rule.allow, ...TEST_ONLY] : rule.allow;
     const own = scopeOfPath(path);
     const code = source.replace(TYPE_ONLY, "");
-    for (const [, spec = ""] of code.matchAll(IMPORT)) {
+    for (const [, spec = ""] of [
+      ...code.matchAll(STATIC_IMPORT),
+      ...code.matchAll(DYNAMIC_IMPORT),
+    ]) {
       if (spec.startsWith("node:") && /\.test\.tsx?$/.test(path)) continue;
       const scope = scopeOfImport(path, spec);
       if (scope === own || permits(allow, scope)) continue;

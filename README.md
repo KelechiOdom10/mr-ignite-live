@@ -17,10 +17,14 @@ Liquipedia asks API users for an identifying User-Agent, gzip, and at most one r
 ```sh
 bun install
 bunx void db migrate   # create or update the local D1 tables (players section)
-bun run dev            # http://localhost:5180
+bun run dev            # http://localhost:5180 (players section replays recorded fixtures)
 ```
 
 Cron triggers don't fire under `vite dev`, so in development `/api/snapshot` syncs itself at most once a minute. To fire the cron by hand, use the curl command Void prints on start.
+
+## Players section
+
+Player data comes from the paid [RivalsIsland API](https://api.rivalsisland.com/docs). By default the dev server replays recorded responses at no cost. To use the live API, put `RIVALSISLAND_API_KEY` and `RIVALSISLAND_MODE=live` in `.env`; `RIVALSISLAND_CREDIT_BUDGET` (default 200) caps spending and `/api/credits` shows what's been spent. See [ADR 8](docs/adr/0008-rivalsisland-for-player-data.md).
 
 ## Deploy
 

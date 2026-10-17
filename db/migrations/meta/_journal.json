@@ -8,6 +8,13 @@
       "when": 1792201935102,
       "tag": "20261017015215_aromatic_supernaut",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1792202575477,
+      "tag": "20261017020255_kind_jubilee",
+      "breakpoints": true
     }
   ]
 }

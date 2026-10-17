@@ -23,10 +23,10 @@ describe("findViolations", () => {
 
   it("flags a new folder that has no rule instead of letting it import anything", () => {
     const violations = findViolations([
-      { path: "src/rivalsisland/client.ts", source: `import { z } from "zod";` },
+      { path: "src/marvelrivalsapi/client.ts", source: `import { z } from "zod";` },
     ]);
     expect(violations).toEqual([
-      "src/rivalsisland/client.ts: no boundary rule covers this file; add one to scripts/boundaries.ts",
+      "src/marvelrivalsapi/client.ts: no boundary rule covers this file; add one to scripts/boundaries.ts",
     ]);
   });
 
@@ -65,7 +65,7 @@ describe("findViolations", () => {
   });
 
   it("doesn't read a string that says from as an import", () => {
-    const source = `const option = { label: "from", value: "x" };`;
+    const source = `const option = { label: "from", value: "x" };\n/** Charged, from \`x-credit-cost\`. */`;
     expect(findViolations([{ path: "src/ui/MatchCard.tsx", source }])).toEqual([]);
   });
 

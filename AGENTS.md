@@ -20,6 +20,8 @@ A personal Marvel Rivals site, local-only. The esports section has live Ignite s
 | `src/liquipedia/`                                       | API client, wikitext parser, team templates                                        | `domain`                                                      |
 | `src/mrvl/`                                             | mrvl.net Convex client and Liquipedia↔mrvl linking (stats, early map results)      | `domain`                                                      |
 | `src/store/`                                            | Sync planning (pure, `plan.ts`), one sync run (`run.ts`), KV I/O through `KvStore` | `domain`, `liquipedia`, `mrvl`; `void/kv` only in `voidKv.ts` |
+| `src/rivalsisland/`                                     | RivalsIsland endpoint registry (cost, TTL, schema), client, typed errors           | `domain`                                                      |
+| `src/store/playerData.ts`                               | Player data: D1 cache, in-flight sharing, atomic credit reservation                | `domain`, `rivalsisland`                                      |
 | `db/`, `src/store/d1.ts`                                | D1 schema, migrations and the player-data store (favourites)                       | within `src/store/`, `void/db` and `@schema` only in `d1.ts`  |
 | `src/players.ts`                                        | Binds the players section to D1                                                    | everything                                                    |
 | `src/sync.ts`, `crons/`, `routes/`, `pages/*.server.ts` | Runtime shell                                                                      | everything                                                    |
@@ -39,6 +41,7 @@ Rules:
 - Times render in the reader's zone after hydration (`useNow`, `useHydrated`) so server HTML matches the client.
 - Tests sit next to the code and name the bug they catch. Fake only `fetch` and KV (`test/memoryKv.ts`); use recorded fixtures in `test/fixtures/` (see its `NOTES.md`), never hand-edited.
 - After pulling a new `db/migrations/` file, run `bunx void db migrate`.
+- RivalsIsland costs credits. Dev and tests replay `test/fixtures/rivalsisland/` (`RIVALSISLAND_MODE=fixtures`, the default). Only `src/store/playerData.ts` may call the client, so every call goes through the cache and the credit budget. Never call detailed match history or premium endpoints. See [ADR 8](docs/adr/0008-rivalsisland-for-player-data.md).
 - Conventional Commits, no AI attribution.
 
 ## Docs
