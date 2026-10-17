@@ -1,6 +1,6 @@
 import { defineHandler } from "void";
 
-import { readStats } from "../../../src/store/stats";
+import { readStats } from "../../../src/sync";
 
 export const GET = defineHandler(async (c) => {
   c.header("Cache-Control", "no-store");

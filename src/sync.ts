@@ -1,9 +1,11 @@
 import type { Snapshot } from "@/domain/model";
+import type { MatchStats } from "@/domain/stats";
 import { createLiquipediaClient } from "@/liquipedia/client";
 import { createMrvlClient } from "@/mrvl/client";
 import { toSnapshot } from "@/store/plan";
 import { syncOnce } from "@/store/run";
 import { readStored } from "@/store/snapshot";
+import { readMatchStats } from "@/store/stats";
 import { voidKvStore } from "@/store/voidKv";
 
 import { live, SCORES_TOPIC } from "./live";
@@ -70,4 +72,8 @@ export async function currentSnapshot(): Promise<Snapshot> {
     console.error("Sync failed, serving stored snapshot", error);
     return toSnapshot(stored, new Date());
   }
+}
+
+export function readStats(matchId: string): Promise<MatchStats | null> {
+  return readMatchStats(voidKvStore, matchId);
 }

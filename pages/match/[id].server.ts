@@ -3,7 +3,7 @@ import { defineHandler, defineHead, type InferProps } from "void";
 
 import { scopeSnapshot } from "@/domain/scope";
 
-import { readStats } from "../../src/store/stats";
+import { readStats } from "../../src/sync";
 import { currentSnapshot } from "../../src/sync";
 
 export type Props = InferProps<typeof loader>;

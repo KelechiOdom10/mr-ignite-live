@@ -13,7 +13,6 @@ import {
 
 import type { KvStore } from "./kv";
 import { statsChanged } from "./plan";
-import { voidKvStore } from "./voidKv";
 
 const STATS_PREFIX = "stats:v2:";
 const INDEX_KEY = "stats-index:v2";
@@ -31,11 +30,6 @@ export type StatsIndex = z.infer<typeof StatsIndexSchema>;
 export async function readMatchStats(store: KvStore, matchId: string): Promise<MatchStats | null> {
   const parsed = MatchStatsSchema.safeParse(await store.get(STATS_PREFIX + matchId));
   return parsed.success ? parsed.data : null;
-}
-
-/** For route and page loaders, which always read the deployed KV. */
-export function readStats(matchId: string): Promise<MatchStats | null> {
-  return readMatchStats(voidKvStore, matchId);
 }
 
 async function readIndex(store: KvStore): Promise<StatsIndex> {
