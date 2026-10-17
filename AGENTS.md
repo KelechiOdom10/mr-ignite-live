@@ -4,13 +4,13 @@ Live Marvel Rivals Ignite scores, brackets and results. A cron pulls Liquipedia 
 
 ## Commands
 
-| Command          | What                                                                          |
-| ---------------- | ----------------------------------------------------------------------------- |
-| `bun run dev`    | Dev server on http://localhost:5180 (syncs on read; crons don't fire in dev)  |
-| `bun run check`  | Format check, lint (warnings fail), typecheck, tests. Run before every commit |
-| `bun run fmt`    | Format                                                                        |
-| `bun run test`   | Vitest (`src/**/*.test.ts`)                                                   |
-| `bun run deploy` | `void deploy`                                                                 |
+| Command          | What                                                                                      |
+| ---------------- | ----------------------------------------------------------------------------------------- |
+| `bun run dev`    | Dev server on http://localhost:5180 (syncs on read; crons don't fire in dev)              |
+| `bun run check`  | Format check, lint (warnings fail), boundaries, typecheck, tests. Run before every commit |
+| `bun run fmt`    | Format                                                                                    |
+| `bun run test`   | Vitest (`src/**/*.test.ts`, `scripts/**/*.test.ts`)                                       |
+| `bun run deploy` | `void deploy`                                                                             |
 
 ## Architecture
 
@@ -26,6 +26,7 @@ Live Marvel Rivals Ignite scores, brackets and results. A cron pulls Liquipedia 
 
 Rules:
 
+- `bun run boundaries` (`scripts/boundaries.ts`) enforces this table in `check`. A new folder fails until it has a rule there.
 - Parse at the edge, trust inside: Liquipedia responses, KV values and the client's `/api/snapshot` fetch all go through Zod. No `as` casts on external data.
 - Liquipedia's API terms: identifying User-Agent, gzip, at most one request per 2s, and only refetch pages whose revision changed. The client enforces the gap; `planSync` enforces the diff.
 - Don't edit `src/components/` or `src/lib/`; re-pull from beUI instead. They're held to plain `strict` (`tsconfig.vendor.json`); app code also gets `noUncheckedIndexedAccess`.

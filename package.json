@@ -10,9 +10,10 @@
     "fmt": "oxfmt .",
     "fmt:check": "oxfmt --check .",
     "lint": "oxlint --deny-warnings",
+    "boundaries": "bun scripts/check-boundaries.ts",
     "typecheck": "bun scripts/typecheck.ts",
     "test": "vitest run",
-    "check": "bun run fmt:check && bun run lint && bun run typecheck && bun run test"
+    "check": "bun run fmt:check && bun run lint && bun run boundaries && bun run typecheck && bun run test"
   },
   "dependencies": {
     "@floating-ui/dom": "^1.8.0",
