@@ -146,6 +146,38 @@ describe("bracketFeeders", () => {
   });
 });
 
+describe("matchView for series that ended without a winner", () => {
+  const AFTER_WINDOW = Date.parse("2026-10-17T03:00:00.000Z");
+
+  it("calls a finished series with no maps a walkover instead of '0 - 0 Final'", () => {
+    const walkover = aMatch({ markedFinished: true });
+    const v = matchView(walkover, matchState(walkover, NOW), false);
+    expect([v.statusText, v.side1.score, v.side2.score]).toEqual(["Walkover", null, null]);
+    expect(v.summary).toBe("Liquid Citadel vs Swamp Gaming, walkover, Upper Bracket Quarterfinals");
+  });
+
+  it("says 'No result' for a series closed by the 6h abandoned rule", () => {
+    const abandoned = aMatch();
+    const v = matchView(abandoned, matchState(abandoned, AFTER_WINDOW), false);
+    expect([v.statusText, v.side1.score, v.winner]).toEqual(["No result", null, null]);
+  });
+
+  it("keeps the partial score of an abandoned series that got through a map", () => {
+    const partial = aMatch({ maps: [aMap(1, 2)] });
+    const v = matchView(partial, matchState(partial, AFTER_WINDOW), false);
+    expect([v.statusText, v.side1.score, v.side2.score]).toEqual(["No result", 0, 1]);
+  });
+
+  it("still scores a live series 0-0 before its first map", () => {
+    expect(view(aMatch(), false).side1.score).toBe(0);
+  });
+
+  it("says only 'Final' for a hidden walkover, which would reveal a forfeit", () => {
+    const walkover = aMatch({ markedFinished: true });
+    expect(matchView(walkover, matchState(walkover, NOW), true).statusText).toBe("Final");
+  });
+});
+
 describe("matchView with spoilers shown", () => {
   it("names the winner, dims the loser and scores each side", () => {
     const v = view(sweep, false);

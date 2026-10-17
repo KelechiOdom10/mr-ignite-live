@@ -31,7 +31,7 @@ export interface VodLink {
   label: string;
 }
 
-export type StatusText = "Live" | "Final" | null;
+export type StatusText = "Live" | "Final" | "Walkover" | "No result" | null;
 
 export interface MatchView {
   status: MatchState["status"];
@@ -59,7 +59,8 @@ export function matchView(
   feeders: SlotFeeders = {},
 ): MatchView {
   const revealed = !hidden;
-  const scored = state.status !== "upcoming" && revealed;
+  const unplayed = state.status === "finished" && state.playedMaps.length === 0;
+  const scored = revealed && state.status !== "upcoming" && !unplayed;
   const winner = revealed && state.winner !== 0 ? state.winner : null;
   const side = (n: Side): SideView => {
     const team = n === 1 ? match.team1 : match.team2;
@@ -79,8 +80,7 @@ export function matchView(
   };
   const side1 = side(1);
   const side2 = side(2);
-  const statusText: StatusText =
-    state.status === "live" ? "Live" : state.status === "finished" ? "Final" : null;
+  const statusText = statusTextOf(state, revealed);
   return {
     status: state.status,
     statusText,
@@ -94,9 +94,21 @@ export function matchView(
   };
 }
 
+function statusTextOf(state: MatchState, revealed: boolean): StatusText {
+  if (state.status === "live") return "Live";
+  if (state.status === "upcoming") return null;
+  if (!revealed) return "Final";
+  if (state.finishedBy === "walkover") return "Walkover";
+  if (state.finishedBy === "abandoned") return "No result";
+  return "Final";
+}
+
 function summaryOf(match: Match, side1: SideView, side2: SideView, statusText: StatusText) {
+  const pairing = `${side1.name} vs ${side2.name}`;
+  if (statusText === "Walkover" || statusText === "No result")
+    return `${pairing}, ${statusText.toLowerCase()}, ${match.round}`;
   if (side1.score === null || side2.score === null || statusText === null)
-    return `${side1.name} vs ${side2.name}, ${match.round}`;
+    return `${pairing}, ${match.round}`;
   return `${side1.name} ${side1.score}, ${side2.name} ${side2.score}, ${statusText.toLowerCase()}, ${match.round}`;
 }
 

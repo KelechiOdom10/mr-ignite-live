@@ -79,7 +79,9 @@ function ScoreCenter({ match, view, now }: { match: Match; view: MatchView; now:
       <div className="font-mono text-4xl font-semibold tabular-nums sm:text-5xl">
         {view.side1.score ?? "–"} : {view.side2.score ?? "–"}
       </div>
-      <div className="mt-1 text-xs text-muted-foreground">Bo{match.bestOf}</div>
+      <div className="mt-1 text-xs text-muted-foreground">
+        {view.status === "finished" && `${view.statusText} · `}Bo{match.bestOf}
+      </div>
     </div>
   );
 }

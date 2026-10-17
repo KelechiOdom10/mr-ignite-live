@@ -38,6 +38,18 @@ describe("matchState", () => {
     expect(matchState(aMatch({ markedFinished: true }), START - MINUTE).status).toBe("finished");
   });
 
+  it("tells a walkover, an unfinished marked series and an abandoned one apart", () => {
+    const at = START + LIVE_WINDOW_MS + MINUTE;
+    expect(
+      [
+        aMatch({ markedFinished: true }),
+        aMatch({ markedFinished: true, maps: [aMap(1, 1)] }),
+        aMatch(),
+        aMatch({ maps: [aMap(1, 1), aMap(2, 1), aMap(3, 1)] }),
+      ].map((m) => matchState(m, at).finishedBy),
+    ).toEqual(["walkover", "marked", "abandoned", "maps"]);
+  });
+
   it("is upcoming before the start with no maps", () => {
     expect(matchState(aMatch(), START - MINUTE).status).toBe("upcoming");
   });
