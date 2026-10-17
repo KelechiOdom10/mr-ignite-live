@@ -1,5 +1,4 @@
 import { Link } from "@void/react";
-import { useReducedMotion } from "motion/react";
 import { useEffect, useState, type FocusEvent } from "react";
 
 import { DynamicIsland, DynamicIslandView } from "@/components/motion/dynamic-island";
@@ -55,9 +54,9 @@ export function LiveIsland({ snapshot, now }: { snapshot: Snapshot; now: number 
   const live = snapshot.matches.filter((m) => matchState(m, now).status === "live");
   const [index, setIndex] = useState(0);
   const [hovered, setHovered] = useState(false);
-  const [focused, setFocused] = useState(false);
-  const reduceMotion = useReducedMotion() === true;
-  const paused = hovered || focused || reduceMotion;
+  const [focusedId, setFocusedId] = useState<string | null>(null);
+  const current = live.length > 0 ? live[index % live.length] : undefined;
+  const paused = hovered || (current !== undefined && focusedId === current.id);
 
   useEffect(() => {
     if (live.length < 2 || paused) return;
@@ -66,18 +65,16 @@ export function LiveIsland({ snapshot, now }: { snapshot: Snapshot; now: number 
   }, [live.length, paused]);
 
   const onBlur = (e: FocusEvent<HTMLDivElement>) => {
-    if (!e.currentTarget.contains(e.relatedTarget)) setFocused(false);
+    if (!e.currentTarget.contains(e.relatedTarget)) setFocusedId(null);
   };
 
-  if (live.length === 0) return null;
-  const current = live[index % live.length];
   if (!current) return null;
 
   return (
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onFocus={() => setFocused(true)}
+      onFocus={() => setFocusedId(current.id)}
       onBlur={onBlur}
     >
       <DynamicIsland
