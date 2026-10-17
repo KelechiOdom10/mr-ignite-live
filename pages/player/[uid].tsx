@@ -75,7 +75,7 @@ export default function PlayerPage({
               />
               <section aria-labelledby="career" className="space-y-2">
                 <h2 id="career" className="text-sm font-semibold text-muted-foreground">
-                  Career
+                  Career · every season and mode
                 </h2>
                 <CareerTiles career={player.value.career} />
               </section>
@@ -110,7 +110,11 @@ export default function PlayerPage({
           </div>
           {history.ok ? (
             <>
-              <HistoryList rows={history.value.rows} now={now} />
+              <HistoryList
+                rows={history.value.rows}
+                currentSeason={player.ok ? player.value.profile.season : null}
+                now={now}
+              />
               <div className="flex items-center justify-between">
                 <Freshness freshness={history.value.freshness} now={now} />
                 {history.value.hasMore && query.page < 50 && (

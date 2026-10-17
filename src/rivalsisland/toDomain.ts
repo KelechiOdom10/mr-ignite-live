@@ -126,6 +126,7 @@ export function toHistoryPage(res: ResponseOf<"history">, freshness: Freshness):
     rows: res.matches.map((m) => ({
       matchUid: m.match_uid,
       playedAt: m.played_at,
+      season: m.season.number,
       mode: m.game_mode,
       map: m.map.name,
       category: m.category?.name ?? null,
