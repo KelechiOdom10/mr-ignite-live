@@ -4,7 +4,7 @@ import type { HistoryRow, Result } from "@/domain/player";
 import { cn } from "@/lib/utils";
 
 import { AwardBadge } from "../AwardBadge";
-import { formatRelative, useHydrated } from "../time";
+import { formatDuration, formatRelative, useHydrated } from "../time";
 
 const RESULT: Record<Result, { label: string; bar: string; text: string }> = {
   win: { label: "Win", bar: "bg-win", text: "text-win" },
@@ -12,10 +12,6 @@ const RESULT: Record<Result, { label: string; bar: string; text: string }> = {
   draw: { label: "Draw", bar: "bg-muted-foreground", text: "text-muted-foreground" },
   abandoned: { label: "Abandoned", bar: "bg-muted-foreground", text: "text-muted-foreground" },
 };
-
-function minutes(seconds: number): string {
-  return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`;
-}
 
 export function HistoryList({ rows, now }: { rows: HistoryRow[]; now: number }) {
   const hydrated = useHydrated();
@@ -52,7 +48,7 @@ export function HistoryList({ rows, now }: { rows: HistoryRow[]; now: number }) 
                   {[
                     m.mode,
                     hydrated ? formatRelative(m.playedAt, now) : null,
-                    minutes(m.durationSeconds),
+                    formatDuration(m.durationSeconds),
                   ]
                     .filter(Boolean)
                     .join(" · ")}

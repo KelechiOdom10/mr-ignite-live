@@ -21,6 +21,7 @@ export function CareerTiles({ career }: { career: Career }) {
     { label: "KDA", value: career.kda === null ? "–" : career.kda.toFixed(2) },
     {
       label: "K / D / A",
+      wide: true,
       value: `${compact(career.kills)} / ${compact(career.deaths)} / ${compact(career.assists)}`,
     },
     { label: "MVP / SVP", value: `${career.mvp} / ${career.svp}` },
@@ -35,14 +36,12 @@ export function CareerTiles({ career }: { career: Career }) {
   return (
     <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3">
       {tiles.map((t) => (
-        <div key={t.label} className="rounded-lg border bg-card p-3">
+        <div
+          key={t.label}
+          className={cn("rounded-lg border bg-card p-3", "wide" in t && "col-span-2")}
+        >
           <dt className="text-xs text-muted-foreground">{t.label}</dt>
-          <dd
-            className={cn(
-              "mt-1 font-mono font-semibold whitespace-nowrap tabular-nums",
-              t.value.length > 10 ? "text-sm" : "text-lg",
-            )}
-          >
+          <dd className={cn("mt-1 font-mono text-lg font-semibold whitespace-nowrap tabular-nums")}>
             {t.value}
           </dd>
         </div>

@@ -1,14 +1,10 @@
 import { AppShell } from "@/ui/AppShell";
 import { DraftStrip, MatchTeams } from "@/ui/players/MatchTeams";
 import { ProblemNotice } from "@/ui/players/ProblemNotice";
-import { formatDate, useHydrated } from "@/ui/time";
+import { formatDate, formatDuration, useHydrated } from "@/ui/time";
 import { useLiveSnapshot } from "@/ui/useLiveSnapshot";
 
 import type { Props } from "./[matchUid].server";
-
-function minutes(seconds: number): string {
-  return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`;
-}
 
 export default function GamePage({ snapshot: initial, match }: Props) {
   const { snapshot, connection, now } = useLiveSnapshot(initial, { view: "events" });
@@ -23,7 +19,7 @@ export default function GamePage({ snapshot: initial, match }: Props) {
               match.value.mode,
               match.value.category,
               match.value.season ? `Season ${match.value.season}` : null,
-              minutes(match.value.durationSeconds),
+              formatDuration(match.value.durationSeconds),
               hydrated ? formatDate(match.value.playedAt) : null,
             ]
               .filter(Boolean)
