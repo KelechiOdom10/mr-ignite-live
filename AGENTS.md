@@ -46,6 +46,7 @@ Rules:
 
 ## Docs
 
+- Proving behaviour: .claude/skills/verify/SKILL.md (zero-credit fixtures, port 5191)
 - [Domain rules](docs/domain.md)
 - [Decisions](docs/adr/)
 
