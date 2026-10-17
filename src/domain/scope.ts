@@ -1,3 +1,4 @@
+import { bracketContainer, PLAYOFFS } from "./bracket";
 import { matchState } from "./matchState";
 import type { Match, Snapshot } from "./model";
 
@@ -16,11 +17,15 @@ function involvesTeam(match: Match, names: ReadonlySet<string>): boolean {
 
 export function scopeSnapshot(snapshot: Snapshot, scope: SnapshotScope, now: number): Snapshot {
   if (scope.kind === "events") {
+    const nearTerm = snapshot.matches.filter(
+      (m) => m.startsAt && Date.parse(m.startsAt) > now - EVENTS_LIST_MATCH_WINDOW_MS,
+    );
+    const brackets = new Set(nearTerm.filter((m) => m.phase === PLAYOFFS).map(bracketContainer));
     return {
       ...snapshot,
       servedAt: new Date(now).toISOString(),
       matches: snapshot.matches.filter(
-        (m) => m.startsAt && Date.parse(m.startsAt) > now - EVENTS_LIST_MATCH_WINDOW_MS,
+        (m) => nearTerm.includes(m) || (m.phase === PLAYOFFS && brackets.has(bracketContainer(m))),
       ),
     };
   }

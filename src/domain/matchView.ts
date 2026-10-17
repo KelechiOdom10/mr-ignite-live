@@ -1,3 +1,4 @@
+import { bracketContainer, PLAYOFFS } from "./bracket";
 import { matchState, type MatchState } from "./matchState";
 import type { MapResult, Match, Team } from "./model";
 
@@ -56,8 +57,6 @@ export interface BracketContext {
   matches: readonly Match[];
   now: number;
 }
-
-const PLAYOFFS = "Playoffs";
 
 export function matchView(
   match: Match,
@@ -159,10 +158,6 @@ function abbreviateRound(round: string): string {
   return round.replace(/\bUpper Bracket\b/i, "UB").replace(/\bLower Bracket\b/i, "LB");
 }
 
-function bracketOf(match: Match): string {
-  return `${match.eventId}|${match.id.slice(0, match.id.lastIndexOf("_"))}`;
-}
-
 function roundNumber(match: Match): number {
   const r = /_R(\d+)M\d+$/.exec(match.id);
   return r ? Number(r[1]) : Number.NaN;
@@ -183,7 +178,7 @@ function slotFeeders(match: Match, { matches, now }: BracketContext): SlotFeeder
       (m) =>
         m.phase === PLAYOFFS &&
         m.id !== match.id &&
-        bracketOf(m) === bracketOf(match) &&
+        bracketContainer(m) === bracketContainer(match) &&
         playedBefore(m, match),
     )
     .map((m) => ({ m, s: matchState(m, now) }))
