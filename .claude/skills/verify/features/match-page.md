@@ -16,6 +16,8 @@ Any match card or strip chip, or `/match/KtMVxkwRyz_R2M4` (RAD vs Pulsar Esports
 
 - With spoilers shown, a note reads "Liquipedia and mrvl.net disagree on map 1 (Liquipedia: Krakoa; mrvl: Celestial Husk)…". The map 1 card shows "mrvl says Celestial Husk".
 - Every stats row has a "Look up <name> among ranked players" link to `/players?name=<name>`. The table says names aren't tied to ranked accounts.
+- Every hero a player used shows as a portrait, most played first; a single hero shows its name. Clicking one opens its time, share, K/D/A, final hits, damage, taken and healing (accuracy per map only). Its trigger's accessible name carries the same numbers. Series cached before per-hero lines were kept say only time played was saved.
+- At 390 and 360 the page doesn't scroll sideways, with or without a breakdown open.
 - With spoilers hidden, maps read "Result hidden", stats say they're hidden, and no conflict note shows.
 
 ## Owning code

@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { addHeroLines, MatchStatsSchema, PlayerStatsSchema, type HeroLine } from "./stats";
+import {
+  addHeroLines,
+  combinePlayers,
+  MatchStatsSchema,
+  PlayerStatsSchema,
+  type HeroLine,
+  type PlayerStats,
+  type TeamMapStats,
+} from "./stats";
 
 describe("MatchStatsSchema", () => {
   it("still reads stats stored before draft order was kept, marking the draft as unknown", () => {
@@ -71,5 +79,69 @@ describe("hero lines", () => {
       isSvp: false,
     });
     expect(stored.heroes[0]?.line ?? null).toBeNull();
+  });
+});
+
+describe("combinePlayers", () => {
+  const line = (kills: number): HeroLine => ({
+    kills,
+    deaths: 0,
+    assists: 0,
+    finalHits: 0,
+    damage: 0,
+    damageTaken: 0,
+    healing: 0,
+    accuracy: 50,
+  });
+  const hero = (id: string, playSeconds: number, l: HeroLine | null) => ({
+    id,
+    name: id,
+    role: null,
+    portraitUrl: null,
+    playSeconds,
+    line: l,
+  });
+  const player = (heroes: PlayerStats["heroes"], kills: number, isMvp = false): PlayerStats => ({
+    name: "Tonez",
+    nationality: null,
+    hero: null,
+    heroes,
+    kills,
+    deaths: 0,
+    assists: 0,
+    finalHits: 0,
+    damage: 0,
+    damageTaken: 0,
+    healing: 0,
+    accuracy: null,
+    isMvp,
+    isSvp: false,
+  });
+  const team = (p: PlayerStats): TeamMapStats => ({
+    name: "100T",
+    won: true,
+    score: 1,
+    bans: [],
+    players: [p],
+  });
+
+  it("adds a hero's time and line across maps, most played first, and counts MVPs", () => {
+    const [row] = combinePlayers([
+      team(player([hero("hulk", 100, line(3))], 3, true)),
+      team(player([hero("hulk", 50, line(2)), hero("groot", 400, line(1))], 3)),
+    ]);
+    expect(row?.heroes.map((h) => [h.id, h.playSeconds, h.line?.kills])).toEqual([
+      ["groot", 400, 1],
+      ["hulk", 150, 5],
+    ]);
+    expect([row?.kills, row?.mvpCount]).toEqual([6, 1]);
+  });
+
+  it("leaves a hero's series line unknown when one map saved no line for it", () => {
+    const [row] = combinePlayers([
+      team(player([hero("hulk", 100, line(3))], 3)),
+      team(player([hero("hulk", 50, null)], 2)),
+    ]);
+    expect(row?.heroes[0]?.line).toBeNull();
   });
 });

@@ -119,22 +119,31 @@ function toHero(hero: {
   };
 }
 
-/** A hero's line only when mrvl sent every count; a partial one would show gaps as zeros. */
 type MrvlHeroPlayed = NonNullable<MrvlScoreboardTeam["players"][number]["heroesPlayed"]>[number];
 
-function toHeroLine(stats: MrvlHeroPlayed["stats"]): HeroLine | null {
+/** A hero's line only when mrvl sent every count; a partial one would show gaps as zeros. */
+export function toHeroLine(stats: MrvlHeroPlayed["stats"]): HeroLine | null {
   if (!stats) return null;
   const { kills, deaths, assists, finalHits, damage, damageTaken, healing } = stats;
-  const counts = [kills, deaths, assists, finalHits, damage, damageTaken, healing];
-  if (counts.some((n) => typeof n !== "number")) return null;
+  if (
+    kills == null ||
+    deaths == null ||
+    assists == null ||
+    finalHits == null ||
+    damage == null ||
+    damageTaken == null ||
+    healing == null
+  ) {
+    return null;
+  }
   return {
-    kills: kills ?? 0,
-    deaths: deaths ?? 0,
-    assists: assists ?? 0,
-    finalHits: finalHits ?? 0,
-    damage: damage ?? 0,
-    damageTaken: damageTaken ?? 0,
-    healing: healing ?? 0,
+    kills,
+    deaths,
+    assists,
+    finalHits,
+    damage,
+    damageTaken,
+    healing,
     accuracy: stats.accuracy ?? null,
   };
 }

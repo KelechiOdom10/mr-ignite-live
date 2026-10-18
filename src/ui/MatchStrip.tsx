@@ -1,5 +1,5 @@
 import { Link } from "@void/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { matchState } from "@/domain/matchState";
 import type { SideView } from "@/domain/matchView";
@@ -74,19 +74,19 @@ const EDGE_MASKS = {
 
 /** Which edges have chips scrolled out of view, so only those edges fade. */
 function useOverflowEdges() {
-  const ref = useRef<HTMLDivElement>(null);
+  // A callback ref, so observers attach whenever the scroller mounts, including when the strip
+  // starts empty and fills in from a live update.
+  const [el, ref] = useState<HTMLDivElement | null>(null);
   const [edges, setEdges] = useState<keyof typeof EDGE_MASKS>("none");
   const measure = useCallback(() => {
-    const el = ref.current;
     if (!el) return;
     const left = el.scrollLeft > 1;
     const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
     setEdges(left && right ? "both" : left ? "left" : right ? "right" : "none");
-  }, []);
+  }, [el]);
   useEffect(() => {
-    const el = ref.current;
     if (!el) return;
-    measure();
+    // A ResizeObserver reports once on observe, which takes the first measurement.
     const resized = new ResizeObserver(measure);
     resized.observe(el);
     // Chips come and go as matches start and finish without the strip itself resizing.
@@ -96,7 +96,7 @@ function useOverflowEdges() {
       resized.disconnect();
       changed.disconnect();
     };
-  }, [measure]);
+  }, [el, measure]);
   return { ref, edges, measure };
 }
 

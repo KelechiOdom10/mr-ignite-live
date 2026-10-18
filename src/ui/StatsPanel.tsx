@@ -1,6 +1,6 @@
 import { Link } from "@void/react";
 import { BarChart3, UserSearch } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/motion/popover";
@@ -9,12 +9,12 @@ import type { MatchView } from "@/domain/matchView";
 import type { Match, Snapshot } from "@/domain/model";
 import { searchableName } from "@/domain/player";
 import {
-  addHeroLines,
+  combinePlayers,
   MatchStatsSchema,
   type Hero,
-  type HeroPlay,
+  type HeroUsage,
+  type SeriesPlayer,
   type MatchStats,
-  type PlayerStats,
   type TeamMapStats,
 } from "@/domain/stats";
 import { cn } from "@/lib/utils";
@@ -88,19 +88,60 @@ function HeroName({ hero }: { hero: Hero }) {
   );
 }
 
-/** One hero's share of a player's map or series, opened from its portrait. */
+function heroSummary(hero: HeroUsage, share: number | null): string {
+  const time = `${formatDuration(hero.playSeconds)} played${share === null ? "" : ` (${share}%)`}`;
+  const line = hero.line;
+  if (!line) return `${hero.name}: ${time}; per-hero stats not saved`;
+  return `${hero.name}: ${time}; ${line.kills} kills, ${line.deaths} deaths, ${line.assists} assists, ${number.format(line.damage)} damage, ${number.format(line.healing)} healing`;
+}
+
+const TRIGGER_CLASS =
+  "inline-flex items-center gap-2 rounded-md outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary";
+
+/**
+ * One hero's share of a player's map or series, opened from its portrait. The popover mounts on
+ * first use: a series page has a portrait per hero per player, and each mounted popover tracks
+ * scroll and resize. Its numbers are also in the trigger's name, since the panel is visual only.
+ */
 function HeroBreakdown({
   hero,
   totalSeconds,
   combined,
+  showName,
 }: {
-  hero: HeroPlay;
+  hero: HeroUsage;
   totalSeconds: number;
   combined: boolean;
+  showName: boolean;
 }) {
-  // A series page holds a panel per hero per player; only fill the ones someone has opened.
-  const [opened, setOpened] = useState(false);
+  const [armed, setArmed] = useState(false);
+  const triggerRef = useRef<HTMLSpanElement>(null);
   const share = totalSeconds > 0 ? Math.round((hero.playSeconds / totalSeconds) * 100) : null;
+  const summary = heroSummary(hero, share);
+  const face = (
+    <>
+      <HeroPortrait hero={hero} size={26} />
+      {showName && <span className="whitespace-nowrap text-foreground">{hero.name}</span>}
+    </>
+  );
+
+  useEffect(() => {
+    if (armed) triggerRef.current?.querySelector("button")?.focus();
+  }, [armed]);
+
+  if (!armed) {
+    return (
+      <button
+        type="button"
+        aria-label={summary}
+        onClick={() => setArmed(true)}
+        className={TRIGGER_CLASS}
+      >
+        {face}
+      </button>
+    );
+  }
+
   const line = hero.line;
   const cells: [string, string][] = line
     ? [
@@ -115,25 +156,15 @@ function HeroBreakdown({
       ]
     : [];
   return (
-    <Popover
-      side="bottom"
-      align="center"
-      sideOffset={10}
-      gooStrength={6}
-      onOpenChange={(open) => open && setOpened(true)}
-    >
-      <PopoverTrigger>
-        <button
-          type="button"
-          aria-label={`${hero.name}: ${formatDuration(hero.playSeconds)} played, show breakdown`}
-          className="rounded-md outline-offset-2 transition-transform hover:scale-110 focus-visible:outline-2 focus-visible:outline-primary"
-        >
-          <HeroPortrait hero={hero} size={26} />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent className="w-60 p-3 text-sm">
-        {opened && (
-          <>
+    <span ref={triggerRef} className="inline-flex">
+      <Popover defaultOpen side="bottom" align="center" sideOffset={10} gooStrength={6}>
+        <PopoverTrigger>
+          <button type="button" aria-label={summary} className={TRIGGER_CLASS}>
+            {face}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-60 p-3 text-sm">
+          <div aria-hidden="true">
             <div className="flex items-center gap-2">
               <HeroPortrait hero={hero} size={32} />
               <div className="min-w-0">
@@ -159,10 +190,10 @@ function HeroBreakdown({
                 cached, so only time played is known.
               </p>
             )}
-          </>
-        )}
-      </PopoverContent>
-    </Popover>
+          </div>
+        </PopoverContent>
+      </Popover>
+    </span>
   );
 }
 
@@ -173,57 +204,22 @@ function HeroesPlayed({ player, combined }: { player: Row; combined: boolean }) 
   return (
     <span className="flex flex-wrap items-center gap-1">
       {heroes.map((h) => (
-        <HeroBreakdown key={h.id} hero={h} totalSeconds={totalSeconds} combined={combined} />
+        <HeroBreakdown
+          key={h.id}
+          hero={h}
+          totalSeconds={totalSeconds}
+          combined={combined}
+          showName={heroes.length === 1}
+        />
       ))}
     </span>
   );
 }
 
-interface Row extends PlayerStats {
-  mvpCount: number;
-  svpCount: number;
-}
+type Row = SeriesPlayer;
 
 function combine(teams: TeamMapStats[]): Row[] {
-  const byName = new Map<string, Row>();
-  for (const team of teams) {
-    for (const p of team.players) {
-      const prev = byName.get(p.name);
-      if (!prev) {
-        byName.set(p.name, { ...p, mvpCount: p.isMvp ? 1 : 0, svpCount: p.isSvp ? 1 : 0 });
-        continue;
-      }
-      const heroes = new Map(prev.heroes.map((h) => [h.id, { ...h }]));
-      for (const h of p.heroes) {
-        const existing = heroes.get(h.id);
-        heroes.set(
-          h.id,
-          existing
-            ? {
-                ...existing,
-                playSeconds: existing.playSeconds + h.playSeconds,
-                line: addHeroLines(existing.line, h.line),
-              }
-            : h,
-        );
-      }
-      byName.set(p.name, {
-        ...prev,
-        heroes: [...heroes.values()].sort((a, b) => b.playSeconds - a.playSeconds),
-        kills: prev.kills + p.kills,
-        deaths: prev.deaths + p.deaths,
-        assists: prev.assists + p.assists,
-        finalHits: prev.finalHits + p.finalHits,
-        damage: prev.damage + p.damage,
-        damageTaken: prev.damageTaken + p.damageTaken,
-        healing: prev.healing + p.healing,
-        accuracy: prev.accuracy,
-        mvpCount: prev.mvpCount + (p.isMvp ? 1 : 0),
-        svpCount: prev.svpCount + (p.isSvp ? 1 : 0),
-      });
-    }
-  }
-  return [...byName.values()];
+  return combinePlayers(teams);
 }
 
 const number = new Intl.NumberFormat("en-US");

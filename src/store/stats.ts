@@ -29,6 +29,7 @@ const StatsIndexSchema = z.record(
     sourceUpdatedAt: z.string(),
     /** Set once a fetch has kept draft order; earlier entries get one refetch in the lookback. */
     draftOrder: z.literal(true).optional(),
+    heroLines: z.literal(true).optional(),
   }),
 );
 export type StatsIndex = z.infer<typeof StatsIndexSchema>;
@@ -50,8 +51,9 @@ async function readIndex(store: KvStore): Promise<StatsIndex> {
   return parsed.success ? parsed.data : {};
 }
 
-function fetchedBeforeDraftOrder(entry: StatsIndex[string] | undefined): boolean {
-  return entry !== undefined && entry.draftOrder !== true;
+/** Indexed before draft order or per-hero lines were kept: worth one refetch while in lookback. */
+function needsBackfill(entry: StatsIndex[string] | undefined): boolean {
+  return entry !== undefined && (entry.draftOrder !== true || entry.heroLines !== true);
 }
 
 export function statsCandidates(snapshot: Snapshot, now: number): Match[] {
@@ -120,14 +122,14 @@ export async function fetchStatsChanges({
   let pagesRequested = 0;
   let indexChanged = false;
 
-  // Series mrvl changed go first, so a draft-order backfill never delays a live score.
+  // Series mrvl changed go first, so a backfill never delays a live score.
   const work = candidates
     .flatMap((match) => {
       const summary = findMrvlMatch(match, summaries);
       if (!summary) return [];
       const sourceUpdatedAt = String(summary.updatedAt ?? "");
       const changed = index[match.id]?.sourceUpdatedAt !== sourceUpdatedAt;
-      if (!changed && !fetchedBeforeDraftOrder(index[match.id])) return [];
+      if (!changed && !needsBackfill(index[match.id])) return [];
       return [{ match, summary, sourceUpdatedAt, changed }];
     })
     .sort((a, b) => Number(b.changed) - Number(a.changed));
@@ -138,7 +140,12 @@ export async function fetchStatsChanges({
     const page = await seriesPage(mrvl, summary.id);
     if (!page) continue;
     const stats = toMatchStats(match, page, sourceUpdatedAt, new Date(now));
-    index[match.id] = { sourceMatchId: summary.id, sourceUpdatedAt, draftOrder: true };
+    index[match.id] = {
+      sourceMatchId: summary.id,
+      sourceUpdatedAt,
+      draftOrder: true,
+      heroLines: true,
+    };
     indexChanged = true;
     if (stats.maps.length === 0) continue;
     mapOverrides[match.id] = toMapOverrides(stats);

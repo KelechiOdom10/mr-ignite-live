@@ -5,7 +5,7 @@ import { MatchStatsSchema } from "@/domain/stats";
 
 import { aMatch } from "../../test/builders";
 import { mrvlFixture } from "../../test/fixtures";
-import { findMrvlMatch, toMapOverrides, toMatchStats } from "./align";
+import { findMrvlMatch, toHeroLine, toMapOverrides, toMatchStats } from "./align";
 import {
   MrvlMatchPageSchema,
   MrvlMatchSummarySchema,
@@ -216,5 +216,34 @@ describe("toMatchStats on a recorded series", () => {
       [3, 1, 3, 2],
       [4, 1, 3, 0],
     ]);
+  });
+});
+
+describe("toHeroLine", () => {
+  it("drops a hero line with any count missing rather than showing the gap as zero", () => {
+    expect(
+      toHeroLine({ kills: 3, deaths: 1, assists: 2, finalHits: 1, damage: 10, damageTaken: 5 }),
+    ).toBeNull();
+    expect(toHeroLine(null)).toBeNull();
+    expect(
+      toHeroLine({
+        kills: 3,
+        deaths: 1,
+        assists: 2,
+        finalHits: 1,
+        damage: 10,
+        damageTaken: 5,
+        healing: 0,
+      }),
+    ).toEqual({
+      kills: 3,
+      deaths: 1,
+      assists: 2,
+      finalHits: 1,
+      damage: 10,
+      damageTaken: 5,
+      healing: 0,
+      accuracy: null,
+    });
   });
 });

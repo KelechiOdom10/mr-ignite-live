@@ -18,6 +18,7 @@ Every page.
 - `/player/…`, `/players`, `/leaderboard`, `/game/…`, `/review`: no fixture strip, but the live island still shows when a match is live, and the footer keeps the live status.
   - Player pages credit "Player data from RivalsIsland; live scores from Liquipedia…".
   - `/review` reads "Recordings and notes stay in this browser…".
+- The fixture strip's first chip lines up with the logo, and only edges with chips scrolled out of view fade. The Matches page's segmented controls have a hairline inset ring and concentric corners (12px outside, 8px pill, 4px padding).
 - At 390 the bottom nav shows the five sections with the current one highlighted. The Hide spoilers switch sits in the header. Nothing overflows horizontally.
 
 ## Owning code

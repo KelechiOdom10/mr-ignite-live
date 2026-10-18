@@ -21,12 +21,12 @@ export const HeroLineSchema = z.object({
 });
 export type HeroLine = z.infer<typeof HeroLineSchema>;
 
-export const HeroPlaySchema = HeroSchema.extend({
+export const HeroUsageSchema = HeroSchema.extend({
   playSeconds: z.number(),
   // Copies stored before per-hero lines were kept have none; they read as unknown, not zero.
   line: HeroLineSchema.nullish(),
 });
-export type HeroPlay = z.infer<typeof HeroPlaySchema>;
+export type HeroUsage = z.infer<typeof HeroUsageSchema>;
 
 /**
  * Two lines for the same hero added together, as across the maps of a series. Accuracy can't be
@@ -53,7 +53,7 @@ export const PlayerStatsSchema = z.object({
   name: z.string(),
   nationality: z.string().nullable(),
   hero: HeroSchema.nullable(),
-  heroes: z.array(HeroPlaySchema),
+  heroes: z.array(HeroUsageSchema),
   kills: z.number(),
   deaths: z.number(),
   assists: z.number(),
@@ -108,3 +108,54 @@ export const MatchStatsSchema = z.object({
   maps: z.array(MapStatsSchema),
 });
 export type MatchStats = z.infer<typeof MatchStatsSchema>;
+
+export interface SeriesPlayer extends PlayerStats {
+  mvpCount: number;
+  svpCount: number;
+}
+
+/**
+ * One row per player across a series' maps: counts add up, each hero's time and line add up, and
+ * accuracy is the first map's since percentages can't be summed.
+ */
+export function combinePlayers(teams: readonly TeamMapStats[]): SeriesPlayer[] {
+  const byName = new Map<string, SeriesPlayer>();
+  for (const team of teams) {
+    for (const p of team.players) {
+      const prev = byName.get(p.name);
+      if (!prev) {
+        byName.set(p.name, { ...p, mvpCount: p.isMvp ? 1 : 0, svpCount: p.isSvp ? 1 : 0 });
+        continue;
+      }
+      const heroes = new Map(prev.heroes.map((h) => [h.id, { ...h }]));
+      for (const h of p.heroes) {
+        const existing = heroes.get(h.id);
+        heroes.set(
+          h.id,
+          existing
+            ? {
+                ...existing,
+                playSeconds: existing.playSeconds + h.playSeconds,
+                line: addHeroLines(existing.line, h.line),
+              }
+            : h,
+        );
+      }
+      byName.set(p.name, {
+        ...prev,
+        heroes: [...heroes.values()].sort((a, b) => b.playSeconds - a.playSeconds),
+        kills: prev.kills + p.kills,
+        deaths: prev.deaths + p.deaths,
+        assists: prev.assists + p.assists,
+        finalHits: prev.finalHits + p.finalHits,
+        damage: prev.damage + p.damage,
+        damageTaken: prev.damageTaken + p.damageTaken,
+        healing: prev.healing + p.healing,
+        accuracy: prev.accuracy,
+        mvpCount: prev.mvpCount + (p.isMvp ? 1 : 0),
+        svpCount: prev.svpCount + (p.isSvp ? 1 : 0),
+      });
+    }
+  }
+  return [...byName.values()];
+}
