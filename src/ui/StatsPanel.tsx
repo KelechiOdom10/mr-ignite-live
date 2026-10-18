@@ -3,13 +3,16 @@ import { BarChart3, UserSearch } from "lucide-react";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/motion/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/motion/tabs";
 import type { MatchView } from "@/domain/matchView";
 import type { Match, Snapshot } from "@/domain/model";
 import { searchableName } from "@/domain/player";
 import {
+  addHeroLines,
   MatchStatsSchema,
   type Hero,
+  type HeroPlay,
   type MatchStats,
   type PlayerStats,
   type TeamMapStats,
@@ -19,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { AwardBadge } from "./AwardBadge";
 import { proxiedImage } from "./images";
 import { TeamLogo } from "./TeamMark";
+import { formatDuration } from "./time";
 
 const StatsResponseSchema = z.object({ stats: MatchStatsSchema.nullable() });
 
@@ -84,6 +88,97 @@ function HeroName({ hero }: { hero: Hero }) {
   );
 }
 
+/** One hero's share of a player's map or series, opened from its portrait. */
+function HeroBreakdown({
+  hero,
+  totalSeconds,
+  combined,
+}: {
+  hero: HeroPlay;
+  totalSeconds: number;
+  combined: boolean;
+}) {
+  // A series page holds a panel per hero per player; only fill the ones someone has opened.
+  const [opened, setOpened] = useState(false);
+  const share = totalSeconds > 0 ? Math.round((hero.playSeconds / totalSeconds) * 100) : null;
+  const line = hero.line;
+  const cells: [string, string][] = line
+    ? [
+        ["K / D / A", `${line.kills} / ${line.deaths} / ${line.assists}`],
+        ["Final hits", number.format(line.finalHits)],
+        ["Damage", number.format(line.damage)],
+        ["Taken", number.format(line.damageTaken)],
+        ["Healing", number.format(line.healing)],
+        ...(combined || line.accuracy === null
+          ? []
+          : ([["Accuracy", `${Math.round(line.accuracy)}%`]] as [string, string][])),
+      ]
+    : [];
+  return (
+    <Popover
+      side="bottom"
+      align="center"
+      sideOffset={10}
+      gooStrength={6}
+      onOpenChange={(open) => open && setOpened(true)}
+    >
+      <PopoverTrigger>
+        <button
+          type="button"
+          aria-label={`${hero.name}: ${formatDuration(hero.playSeconds)} played, show breakdown`}
+          className="rounded-md outline-offset-2 transition-transform hover:scale-110 focus-visible:outline-2 focus-visible:outline-primary"
+        >
+          <HeroPortrait hero={hero} size={26} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-60 p-3 text-sm">
+        {opened && (
+          <>
+            <div className="flex items-center gap-2">
+              <HeroPortrait hero={hero} size={32} />
+              <div className="min-w-0">
+                <p className="truncate font-medium text-foreground">{hero.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatDuration(hero.playSeconds)} played{share !== null && ` · ${share}%`}
+                  {combined && " · all maps"}
+                </p>
+              </div>
+            </div>
+            {line ? (
+              <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5">
+                {cells.map(([label, value]) => (
+                  <div key={label}>
+                    <dt className="text-xs text-muted-foreground">{label}</dt>
+                    <dd className="font-mono tabular-nums text-foreground">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : (
+              <p className="mt-3 text-xs text-muted-foreground">
+                Per-hero stats weren&apos;t saved when this {combined ? "series" : "map"} was
+                cached, so only time played is known.
+              </p>
+            )}
+          </>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+/** Every hero a player used, most played first; each opens its own breakdown. */
+function HeroesPlayed({ player, combined }: { player: Row; combined: boolean }) {
+  const heroes = player.heroes.toSorted((a, b) => b.playSeconds - a.playSeconds);
+  const totalSeconds = heroes.reduce((sum, h) => sum + h.playSeconds, 0);
+  return (
+    <span className="flex flex-wrap items-center gap-1">
+      {heroes.map((h) => (
+        <HeroBreakdown key={h.id} hero={h} totalSeconds={totalSeconds} combined={combined} />
+      ))}
+    </span>
+  );
+}
+
 interface Row extends PlayerStats {
   mvpCount: number;
   svpCount: number;
@@ -103,7 +198,13 @@ function combine(teams: TeamMapStats[]): Row[] {
         const existing = heroes.get(h.id);
         heroes.set(
           h.id,
-          existing ? { ...existing, playSeconds: existing.playSeconds + h.playSeconds } : h,
+          existing
+            ? {
+                ...existing,
+                playSeconds: existing.playSeconds + h.playSeconds,
+                line: addHeroLines(existing.line, h.line),
+              }
+            : h,
         );
       }
       byName.set(p.name, {
@@ -213,13 +314,8 @@ function StatsTable({
                   </span>
                 </th>
                 <td className="px-3 py-2 text-muted-foreground">
-                  {combined ? (
-                    <span className="flex items-center gap-1">
-                      {p.heroes.slice(0, 4).map((h) => (
-                        <HeroPortrait key={h.id} hero={h} size={26} />
-                      ))}
-                      <span className="sr-only">{p.heroes.map((h) => h.name).join(", ")}</span>
-                    </span>
+                  {p.heroes.length > 0 ? (
+                    <HeroesPlayed player={p} combined={combined} />
                   ) : p.hero ? (
                     <HeroName hero={p.hero} />
                   ) : null}

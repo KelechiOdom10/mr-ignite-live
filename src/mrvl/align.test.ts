@@ -72,6 +72,19 @@ describe("toMatchStats on a recorded series", () => {
     expect(first?.teams.map((t) => t.won)).toEqual([false, true]);
   });
 
+  it("keeps each hero's own line, so Tonez's 13 kills split across the four heroes he played", () => {
+    const tonez = stats.maps
+      .flatMap((m) => m.teams.flatMap((t) => t.players))
+      .find((p) => p.name === "Tonez" && p.heroes.length === 4);
+    expect(tonez?.heroes.map((h) => [h.name, h.line?.kills])).toEqual([
+      ["The Thing", 5],
+      ["Hulk", 6],
+      ["Peni Parker", 0],
+      ["Groot", 2],
+    ]);
+    expect(tonez?.heroes.reduce((sum, h) => sum + (h.line?.kills ?? 0), 0)).toBe(tonez?.kills);
+  });
+
   it("carries MVP and SVP per map", () => {
     const mvp = stats.maps[0]?.teams.flatMap((t) => t.players).find((p) => p.isMvp);
     const svp = stats.maps[0]?.teams.flatMap((t) => t.players).find((p) => p.isSvp);
