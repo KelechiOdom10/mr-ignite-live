@@ -96,7 +96,7 @@ export default function HomePage({ snapshot: initial }: Props) {
               onValueChange={(v) => isListTab(v) && setChosenTab({ region, tab: v })}
               variant="segment"
             >
-              <TabsList aria-label="Show">
+              <TabsList aria-label="Show" className="rounded-xl p-1 ring-1 ring-border ring-inset">
                 <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
                 <TabsTrigger value="results">Results</TabsTrigger>
               </TabsList>
@@ -168,7 +168,10 @@ export default function HomePage({ snapshot: initial }: Props) {
             onValueChange={(v) => isEventPhase(v) && setEventTab(v)}
             variant="segment"
           >
-            <TabsList aria-label="Event status">
+            <TabsList
+              aria-label="Event status"
+              className="rounded-xl p-1 ring-1 ring-border ring-inset"
+            >
               <TabsTrigger value="ongoing">Ongoing</TabsTrigger>
               <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
               <TabsTrigger value="completed">Completed</TabsTrigger>
