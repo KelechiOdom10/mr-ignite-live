@@ -49,6 +49,7 @@ export const RULES: readonly BoundaryRule[] = [
   { name: "test helpers", files: /^test\//, allow: "any" },
   { name: "D1 schema", files: /^db\//, allow: ["void/schema-d1"] },
   { name: "scripts", files: /^scripts\//, allow: "any" },
+  { name: "anti-slop (vendored)", files: /^tools\/oxlint\/anti-slop\//, allow: "any" },
   { name: "root config", files: /^[^/]+\.ts$/, allow: "any" },
 ];
 

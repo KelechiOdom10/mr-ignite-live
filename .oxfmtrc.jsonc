@@ -10,5 +10,12 @@
   "endOfLine": "lf",
   "experimentalSortPackageJson": true,
   "experimentalSortImports": { "ignoreCase": true, "newlinesBetween": true, "order": "asc" },
-  "ignorePatterns": ["src/components/**", "src/lib/**", "test/fixtures/**", ".void/**", "dist/**"],
+  "ignorePatterns": [
+    "src/components/**",
+    "src/lib/**",
+    "test/fixtures/**",
+    ".void/**",
+    "dist/**",
+    "tools/oxlint/anti-slop/**",
+  ],
 }

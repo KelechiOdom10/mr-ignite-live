@@ -27,6 +27,7 @@ A personal Marvel Rivals site, local-only. The esports section has live Ignite s
 | `src/sync.ts`, `crons/`, `routes/`, `pages/*.server.ts` | Runtime shell                                                                      | everything                                                    |
 | `src/ui/`, `pages/*.tsx`                                | React views                                                                        | `domain`, `components`, `lib`                                 |
 | `src/components/`, `src/lib/`                           | beUI, copied verbatim from https://beui.dev/r                                      | —                                                             |
+| `tools/oxlint/anti-slop/`                               | Vendored anti-slop Oxlint rules (see its `UPSTREAM.md`)                            | —                                                             |
 
 Rules:
 
@@ -34,6 +35,7 @@ Rules:
 - Parse at the edge, trust inside: Liquipedia responses, KV values and the client's `/api/snapshot` fetch all go through Zod. No `as` casts on external data.
 - Liquipedia's API terms: identifying User-Agent, gzip, at most one request per 2s, and only refetch pages whose revision changed. The client enforces the gap; `planSync` enforces the diff.
 - Don't edit `src/components/` or `src/lib/`; re-pull from beUI instead. They're held to plain `strict` (`tsconfig.vendor.json`); app code also gets `noUncheckedIndexedAccess`.
+- `tools/oxlint/anti-slop/` is ours to change: edit a rule rather than disabling it, and record deviations in its `UPSTREAM.md`. Fix findings; don't suppress them or launder types to pass.
 - mrvl is a courtesy source: keep its request volume where `src/store/stats.ts` caps it, and never let its failure break the Liquipedia sync. Liquipedia map results always win over mrvl overrides.
 - Bump `STORED_SNAPSHOT_VERSION` when the stored shape changes; an old value then fails the schema and is rebuilt.
 - Every match surface (cards, strip chips, bracket slots, search results) links to `/match/:id`. Reuse `MatchCard` rather than drawing a new match tile.
