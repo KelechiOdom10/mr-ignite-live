@@ -106,7 +106,10 @@ function TeamSide({
     >
       <TeamLogo team={team} info={team ? snapshot.teams[team.name] : undefined} size={64} />
       <div
-        className={cn("min-w-0 text-center", align === "end" ? "sm:text-right" : "sm:text-left")}
+        className={cn(
+          "max-w-full min-w-0 text-center",
+          align === "end" ? "sm:text-right" : "sm:text-left",
+        )}
       >
         <div className="truncate text-lg font-semibold sm:text-2xl" title={side.name}>
           {side.name}
@@ -272,7 +275,7 @@ function MatchDetail({
               </div>
             )}
           </div>
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 px-5 py-8 sm:gap-8 sm:px-8 sm:py-10">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 px-5 py-8 sm:gap-8 sm:px-8 sm:py-10">
             <TeamSide side={view.side1} snapshot={snapshot} align="end" />
             <ScoreCenter match={match} view={view} now={now} />
             <TeamSide side={view.side2} snapshot={snapshot} align="start" />

@@ -155,7 +155,7 @@ function StatsTable({
           </span>
         )}
       </div>
-      <div className="overflow-x-auto rounded-xl border">
+      <div className="relative overflow-x-auto rounded-xl border">
         <table className="w-full min-w-[44rem] text-sm">
           <thead className="bg-muted/50 text-xs text-muted-foreground">
             <tr>
