@@ -1,4 +1,4 @@
-import type { DraftFormat, DraftStep } from "./draft";
+import type { DraftFormat, DraftStep, DraftSummary } from "./draft";
 
 export type Camp = 0 | 1;
 
@@ -86,4 +86,61 @@ export function outcome(moves: readonly SimMove[]): [CampOutcome, CampOutcome] {
     unavailable: [...new Set(of(camp === 0 ? 1 : 0, "ban"))],
   });
   return [side(0), side(1)];
+}
+
+export interface SlotPlan {
+  bans: number;
+  protects: number;
+}
+
+/** How many bans and protects a team makes over the whole format: the slots its board shows. */
+export function slotPlan(format: DraftFormat, camp: Camp): SlotPlan {
+  const mine = format.steps.filter((s) => actors(s).includes(camp));
+  return {
+    bans: mine.filter((s) => s.kind === "ban").length,
+    protects: mine.filter((s) => s.kind === "protect").length,
+  };
+}
+
+export interface TimelineStep {
+  index: number;
+  actor: DraftStep["actor"];
+  kind: DraftStep["kind"];
+  picks: { camp: Camp; heroId: string }[];
+  state: "done" | "current" | "upcoming";
+}
+
+/** Every step of the format with what was picked in it, and which step is being played. */
+export function timeline(format: DraftFormat, moves: readonly SimMove[]): TimelineStep[] {
+  const current = currentTurn(format, moves)?.step ?? null;
+  return format.steps.map((s, index) => ({
+    index,
+    actor: s.actor,
+    kind: s.kind,
+    picks: moves.filter((m) => m.step === index).map((m) => ({ camp: m.camp, heroId: m.heroId })),
+    state:
+      current === null || index < current ? "done" : index === current ? "current" : "upcoming",
+  }));
+}
+
+export interface ProRate {
+  /** Share of pro team drafts that banned the hero. */
+  banned: number;
+  /** Share of team drafts with protects known that protected it; null when none are known. */
+  protected: number | null;
+}
+
+/** Pro ban and protect shares per hero, to show beside the pool while practising. */
+export function proRates(summary: DraftSummary): Record<string, ProRate> {
+  const { teamDrafts, withProtects } = summary.sample;
+  if (teamDrafts === 0) return {};
+  return Object.fromEntries(
+    summary.rows.map((r) => [
+      r.hero.id,
+      {
+        banned: r.banned / teamDrafts,
+        protected: withProtects > 0 ? r.protected / withProtects : null,
+      },
+    ]),
+  );
 }

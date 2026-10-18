@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import { IGNITE_2026 } from "./draft";
-import { applyMove, currentTurn, moveProblem, outcome, type SimMove } from "./draftSim";
+import {
+  applyMove,
+  currentTurn,
+  moveProblem,
+  outcome,
+  proRates,
+  slotPlan,
+  timeline,
+  type SimMove,
+} from "./draftSim";
 
 function play(moves: [0 | 1, string][]): SimMove[] {
   return moves.reduce<SimMove[]>(
@@ -101,5 +110,52 @@ describe("draft simulator edges", () => {
     }
     expect(moves).toHaveLength(14);
     expect(moveProblem(IGNITE_2026, moves, 0, "anyone")).toEqual({ kind: "finished" });
+  });
+});
+
+describe("draft board", () => {
+  it("gives each Ignite 2026 team five ban slots and two protect slots", () => {
+    expect(slotPlan(IGNITE_2026, 0)).toEqual({ bans: 5, protects: 2 });
+    expect(slotPlan(IGNITE_2026, 1)).toEqual({ bans: 5, protects: 2 });
+  });
+
+  it("marks steps done, current and upcoming, with each step's picks", () => {
+    const steps = timeline(
+      IGNITE_2026,
+      play([
+        [1, "loki"],
+        [0, "mantis"],
+      ]),
+    );
+    expect(steps).toHaveLength(11);
+    expect(steps[0]).toMatchObject({
+      state: "done",
+      picks: [
+        { camp: 1, heroId: "loki" },
+        { camp: 0, heroId: "mantis" },
+      ],
+    });
+    expect(steps[1]).toMatchObject({
+      state: "current",
+      actor: "first",
+      kind: "protect",
+      picks: [],
+    });
+    expect(steps[2]?.state).toBe("upcoming");
+  });
+
+  it("reads pro shares against their own denominators, and none when protects aren't known", () => {
+    const hero = { id: "loki", name: "Loki", role: "Strategist", portraitUrl: null };
+    const rates = proRates({
+      rows: [{ hero, played: 3, banned: 6, protected: 2, presentMaps: 5 }],
+      sample: { teamDrafts: 8, maps: 4, series: 2, withProtects: 4 },
+    });
+    expect(rates.loki).toEqual({ banned: 0.75, protected: 0.5 });
+    expect(
+      proRates({
+        rows: [{ hero, played: 1, banned: 1, protected: 0, presentMaps: 1 }],
+        sample: { teamDrafts: 2, maps: 1, series: 1, withProtects: 0 },
+      }).loki?.protected,
+    ).toBeNull();
   });
 });
