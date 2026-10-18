@@ -4,6 +4,7 @@ import {
   IGNITE_2026,
   filterDrafts,
   formatDeviations,
+  statsFollowingFormat,
   summariseDrafts,
   toTeamDrafts,
   type TeamDraft,
@@ -126,5 +127,35 @@ describe("formatDeviations past the end", () => {
   it("reports a step the format doesn't have", () => {
     const extra: DraftAction = { phase: 11, side: 1, camp: 0, kind: "ban", hero: hero("x") };
     expect(formatDeviations([extra], IGNITE_2026)).toContain("step 11 is past the format's end");
+  });
+});
+
+describe("statsFollowingFormat", () => {
+  const followsIgnite: DraftAction[] = IGNITE_2026.steps.flatMap((step, phase) =>
+    ([0, 1] as const)
+      .filter((camp) => step.actor === "both" || (step.actor === "first") === (camp === 0))
+      .map((camp) => ({
+        phase,
+        side: camp === 0 ? 1 : 2,
+        camp,
+        kind: step.kind,
+        hero: hero(`h${phase}-${camp}`),
+      })),
+  );
+
+  it("keeps only maps whose recorded order follows the format, dropping unordered ones", () => {
+    expect(formatDeviations(followsIgnite, IGNITE_2026)).toEqual([]);
+    const kept = statsFollowingFormat(
+      [
+        series([
+          aMapStats({ map: "Midtown", index: 1, draft: followsIgnite }),
+          aMapStats({ map: "Krakoa", index: 2, draft: null }),
+          aMapStats({ map: "Thebes", index: 3, draft: followsIgnite.slice(1) }),
+        ]),
+        series([aMapStats({ map: "Arakko", draft: null })]),
+      ],
+      IGNITE_2026,
+    );
+    expect(kept.map((s) => s.maps.map((m) => m.map))).toEqual([["Midtown"]]);
   });
 });

@@ -247,6 +247,20 @@ export interface DraftCoverage {
   newestFetchedAt: string | null;
 }
 
+/**
+ * Only the maps whose recorded draft follows the format step for step, so shares shown beside a
+ * practice board aren't diluted by maps drafted another way or with no recorded order.
+ */
+export function statsFollowingFormat(
+  stats: readonly MatchStats[],
+  format: DraftFormat,
+): MatchStats[] {
+  return stats.flatMap((s) => {
+    const maps = s.maps.filter((m) => m.draft && formatDeviations(m.draft, format).length === 0);
+    return maps.length > 0 ? [{ ...s, maps }] : [];
+  });
+}
+
 export function draftCoverage(stats: readonly MatchStats[], format: DraftFormat): DraftCoverage {
   const maps = stats.flatMap((s) => s.maps);
   const ordered = maps.flatMap((m) => (m.draft ? [m.draft] : []));
