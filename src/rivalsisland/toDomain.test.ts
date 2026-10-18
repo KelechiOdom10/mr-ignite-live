@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
+import { groupBySeason, seasonRecord } from "@/domain/player";
+
 import { rivalsIslandFixture, RECORDED_UIDS } from "../../test/fakeRivalsIsland";
-import { MatchDetailSchema } from "./schemas";
-import { toMatchDetail } from "./toDomain";
+import { CareerResponseSchema, MatchDetailSchema, MatchHistoryResponseSchema } from "./schemas";
+import { toHistoryPage, toMatchDetail, toProfile } from "./toDomain";
 
 describe("toMatchDetail", () => {
   it("splits the recorded match into its two teams with each player's most-played hero first", () => {
@@ -21,5 +23,33 @@ describe("toMatchDetail", () => {
       expect(times).toEqual([...times].sort((a, b) => b - a));
     }
     expect(match.draft.filter((d) => d.action === "ban")).toHaveLength(6);
+  });
+});
+
+describe("season scope", () => {
+  const freshness = { fetchedAt: 0, stale: false };
+
+  it("splits Sypeh's history at the 10.5 reset: one match this season, 19 from 10.0", () => {
+    const page = toHistoryPage(
+      MatchHistoryResponseSchema.parse(rivalsIslandFixture("history-sypeh")),
+      freshness,
+    );
+    expect(groupBySeason(page.rows).map((g) => [g.season, g.rows.length])).toEqual([
+      ["10.5", 1],
+      ["10.0", 19],
+    ]);
+  });
+
+  it("gives Sypeh's single 10.5 match no win rate, but TrqstMe's 58 a real one", () => {
+    const sypeh = toProfile(
+      CareerResponseSchema.parse(rivalsIslandFixture("career-sypeh")),
+      new Map(),
+    );
+    expect(seasonRecord(sypeh)).toEqual({ kind: "few", season: "10.5", matches: 1, wins: 1 });
+    const trqstMe = toProfile(
+      CareerResponseSchema.parse(rivalsIslandFixture("player-career")),
+      new Map(),
+    );
+    expect(seasonRecord(trqstMe)).toMatchObject({ kind: "enough", matches: 58, wins: 37 });
   });
 });

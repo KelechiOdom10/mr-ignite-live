@@ -1,6 +1,21 @@
 import { describe, expect, it } from "vitest";
 
-import { recentHeroes, UidSchema, type MatchDetail, type MatchPlayer } from "./player";
+import {
+  groupBySeason,
+  MIN_MATCHES_FOR_WIN_RATE,
+  parseRecentPlayers,
+  RECENT_PLAYERS_LIMIT,
+  rememberPlayer,
+  searchableName,
+  searchPrefill,
+  recentHeroes,
+  seasonRecord,
+  UidSchema,
+  type HistoryRow,
+  type MatchDetail,
+  type MatchPlayer,
+  type PlayerProfile,
+} from "./player";
 
 const me = UidSchema.parse("670067075");
 const other = UidSchema.parse("1124326809");
@@ -55,5 +70,118 @@ describe("recentHeroes", () => {
       ["Luna Snow", 500],
       ["Bruce Banner", 400],
     ]);
+  });
+});
+
+function profile(season: string | null, seasonMatches: number | null, seasonWins: number | null) {
+  const rank = { name: null, level: null, score: null };
+  const p: PlayerProfile = {
+    uid: me,
+    name: "me",
+    level: null,
+    club: null,
+    iconUrl: null,
+    signatureHero: null,
+    season,
+    rank,
+    peakRank: rank,
+    seasonWins,
+    seasonMatches,
+    lastOnline: null,
+  };
+  return p;
+}
+
+describe("seasonRecord", () => {
+  it("withholds a win rate until the season has enough matches", () => {
+    expect(seasonRecord(profile("10.5", MIN_MATCHES_FOR_WIN_RATE - 1, 9)).kind).toBe("few");
+    expect(seasonRecord(profile("10.5", MIN_MATCHES_FOR_WIN_RATE, 5))).toMatchObject({
+      kind: "enough",
+      winRate: 0.5,
+    });
+  });
+
+  it("tells no matches this season apart from an unknown count", () => {
+    expect(seasonRecord(profile("10.5", 0, 0)).kind).toBe("none");
+    expect(seasonRecord(profile("10.5", null, null)).kind).toBe("unknown");
+    expect(seasonRecord(profile(null, 3, 1)).kind).toBe("unknown");
+  });
+
+  it("doesn't turn a missing win count into a 0% season", () => {
+    expect(seasonRecord(profile("10.5", 12, null)).kind).toBe("unknown");
+  });
+});
+
+describe("groupBySeason", () => {
+  function row(matchUid: string, season: string | null): HistoryRow {
+    return {
+      matchUid,
+      playedAt: "2026-10-16T15:00:00Z",
+      season,
+      mode: null,
+      map: null,
+      category: null,
+      result: "win",
+      score: null,
+      kills: 0,
+      deaths: 0,
+      assists: 0,
+      kda: null,
+      mvp: false,
+      svp: false,
+      leftGame: false,
+      rankChange: null,
+      durationSeconds: 600,
+    };
+  }
+
+  it("keeps order and starts a new group at each season change", () => {
+    const groups = groupBySeason([row("a", "10.5"), row("b", "10.0"), row("c", "10.0")]);
+    expect(groups.map((g) => [g.season, g.rows.map((r) => r.matchUid)])).toEqual([
+      ["10.5", ["a"]],
+      ["10.0", ["b", "c"]],
+    ]);
+  });
+});
+
+describe("recent players", () => {
+  it("drops malformed storage instead of trusting it", () => {
+    expect(parseRecentPlayers("not json")).toEqual([]);
+    expect(parseRecentPlayers('{"uid":"1"}')).toEqual([]);
+    expect(
+      parseRecentPlayers('[{"uid":"670067075","name":"Sypeh"},{"uid":"0","name":"bad uid"},7]'),
+    ).toEqual([{ uid: me, name: "Sypeh" }]);
+  });
+
+  it("moves a revisited player to the front without duplicating, capped", () => {
+    const many = Array.from({ length: RECENT_PLAYERS_LIMIT }, (_, i) => ({
+      uid: UidSchema.parse(String(i + 1)),
+      name: `p${i + 1}`,
+    }));
+    const next = rememberPlayer(many, { uid: UidSchema.parse("3"), name: "p3 renamed" });
+    expect(next).toHaveLength(RECENT_PLAYERS_LIMIT);
+    expect(next[0]).toEqual({ uid: "3", name: "p3 renamed" });
+    expect(next.filter((p) => p.uid === "3")).toHaveLength(1);
+  });
+});
+
+describe("searchableName", () => {
+  it("only offers names RivalsIsland's exact search accepts", () => {
+    expect(searchableName(" Sypeh ")).toBe("Sypeh");
+    expect(searchableName("")).toBeNull();
+    expect(searchableName("a".repeat(17))).toBeNull();
+  });
+});
+
+describe("searchPrefill", () => {
+  it("prefills and focuses a valid name, and drops a blank or over-long one", () => {
+    expect(searchPrefill(" Sypeh ", undefined)).toEqual({ name: "Sypeh", focus: true });
+    expect(searchPrefill("   ", undefined)).toEqual({ name: "", focus: false });
+    expect(searchPrefill("a".repeat(17), undefined)).toEqual({ name: "", focus: false });
+  });
+
+  it("focuses an empty field only when global search asked for it", () => {
+    expect(searchPrefill(undefined, "name")).toEqual({ name: "", focus: true });
+    expect(searchPrefill(undefined, "other")).toEqual({ name: "", focus: false });
   });
 });

@@ -1,8 +1,14 @@
 import { Form, useForm } from "@void/react";
 import { Search } from "lucide-react";
 
-export function SearchForm() {
-  const form = useForm("/players", { name: "" });
+export function SearchForm({
+  initialName = "",
+  autoFocus = false,
+}: {
+  initialName?: string;
+  autoFocus?: boolean;
+}) {
+  const form = useForm("/players", { name: initialName });
   return (
     <Form form={form} className="space-y-1.5">
       <label htmlFor="player-name" className="text-sm font-medium">
@@ -16,6 +22,7 @@ export function SearchForm() {
           onChange={(e) => form.setData("name", e.target.value)}
           maxLength={16}
           autoComplete="off"
+          autoFocus={autoFocus}
           spellCheck={false}
           placeholder="Sypeh"
           aria-invalid={form.errors.name ? true : undefined}

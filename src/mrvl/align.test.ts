@@ -5,7 +5,7 @@ import { MatchStatsSchema } from "@/domain/stats";
 
 import { aMatch } from "../../test/builders";
 import { mrvlFixture } from "../../test/fixtures";
-import { findMrvlMatch, toMapOverrides, toMatchStats } from "./align";
+import { findMrvlMatch, toHeroLine, toMapOverrides, toMatchStats } from "./align";
 import {
   MrvlMatchPageSchema,
   MrvlMatchSummarySchema,
@@ -70,6 +70,19 @@ describe("toMatchStats on a recorded series", () => {
     const [first] = stats.maps;
     expect(first?.teams.map((t) => t.name)).toEqual(["FlyQuest", "100 Thieves"]);
     expect(first?.teams.map((t) => t.won)).toEqual([false, true]);
+  });
+
+  it("keeps each hero's own line, so Tonez's 13 kills split across the four heroes he played", () => {
+    const tonez = stats.maps
+      .flatMap((m) => m.teams.flatMap((t) => t.players))
+      .find((p) => p.name === "Tonez" && p.heroes.length === 4);
+    expect(tonez?.heroes.map((h) => [h.name, h.line?.kills])).toEqual([
+      ["The Thing", 5],
+      ["Hulk", 6],
+      ["Peni Parker", 0],
+      ["Groot", 2],
+    ]);
+    expect(tonez?.heroes.reduce((sum, h) => sum + (h.line?.kills ?? 0), 0)).toBe(tonez?.kills);
   });
 
   it("carries MVP and SVP per map", () => {
@@ -203,5 +216,34 @@ describe("toMatchStats on a recorded series", () => {
       [3, 1, 3, 2],
       [4, 1, 3, 0],
     ]);
+  });
+});
+
+describe("toHeroLine", () => {
+  it("drops a hero line with any count missing rather than showing the gap as zero", () => {
+    expect(
+      toHeroLine({ kills: 3, deaths: 1, assists: 2, finalHits: 1, damage: 10, damageTaken: 5 }),
+    ).toBeNull();
+    expect(toHeroLine(null)).toBeNull();
+    expect(
+      toHeroLine({
+        kills: 3,
+        deaths: 1,
+        assists: 2,
+        finalHits: 1,
+        damage: 10,
+        damageTaken: 5,
+        healing: 0,
+      }),
+    ).toEqual({
+      kills: 3,
+      deaths: 1,
+      assists: 2,
+      finalHits: 1,
+      damage: 10,
+      damageTaken: 5,
+      healing: 0,
+      accuracy: null,
+    });
   });
 });

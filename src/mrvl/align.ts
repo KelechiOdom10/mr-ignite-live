@@ -2,6 +2,7 @@ import type { MapOverride, MapWinner, Match, Team } from "@/domain/model";
 import type {
   DraftAction,
   Hero,
+  HeroLine,
   MapStats,
   MatchStats,
   PlayerStats,
@@ -118,6 +119,35 @@ function toHero(hero: {
   };
 }
 
+type MrvlHeroPlayed = NonNullable<MrvlScoreboardTeam["players"][number]["heroesPlayed"]>[number];
+
+/** A hero's line only when mrvl sent every count; a partial one would show gaps as zeros. */
+export function toHeroLine(stats: MrvlHeroPlayed["stats"]): HeroLine | null {
+  if (!stats) return null;
+  const { kills, deaths, assists, finalHits, damage, damageTaken, healing } = stats;
+  if (
+    kills == null ||
+    deaths == null ||
+    assists == null ||
+    finalHits == null ||
+    damage == null ||
+    damageTaken == null ||
+    healing == null
+  ) {
+    return null;
+  }
+  return {
+    kills,
+    deaths,
+    assists,
+    finalHits,
+    damage,
+    damageTaken,
+    healing,
+    accuracy: stats.accuracy ?? null,
+  };
+}
+
 function toPlayer(p: MrvlScoreboardTeam["players"][number]): PlayerStats {
   const s = p.stats ?? {};
   return {
@@ -127,6 +157,7 @@ function toPlayer(p: MrvlScoreboardTeam["players"][number]): PlayerStats {
     heroes: (p.heroesPlayed ?? []).map((h) => ({
       ...toHero(h.hero),
       playSeconds: h.playTimeSeconds ?? 0,
+      line: toHeroLine(h.stats),
     })),
     kills: s.kills ?? 0,
     deaths: s.deaths ?? 0,

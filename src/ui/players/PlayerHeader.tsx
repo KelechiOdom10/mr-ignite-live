@@ -1,7 +1,14 @@
 import { Form, useForm } from "@void/react";
 import { RefreshCw, Star } from "lucide-react";
 
-import type { Freshness as FreshnessData, PlayerProfile, Uid } from "@/domain/player";
+import {
+  MIN_MATCHES_FOR_WIN_RATE,
+  seasonRecord,
+  type Freshness as FreshnessData,
+  type PlayerProfile,
+  type SeasonRecord,
+  type Uid,
+} from "@/domain/player";
 import { cn } from "@/lib/utils";
 
 import { Freshness } from "./Freshness";
@@ -67,6 +74,37 @@ export function RefreshButton({
   );
 }
 
+function plural(n: number, word: string): string {
+  return `${n} ${word}${n === 1 ? "" : "es"}`;
+}
+
+/** This season only: the career tiles cover every season, and history can span a reset. */
+function SeasonSummary({ record }: { record: SeasonRecord }) {
+  if (record.kind === "unknown") {
+    return record.season ? (
+      <span className="text-muted-foreground">Season {record.season}</span>
+    ) : null;
+  }
+  const label = <span className="text-foreground">Ranked this season ({record.season})</span>;
+  if (record.kind === "none") {
+    return <span className="text-muted-foreground">{label}: no matches yet</span>;
+  }
+  if (record.kind === "few") {
+    return (
+      <span className="text-muted-foreground">
+        {label}: {record.wins}W of {plural(record.matches, "match")} · too few for a win rate (needs{" "}
+        {MIN_MATCHES_FOR_WIN_RATE})
+      </span>
+    );
+  }
+  return (
+    <span className="text-muted-foreground">
+      {label}: {record.wins}W of {plural(record.matches, "match")} (
+      {Math.round(record.winRate * 100)}%)
+    </span>
+  );
+}
+
 export function PlayerHeader({
   profile,
   freshness,
@@ -78,10 +116,6 @@ export function PlayerHeader({
   now: number;
   actions: React.ReactNode;
 }) {
-  const winRate =
-    profile.seasonMatches && profile.seasonWins !== null
-      ? Math.round((profile.seasonWins / profile.seasonMatches) * 100)
-      : null;
   return (
     <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div className="flex min-w-0 items-center gap-4">
@@ -102,14 +136,7 @@ export function PlayerHeader({
                 Peak <RankBadge rank={profile.peakRank} className="ml-1" />
               </span>
             )}
-            {profile.season && (
-              <span className="text-muted-foreground">
-                Season {profile.season}
-                {profile.seasonMatches !== null &&
-                  ` · ${profile.seasonWins ?? 0}W of ${profile.seasonMatches}`}
-                {winRate !== null && ` (${winRate}%)`}
-              </span>
-            )}
+            <SeasonSummary record={seasonRecord(profile)} />
           </div>
           <div className="mt-1">
             <Freshness freshness={freshness} now={now} />

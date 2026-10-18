@@ -1,6 +1,6 @@
 import { Link } from "@void/react";
 
-import type { HistoryRow, Result } from "@/domain/player";
+import { groupBySeason, type HistoryRow, type Result } from "@/domain/player";
 import { cn } from "@/lib/utils";
 
 import { AwardBadge } from "../AwardBadge";
@@ -13,8 +13,21 @@ const RESULT: Record<Result, { label: string; bar: string; text: string }> = {
   abandoned: { label: "Abandoned", bar: "bg-muted-foreground", text: "text-muted-foreground" },
 };
 
-export function HistoryList({ rows, now }: { rows: HistoryRow[]; now: number }) {
-  const hydrated = useHydrated();
+function seasonHeading(season: string | null, currentSeason: string | null): string {
+  if (season === null) return "Season unknown";
+  return season === currentSeason ? `Season ${season} · this season` : `Season ${season}`;
+}
+
+/** Rows grouped by season, so matches from before a reset don't read as this season's. */
+export function HistoryList({
+  rows,
+  currentSeason,
+  now,
+}: {
+  rows: HistoryRow[];
+  currentSeason: string | null;
+  now: number;
+}) {
   if (rows.length === 0) {
     return (
       <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
@@ -22,6 +35,25 @@ export function HistoryList({ rows, now }: { rows: HistoryRow[]; now: number }) 
       </p>
     );
   }
+  return (
+    <div className="space-y-4">
+      {groupBySeason(rows).map((group, i) => (
+        <section key={`${group.season}-${i}`} aria-labelledby={`season-group-${i}`}>
+          <h3 className="mb-2 flex items-baseline justify-between gap-2 text-xs font-medium text-muted-foreground">
+            <span id={`season-group-${i}`}>{seasonHeading(group.season, currentSeason)}</span>
+            <span>
+              {group.rows.length} {group.rows.length === 1 ? "match" : "matches"} on this page
+            </span>
+          </h3>
+          <HistoryRows rows={group.rows} now={now} />
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function HistoryRows({ rows, now }: { rows: HistoryRow[]; now: number }) {
+  const hydrated = useHydrated();
   return (
     <ol className="overflow-hidden rounded-lg border divide-y">
       {rows.map((m) => {

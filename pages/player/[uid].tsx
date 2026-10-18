@@ -8,6 +8,7 @@ import { HeroesPanel } from "@/ui/players/HeroesPanel";
 import { HistoryList } from "@/ui/players/HistoryList";
 import { FavouriteButton, PlayerHeader, RefreshButton } from "@/ui/players/PlayerHeader";
 import { ProblemNotice } from "@/ui/players/ProblemNotice";
+import { useRememberPlayer } from "@/ui/players/recentPlayers";
 import { useLiveSnapshot } from "@/ui/useLiveSnapshot";
 
 import type { Props } from "./[uid].server";
@@ -27,6 +28,7 @@ export default function PlayerPage({
   isFavourite,
 }: Props) {
   const { snapshot, connection, now } = useLiveSnapshot(initial, { view: "events" });
+  useRememberPlayer(uid && player?.ok ? { uid, name: player.value.profile.name } : null);
   if (!uid || !player || !history || !heroes) {
     return (
       <AppShell snapshot={snapshot} connection={connection} now={now}>
@@ -75,7 +77,7 @@ export default function PlayerPage({
               />
               <section aria-labelledby="career" className="space-y-2">
                 <h2 id="career" className="text-sm font-semibold text-muted-foreground">
-                  Career
+                  Career · every season and mode
                 </h2>
                 <CareerTiles career={player.value.career} />
               </section>
@@ -110,7 +112,11 @@ export default function PlayerPage({
           </div>
           {history.ok ? (
             <>
-              <HistoryList rows={history.value.rows} now={now} />
+              <HistoryList
+                rows={history.value.rows}
+                currentSeason={player.ok ? player.value.profile.season : null}
+                now={now}
+              />
               <div className="flex items-center justify-between">
                 <Freshness freshness={history.value.freshness} now={now} />
                 {history.value.hasMore && query.page < 50 && (

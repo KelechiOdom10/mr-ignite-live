@@ -1,19 +1,20 @@
 import { defineHandler, defineHead, type InferProps } from "void";
 import { z } from "zod";
 
-import { problemMessage } from "@/domain/player";
+import { PlayerNameQuerySchema, problemMessage, searchPrefill } from "@/domain/player";
 import { linkableUid } from "@/rivalsisland/toDomain";
 
 import { favourites, loadPlayers, shellSnapshot } from "../src/players";
 
 export type Props = InferProps<typeof loader>;
 
-export const loader = defineHandler(async () => {
+export const loader = defineHandler(async (c) => {
   const [snapshot, saved] = await Promise.all([shellSnapshot(), favourites.list()]);
-  return { snapshot, favourites: saved };
+  const prefill = searchPrefill(c.req.query("name"), c.req.query("focus"));
+  return { snapshot, favourites: saved, prefill };
 });
 
-const SearchBody = z.object({ name: z.string().trim().min(1).max(16) });
+const SearchBody = z.object({ name: PlayerNameQuerySchema });
 
 export const action = defineHandler.withValidator({ body: SearchBody })(async (c, { body }) => {
   const found = await loadPlayers(

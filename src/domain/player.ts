@@ -144,6 +144,7 @@ export type Result = z.infer<typeof ResultSchema>;
 export const HistoryRowSchema = z.object({
   matchUid: z.string(),
   playedAt: z.iso.datetime(),
+  season: z.string().nullable(),
   mode: z.string().nullable(),
   map: z.string().nullable(),
   category: z.string().nullable(),
@@ -249,4 +250,92 @@ export function recentHeroes(uid: Uid, matches: readonly MatchDetail[], limit = 
     }
   }
   return [...byHero.values()].sort((a, b) => b.playSeconds - a.playSeconds).slice(0, limit);
+}
+
+/** Below this many matches a season win rate is noise, so it isn't shown. */
+export const MIN_MATCHES_FOR_WIN_RATE = 10;
+
+export type SeasonRecord =
+  | { kind: "unknown"; season: string | null }
+  | { kind: "none"; season: string }
+  | { kind: "few"; season: string; matches: number; wins: number }
+  | { kind: "enough"; season: string; matches: number; wins: number; winRate: number };
+
+/**
+ * The current season's record from the profile. Rank carries over a season reset, but the match
+ * count starts again, so a veteran can have one match this season: say so instead of a rate.
+ */
+export function seasonRecord(profile: PlayerProfile): SeasonRecord {
+  const { season, seasonMatches: matches, seasonWins } = profile;
+  if (season === null || matches === null) return { kind: "unknown", season };
+  if (matches === 0) return { kind: "none", season };
+  // A missing win count isn't zero wins.
+  if (seasonWins === null) return { kind: "unknown", season };
+  const wins = seasonWins;
+  if (matches < MIN_MATCHES_FOR_WIN_RATE) return { kind: "few", season, matches, wins };
+  return { kind: "enough", season, matches, wins, winRate: wins / matches };
+}
+
+export interface SeasonGroup {
+  season: string | null;
+  rows: HistoryRow[];
+}
+
+/** Consecutive history rows from the same season, newest first, so the list can mark each reset. */
+export function groupBySeason(rows: readonly HistoryRow[]): SeasonGroup[] {
+  const groups: SeasonGroup[] = [];
+  for (const row of rows) {
+    const last = groups.at(-1);
+    if (last && last.season === row.season) last.rows.push(row);
+    else groups.push({ season: row.season, rows: [row] });
+  }
+  return groups;
+}
+
+export const RecentPlayerSchema = z.object({ uid: UidSchema, name: z.string().min(1).max(64) });
+export type RecentPlayer = z.infer<typeof RecentPlayerSchema>;
+
+export const RECENT_PLAYERS_LIMIT = 8;
+
+/** Players opened in this browser, newest first; anything malformed is dropped rather than trusted. */
+export function parseRecentPlayers(raw: string | null): RecentPlayer[] {
+  if (!raw) return [];
+  try {
+    const parsed = z.array(z.unknown()).safeParse(JSON.parse(raw));
+    if (!parsed.success) return [];
+    return parsed.data
+      .flatMap((item) => {
+        const player = RecentPlayerSchema.safeParse(item);
+        return player.success ? [player.data] : [];
+      })
+      .slice(0, RECENT_PLAYERS_LIMIT);
+  } catch {
+    return [];
+  }
+}
+
+export function rememberPlayer(
+  list: readonly RecentPlayer[],
+  player: RecentPlayer,
+): RecentPlayer[] {
+  return [player, ...list.filter((p) => p.uid !== player.uid)].slice(0, RECENT_PLAYERS_LIMIT);
+}
+
+/** RivalsIsland's search takes an exact in-game name of up to 16 characters. */
+export const PlayerNameQuerySchema = z.string().trim().min(1).max(16);
+
+/** A name worth offering as a ranked lookup; esports names can be longer than an in-game name. */
+export function searchableName(name: string): string | null {
+  const parsed = PlayerNameQuerySchema.safeParse(name);
+  return parsed.success ? parsed.data : null;
+}
+
+/**
+ * What /players prefills from its query. A name is never searched automatically: a search can
+ * cost credits, so the reader presses Search.
+ */
+export function searchPrefill(name: string | undefined, focus: string | undefined) {
+  const parsed = PlayerNameQuerySchema.safeParse(name ?? "");
+  const prefilled = parsed.success ? parsed.data : "";
+  return { name: prefilled, focus: prefilled !== "" || focus === "name" };
 }

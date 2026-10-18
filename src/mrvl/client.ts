@@ -61,7 +61,13 @@ const ScoreboardPlayerSchema = z.object({
   linkedNationality: z.string().nullish(),
   hero: HeroSchema.nullish(),
   heroesPlayed: z
-    .array(z.object({ hero: HeroSchema, playTimeSeconds: z.number().nullish() }))
+    .array(
+      z.object({
+        hero: HeroSchema,
+        playTimeSeconds: z.number().nullish(),
+        stats: PlayerStatsNumbersSchema.nullish(),
+      }),
+    )
     .nullish(),
   stats: PlayerStatsNumbersSchema.nullish(),
   isMvp: z.boolean().nullish(),

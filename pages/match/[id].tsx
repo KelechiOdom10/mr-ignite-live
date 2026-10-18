@@ -1,9 +1,9 @@
 import { Link } from "@void/react";
-import { ExternalLink, Play } from "lucide-react";
+import { ExternalLink, Play, TriangleAlert } from "lucide-react";
 
 import { Card } from "@/components/motion/card";
 import { NotFoundGlitch } from "@/components/motion/not-found";
-import { mapInfo } from "@/domain/maps";
+import { mapInfo, mapNameConflicts, type MapNameConflict } from "@/domain/maps";
 import type { MapSlotView, MatchView, SideView } from "@/domain/matchView";
 import type { IgniteEvent, Match, Snapshot, Team } from "@/domain/model";
 import { eventSlug } from "@/domain/scope";
@@ -106,7 +106,10 @@ function TeamSide({
     >
       <TeamLogo team={team} info={team ? snapshot.teams[team.name] : undefined} size={64} />
       <div
-        className={cn("min-w-0 text-center", align === "end" ? "sm:text-right" : "sm:text-left")}
+        className={cn(
+          "max-w-full min-w-0 text-center",
+          align === "end" ? "sm:text-right" : "sm:text-left",
+        )}
       >
         <div className="truncate text-lg font-semibold sm:text-2xl" title={side.name}>
           {side.name}
@@ -122,11 +125,13 @@ function MapCard({
   view,
   snapshot,
   mvp,
+  conflict,
 }: {
   slot: MapSlotView;
   view: MatchView;
   snapshot: Snapshot;
   mvp: PlayerStats | undefined;
+  conflict: MapNameConflict | undefined;
 }) {
   if (slot.kind === "hidden") return <HiddenMapCard index={slot.index} />;
   const winner = slot.kind === "played" ? (slot.winner === 1 ? view.side1 : view.side2).team : null;
@@ -162,6 +167,12 @@ function MapCard({
         <div className="mt-1 font-medium">
           {slot.map ?? (slot.kind === "current" ? "Picking…" : "TBD")}
         </div>
+        {conflict && (
+          <p className="mt-1 inline-flex items-center gap-1 rounded bg-primary/15 px-1.5 py-0.5 text-[0.7rem] text-primary">
+            <TriangleAlert className="size-3" aria-hidden />
+            mrvl says {conflict.mrvl}
+          </p>
+        )}
         {mvp && (
           <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
             {mvp.hero && <HeroPortrait hero={mvp.hero} size={22} />}
@@ -228,6 +239,7 @@ function MatchDetail({
   initialStats: MatchStats | null;
 }) {
   const stats = useMatchStats(match.id, initialStats, snapshot.servedAt);
+  const conflicts = mapNameConflicts(match.maps, stats?.maps ?? []);
   const hydrated = useHydrated();
   const view = useMatchView(match, now, snapshot.matches);
   const event: IgniteEvent | undefined = snapshot.events.find((e) => e.id === match.eventId);
@@ -263,7 +275,7 @@ function MatchDetail({
               </div>
             )}
           </div>
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 px-5 py-8 sm:gap-8 sm:px-8 sm:py-10">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 px-5 py-8 sm:gap-8 sm:px-8 sm:py-10">
             <TeamSide side={view.side1} snapshot={snapshot} align="end" />
             <ScoreCenter match={match} view={view} now={now} />
             <TeamSide side={view.side2} snapshot={snapshot} align="start" />
@@ -336,6 +348,19 @@ function MatchDetail({
           <h2 id="maps-heading" className="text-lg font-semibold">
             Maps
           </h2>
+          {view.revealed && conflicts.length > 0 && (
+            <p
+              role="note"
+              className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-sm"
+            >
+              Liquipedia and mrvl.net disagree on{" "}
+              {conflicts
+                .map((c) => `map ${c.index} (Liquipedia: ${c.liquipedia}; mrvl: ${c.mrvl})`)
+                .join(", ")}
+              . Rivals Hub shows both names and doesn&apos;t pick one; the stats below are
+              mrvl&apos;s.
+            </p>
+          )}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {view.maps.map((slot) => (
               <MapCard
@@ -347,6 +372,7 @@ function MatchDetail({
                   .find((m) => m.index === slot.index)
                   ?.teams.flatMap((team) => team.players)
                   .find((p) => p.isMvp)}
+                conflict={conflicts.find((c) => c.index === slot.index)}
               />
             ))}
           </div>

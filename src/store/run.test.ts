@@ -215,6 +215,52 @@ describe("syncOnce on match day", () => {
     expect(backfilled.maps.every((m) => m.draft?.length === 14)).toBe(true);
   });
 
+  it("refetches a recent series indexed before per-hero lines were kept, once", async () => {
+    const day = matchDay();
+    await day.sync();
+    const key = `stats:v2:${FLY_100T}`;
+    const stored = StoredStats.parse(await day.store.get(key));
+    const withoutLines = {
+      ...stored,
+      maps: stored.maps.map((m) => ({
+        ...m,
+        teams: m.teams.map((t) => ({
+          ...t,
+          players: t.players.map((p) => ({
+            ...p,
+            heroes: p.heroes.map(({ line: _, ...h }) => h),
+          })),
+        })),
+      })),
+    };
+    await day.store.put(key, withoutLines);
+    const index = IndexSchema.parse(await day.store.get("stats-index:v2"));
+    await day.store.put("stats-index:v2", {
+      ...index,
+      [FLY_100T]: {
+        sourceMatchId: FLY_100T_MRVL_ID,
+        sourceUpdatedAt: index[FLY_100T]?.sourceUpdatedAt,
+        draftOrder: true,
+      },
+    });
+    const pageRequests = () =>
+      day.mrvl.requests.filter(
+        (r) => r.path === "matches:getPageData" && r.args.id === FLY_100T_MRVL_ID,
+      ).length;
+    const before = pageRequests();
+
+    await day.sync();
+    await day.sync();
+
+    expect(pageRequests() - before).toBe(1);
+    const backfilled = StoredStats.parse(await day.store.get(key));
+    const heroes = backfilled.maps.flatMap((m) =>
+      m.teams.flatMap((t) => t.players.flatMap((p) => p.heroes)),
+    );
+    expect(heroes.length).toBeGreaterThan(0);
+    expect(heroes.every((h) => h.line)).toBe(true);
+  });
+
   it("doesn't let one failing mrvl series page hold back the others, and retries it next run", async () => {
     const day = matchDay({ mrvl: { failingPages: [TLC_SWAMP_MRVL_ID] } });
 

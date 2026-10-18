@@ -8,7 +8,7 @@ import { useLiveSnapshot } from "@/ui/useLiveSnapshot";
 
 import type { Props } from "./players.server";
 
-export default function PlayersPage({ snapshot: initial, favourites }: Props) {
+export default function PlayersPage({ snapshot: initial, favourites, prefill }: Props) {
   const { snapshot, connection, now } = useLiveSnapshot(initial, { view: "events" });
   return (
     <AppShell snapshot={snapshot} connection={connection} now={now}>
@@ -20,7 +20,7 @@ export default function PlayersPage({ snapshot: initial, favourites }: Props) {
         <PlayersTabs current="/players" />
       </div>
       <div className="mt-6 max-w-xl">
-        <SearchForm />
+        <SearchForm initialName={prefill.name} autoFocus={prefill.focus} />
       </div>
       <section aria-labelledby="favourites" className="mt-8 space-y-3">
         <h2 id="favourites" className="text-lg font-semibold">

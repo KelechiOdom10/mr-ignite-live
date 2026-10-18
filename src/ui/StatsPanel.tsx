@@ -1,15 +1,20 @@
-import { BarChart3 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Link } from "@void/react";
+import { BarChart3, UserSearch } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/motion/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/motion/tabs";
 import type { MatchView } from "@/domain/matchView";
 import type { Match, Snapshot } from "@/domain/model";
+import { searchableName } from "@/domain/player";
 import {
+  combinePlayers,
   MatchStatsSchema,
   type Hero,
+  type HeroUsage,
+  type SeriesPlayer,
   type MatchStats,
-  type PlayerStats,
   type TeamMapStats,
 } from "@/domain/stats";
 import { cn } from "@/lib/utils";
@@ -17,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { AwardBadge } from "./AwardBadge";
 import { proxiedImage } from "./images";
 import { TeamLogo } from "./TeamMark";
+import { formatDuration } from "./time";
 
 const StatsResponseSchema = z.object({ stats: MatchStatsSchema.nullable() });
 
@@ -82,45 +88,138 @@ function HeroName({ hero }: { hero: Hero }) {
   );
 }
 
-interface Row extends PlayerStats {
-  mvpCount: number;
-  svpCount: number;
+function heroSummary(hero: HeroUsage, share: number | null): string {
+  const time = `${formatDuration(hero.playSeconds)} played${share === null ? "" : ` (${share}%)`}`;
+  const line = hero.line;
+  if (!line) return `${hero.name}: ${time}; per-hero stats not saved`;
+  return `${hero.name}: ${time}; ${line.kills} kills, ${line.deaths} deaths, ${line.assists} assists, ${number.format(line.damage)} damage, ${number.format(line.healing)} healing`;
 }
 
-function combine(teams: TeamMapStats[]): Row[] {
-  const byName = new Map<string, Row>();
-  for (const team of teams) {
-    for (const p of team.players) {
-      const prev = byName.get(p.name);
-      if (!prev) {
-        byName.set(p.name, { ...p, mvpCount: p.isMvp ? 1 : 0, svpCount: p.isSvp ? 1 : 0 });
-        continue;
-      }
-      const heroes = new Map(prev.heroes.map((h) => [h.id, { ...h }]));
-      for (const h of p.heroes) {
-        const existing = heroes.get(h.id);
-        heroes.set(
-          h.id,
-          existing ? { ...existing, playSeconds: existing.playSeconds + h.playSeconds } : h,
-        );
-      }
-      byName.set(p.name, {
-        ...prev,
-        heroes: [...heroes.values()].sort((a, b) => b.playSeconds - a.playSeconds),
-        kills: prev.kills + p.kills,
-        deaths: prev.deaths + p.deaths,
-        assists: prev.assists + p.assists,
-        finalHits: prev.finalHits + p.finalHits,
-        damage: prev.damage + p.damage,
-        damageTaken: prev.damageTaken + p.damageTaken,
-        healing: prev.healing + p.healing,
-        accuracy: prev.accuracy,
-        mvpCount: prev.mvpCount + (p.isMvp ? 1 : 0),
-        svpCount: prev.svpCount + (p.isSvp ? 1 : 0),
-      });
-    }
+const TRIGGER_CLASS =
+  "inline-flex items-center gap-2 rounded-md outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary";
+
+/**
+ * One hero's share of a player's map or series, opened from its portrait. The popover mounts on
+ * first use: a series page has a portrait per hero per player, and each mounted popover tracks
+ * scroll and resize. Its numbers are also in the trigger's name, since the panel is visual only.
+ */
+function HeroBreakdown({
+  hero,
+  totalSeconds,
+  combined,
+  showName,
+}: {
+  hero: HeroUsage;
+  totalSeconds: number;
+  combined: boolean;
+  showName: boolean;
+}) {
+  const [armed, setArmed] = useState(false);
+  const triggerRef = useRef<HTMLSpanElement>(null);
+  const share = totalSeconds > 0 ? Math.round((hero.playSeconds / totalSeconds) * 100) : null;
+  const summary = heroSummary(hero, share);
+  const face = (
+    <>
+      <HeroPortrait hero={hero} size={26} />
+      {showName && <span className="whitespace-nowrap text-foreground">{hero.name}</span>}
+    </>
+  );
+
+  useEffect(() => {
+    if (armed) triggerRef.current?.querySelector("button")?.focus();
+  }, [armed]);
+
+  if (!armed) {
+    return (
+      <button
+        type="button"
+        aria-label={summary}
+        onClick={() => setArmed(true)}
+        className={TRIGGER_CLASS}
+      >
+        {face}
+      </button>
+    );
   }
-  return [...byName.values()];
+
+  const line = hero.line;
+  const cells: [string, string][] = line
+    ? [
+        ["K / D / A", `${line.kills} / ${line.deaths} / ${line.assists}`],
+        ["Final hits", number.format(line.finalHits)],
+        ["Damage", number.format(line.damage)],
+        ["Taken", number.format(line.damageTaken)],
+        ["Healing", number.format(line.healing)],
+        ...(combined || line.accuracy === null
+          ? []
+          : ([["Accuracy", `${Math.round(line.accuracy)}%`]] as [string, string][])),
+      ]
+    : [];
+  return (
+    <span ref={triggerRef} className="inline-flex">
+      <Popover defaultOpen side="bottom" align="center" sideOffset={10} gooStrength={6}>
+        <PopoverTrigger>
+          <button type="button" aria-label={summary} className={TRIGGER_CLASS}>
+            {face}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-60 p-3 text-sm">
+          <div aria-hidden="true">
+            <div className="flex items-center gap-2">
+              <HeroPortrait hero={hero} size={32} />
+              <div className="min-w-0">
+                <p className="truncate font-medium text-foreground">{hero.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatDuration(hero.playSeconds)} played{share !== null && ` · ${share}%`}
+                  {combined && " · all maps"}
+                </p>
+              </div>
+            </div>
+            {line ? (
+              <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5">
+                {cells.map(([label, value]) => (
+                  <div key={label}>
+                    <dt className="text-xs text-muted-foreground">{label}</dt>
+                    <dd className="font-mono tabular-nums text-foreground">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : (
+              <p className="mt-3 text-xs text-muted-foreground">
+                Per-hero stats weren&apos;t saved when this {combined ? "series" : "map"} was
+                cached, so only time played is known.
+              </p>
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
+    </span>
+  );
+}
+
+/** Every hero a player used, most played first; each opens its own breakdown. */
+function HeroesPlayed({ player, combined }: { player: Row; combined: boolean }) {
+  const heroes = player.heroes.toSorted((a, b) => b.playSeconds - a.playSeconds);
+  const totalSeconds = heroes.reduce((sum, h) => sum + h.playSeconds, 0);
+  return (
+    <span className="flex flex-wrap items-center gap-1">
+      {heroes.map((h) => (
+        <HeroBreakdown
+          key={h.id}
+          hero={h}
+          totalSeconds={totalSeconds}
+          combined={combined}
+          showName={heroes.length === 1}
+        />
+      ))}
+    </span>
+  );
+}
+
+type Row = SeriesPlayer;
+
+function combine(teams: TeamMapStats[]): Row[] {
+  return combinePlayers(teams);
 }
 
 const number = new Intl.NumberFormat("en-US");
@@ -153,7 +252,7 @@ function StatsTable({
           </span>
         )}
       </div>
-      <div className="overflow-x-auto rounded-xl border">
+      <div className="relative overflow-x-auto rounded-xl border">
         <table className="w-full min-w-[44rem] text-sm">
           <thead className="bg-muted/50 text-xs text-muted-foreground">
             <tr>
@@ -187,6 +286,9 @@ function StatsTable({
                   Acc.
                 </th>
               )}
+              <th scope="col" className="w-8 px-1 py-2">
+                <span className="sr-only">Ranked lookup</span>
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -208,13 +310,8 @@ function StatsTable({
                   </span>
                 </th>
                 <td className="px-3 py-2 text-muted-foreground">
-                  {combined ? (
-                    <span className="flex items-center gap-1">
-                      {p.heroes.slice(0, 4).map((h) => (
-                        <HeroPortrait key={h.id} hero={h} size={26} />
-                      ))}
-                      <span className="sr-only">{p.heroes.map((h) => h.name).join(", ")}</span>
-                    </span>
+                  {p.heroes.length > 0 ? (
+                    <HeroesPlayed player={p} combined={combined} />
                   ) : p.hero ? (
                     <HeroName hero={p.hero} />
                   ) : null}
@@ -239,6 +336,9 @@ function StatsTable({
                     {p.accuracy === null ? "–" : `${Math.round(p.accuracy)}%`}
                   </td>
                 )}
+                <td className="px-1 py-2 text-right">
+                  <RankedLookup name={p.name} />
+                </td>
               </tr>
             ))}
           </tbody>
@@ -250,6 +350,25 @@ function StatsTable({
 
 function asRows(team: TeamMapStats): Row[] {
   return team.players.map((p) => ({ ...p, mvpCount: p.isMvp ? 1 : 0, svpCount: p.isSvp ? 1 : 0 }));
+}
+
+/**
+ * A lookup, not a link to a profile: mrvl names aren't tied to ranked accounts, and names repeat.
+ * It opens the player search prefilled, so the reader decides whether to search.
+ */
+function RankedLookup({ name }: { name: string }) {
+  const query = searchableName(name);
+  if (!query) return null;
+  return (
+    <Link
+      href={`/players?name=${encodeURIComponent(query)}`}
+      aria-label={`Look up ${name} among ranked players`}
+      title="Look up this name among ranked players"
+      className="inline-flex size-6 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+    >
+      <UserSearch className="size-3.5" aria-hidden />
+    </Link>
+  );
 }
 
 export function StatsPanel({
@@ -289,50 +408,58 @@ export function StatsPanel({
           MVP, SVP, heroes and player stats appear a minute or two after each map ends.
         </p>
       ) : (
-        <Tabs defaultValue="all" variant="underline">
-          <div className="-mx-4 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:px-0">
-            <TabsList aria-label="Map">
-              <TabsTrigger value="all" className="whitespace-nowrap">
-                All maps
-              </TabsTrigger>
-              {stats.maps.map((m) => (
-                <TabsTrigger key={m.index} value={String(m.index)} className="whitespace-nowrap">
-                  Map {m.index} · {m.map}
+        <>
+          <p className="text-xs text-muted-foreground">
+            Names come from mrvl.net and aren&apos;t tied to ranked accounts, so one name can belong
+            to several players.{" "}
+            <UserSearch className="inline size-3.5 align-text-bottom" aria-hidden /> looks a name up
+            on Players.
+          </p>
+          <Tabs defaultValue="all" variant="underline">
+            <div className="-mx-4 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:px-0">
+              <TabsList aria-label="Map">
+                <TabsTrigger value="all" className="whitespace-nowrap">
+                  All maps
                 </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
-          <TabsContent value="all">
-            <div className="space-y-6">
-              {([0, 1] as const).map((side) => (
-                <StatsTable
-                  key={side}
-                  team={side === 0 ? match.team1 : match.team2}
-                  rows={combine(stats.maps.map((m) => m.teams[side]))}
-                  bans={[]}
-                  snapshot={snapshot}
-                  combined
-                />
-              ))}
+                {stats.maps.map((m) => (
+                  <TabsTrigger key={m.index} value={String(m.index)} className="whitespace-nowrap">
+                    Map {m.index} · {m.map}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
             </div>
-          </TabsContent>
-          {stats.maps.map((m) => (
-            <TabsContent key={m.index} value={String(m.index)}>
+            <TabsContent value="all">
               <div className="space-y-6">
                 {([0, 1] as const).map((side) => (
                   <StatsTable
                     key={side}
                     team={side === 0 ? match.team1 : match.team2}
-                    rows={asRows(m.teams[side])}
-                    bans={m.teams[side].bans}
+                    rows={combine(stats.maps.map((m) => m.teams[side]))}
+                    bans={[]}
                     snapshot={snapshot}
-                    combined={false}
+                    combined
                   />
                 ))}
               </div>
             </TabsContent>
-          ))}
-        </Tabs>
+            {stats.maps.map((m) => (
+              <TabsContent key={m.index} value={String(m.index)}>
+                <div className="space-y-6">
+                  {([0, 1] as const).map((side) => (
+                    <StatsTable
+                      key={side}
+                      team={side === 0 ? match.team1 : match.team2}
+                      rows={asRows(m.teams[side])}
+                      bans={m.teams[side].bans}
+                      snapshot={snapshot}
+                      combined={false}
+                    />
+                  ))}
+                </div>
+              </TabsContent>
+            ))}
+          </Tabs>
+        </>
       )}
     </section>
   );
