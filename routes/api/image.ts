@@ -12,13 +12,13 @@ export const GET = defineHandler(async (c) => {
 
   if (!source) return c.text("Image host not allowed", 400);
 
-  const cache = (globalThis as { caches?: { default?: Cache } }).caches?.default;
+  const cache = await caches.open("image-proxy");
 
   const cacheKey = new Request(
     new URL(`/api/image?u=${encodeURIComponent(source.href)}`, c.req.url).toString(),
   );
 
-  const cached = await cache?.match(cacheKey);
+  const cached = await cache.match(cacheKey);
 
   if (cached) return cached;
 
@@ -42,7 +42,7 @@ export const GET = defineHandler(async (c) => {
     },
   });
 
-  if (cache) c.executionCtx.waitUntil(cache.put(cacheKey, res.clone()));
+  c.executionCtx.waitUntil(cache.put(cacheKey, res.clone()));
 
   return res;
 });

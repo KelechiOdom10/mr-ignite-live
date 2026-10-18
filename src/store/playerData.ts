@@ -91,15 +91,15 @@ function negativeError(status: CachedStatus): RivalsIslandError | null {
   return null;
 }
 
-function negativeStatus(error: unknown): CachedStatus | null {
-  if (error instanceof MatchHistoryPrivateError) return "history_private";
+function negativeStatus(cause: unknown): CachedStatus | null {
+  if (cause instanceof MatchHistoryPrivateError) return "history_private";
 
-  if (error instanceof CareerPrivateError) return "career_private";
+  if (cause instanceof CareerPrivateError) return "career_private";
 
-  if (error instanceof NotFoundError) return "not_found";
+  if (cause instanceof NotFoundError) return "not_found";
 
   // A changed response would fail again; remembering it stops a paid retry on every view.
-  if (error instanceof RivalsIslandContractError) return "broken";
+  if (cause instanceof RivalsIslandContractError) return "broken";
 
   return null;
 }
@@ -206,8 +206,11 @@ export function createPlayerData(options: PlayerDataOptions) {
 
       const running = inFlight.get(key);
 
-      // SAFETY: inFlight is keyed by requestKey(name, params), which includes the endpoint name, so a hit holds a promise for this same E.
-      if (running) return running as Promise<Fetched<ResponseOf<E>>>;
+      if (running) {
+        // SAFETY: inFlight is keyed by requestKey(name, params), which includes the endpoint name, so a hit holds a promise for this same E.
+        return running as Promise<Fetched<ResponseOf<E>>>;
+      }
+
       const request = fetchAndStore(name, params, key, cached).finally(() => inFlight.delete(key));
       inFlight.set(key, request);
 

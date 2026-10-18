@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { liquipediaFixture } from "../../test/fixtures";
+import { type Json, liquipediaFixture } from "../../test/fixtures";
 import {
   createLiquipediaClient,
   LIQUIPEDIA_USER_AGENT,
@@ -24,7 +24,7 @@ function fakeFetch(respond: () => Response) {
 }
 
 const json =
-  (body: unknown, status = 200) =>
+  (body: Json, status = 200) =>
   () =>
     new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 

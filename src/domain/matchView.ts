@@ -256,9 +256,12 @@ export function formView(team: Team, matches: Match[], now: number, hidden: bool
   if (hidden) return { kind: "hidden" };
 
   const results = matches
-    .filter((m) => involves(m, team) && m.startsAt)
-    .map((m) => ({ m, s: matchState(m, now) }))
-    .filter(({ s }) => s.status === "finished" && s.winner !== 0)
+    .flatMap((m) => {
+      if (!involves(m, team) || !m.startsAt) return [];
+      const s = matchState(m, now);
+
+      return s.status === "finished" && s.winner !== 0 ? [{ m, s }] : [];
+    })
     .toSorted((a, b) => (a.m.startsAt ?? "").localeCompare(b.m.startsAt ?? ""))
     .slice(-FORM_LENGTH)
     .map(({ m, s }) => {

@@ -153,7 +153,7 @@ export function createMrvlClient(options: MrvlClientOptions = {}) {
   async function query<S extends z.ZodType>(
     schema: S,
     path: string,
-    args: Record<string, unknown>,
+    args: Record<string, string | number>,
   ): Promise<z.infer<S>> {
     let body: unknown;
 

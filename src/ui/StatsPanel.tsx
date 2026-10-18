@@ -32,9 +32,9 @@ export function useMatchStats(matchId: string, initial: MatchStats | null, refre
     const controller = new AbortController();
     const url = `/api/stats/${encodeURIComponent(matchId)}?at=${encodeURIComponent(refreshKey)}`;
     fetch(url, { signal: controller.signal })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((body: unknown) => {
-        const parsed = StatsResponseSchema.safeParse(body);
+      .then(async (res) => {
+        if (!res.ok) return;
+        const parsed = StatsResponseSchema.safeParse(await res.json());
 
         if (parsed.success) setStats(parsed.data.stats);
       })
@@ -46,11 +46,11 @@ export function useMatchStats(matchId: string, initial: MatchStats | null, refre
   return stats;
 }
 
-const ROLE_DOT: Record<string, string> = {
-  Vanguard: "bg-region-americas",
-  Duelist: "bg-live",
-  Strategist: "bg-win",
-};
+const ROLE_DOT = new Map<string, string>([
+  ["Vanguard", "bg-region-americas"],
+  ["Duelist", "bg-live"],
+  ["Strategist", "bg-win"],
+]);
 
 export function HeroPortrait({
   hero,
@@ -77,7 +77,7 @@ export function HeroPortrait({
     <span
       title={hero.name}
       style={box}
-      className={cn("shrink-0 rounded-md", ROLE_DOT[hero.role ?? ""] ?? "bg-muted", className)}
+      className={cn("shrink-0 rounded-md", ROLE_DOT.get(hero.role ?? "") ?? "bg-muted", className)}
     />
   );
 }

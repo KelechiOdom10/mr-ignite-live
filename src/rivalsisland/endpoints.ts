@@ -52,8 +52,10 @@ export interface Endpoint<E extends EndpointName> {
   path: (params: EndpointParams[E]) => string;
 }
 
+export type EndpointRegistry = { [E in EndpointName]: Endpoint<E> };
+
 // history and leaderboard prices depend on page size; these paths pin it to the priced size.
-export const ENDPOINTS: { [E in EndpointName]: Endpoint<E> } = {
+export const ENDPOINTS: EndpointRegistry = {
   search: {
     cost: 5,
     ttlSeconds: DAY,

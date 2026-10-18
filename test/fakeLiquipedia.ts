@@ -46,6 +46,13 @@ export function fakeClock(startIso: string): Clock {
   };
 }
 
+export interface FakeLiquipediaSettings {
+  /** How long each response takes on the fake clock. */
+  latencyMs: number;
+  /** Image URLs Liquipedia has, by file name. */
+  images: Record<string, string>;
+}
+
 export interface LiquipediaRequest {
   params: URLSearchParams;
   at: number;
@@ -67,17 +74,13 @@ export function fakeLiquipedia({
 }) {
   const requests: LiquipediaRequest[] = [];
 
-  const settings: {
-    /** How long each response takes on the fake clock. */
-    latencyMs: number;
-    /** Image URLs Liquipedia has, by file name. */
-    images: Record<string, string>;
-  } = { latencyMs: 0, images: {} };
+  const settings: FakeLiquipediaSettings = { latencyMs: 0, images: {} };
 
   const titlesOf = (params: URLSearchParams) => (params.get("titles") ?? "").split("|");
 
-  function body(params: URLSearchParams): unknown {
-    if (params.get("action") === "expandtemplates") return liquipediaFixture("teamshort.json");
+  function respond(params: URLSearchParams): Response {
+    if (params.get("action") === "expandtemplates")
+      return Response.json(liquipediaFixture("teamshort.json"));
 
     if (params.get("prop") === "imageinfo") {
       const pages = titlesOf(params).map((title) => {
@@ -88,14 +91,14 @@ export function fakeLiquipedia({
           : { ...recordedMissing, title };
       });
 
-      return { query: { pages } };
+      return Response.json({ query: { pages } });
     }
 
     if (params.get("rvprop") === "content") {
       const wanted = new Set(titlesOf(params));
       const pages = recordedContents.query.pages.filter((p) => wanted.has(p.title));
 
-      return { ...recordedContents, query: { ...recordedContents.query, pages } };
+      return Response.json({ ...recordedContents, query: { ...recordedContents.query, pages } });
     }
 
     if (params.get("rvprop") === "ids|timestamp") {
@@ -109,7 +112,7 @@ export function fakeLiquipedia({
           : { ...recordedPage, title, revisions: [{ ...recordedRevision, revid }] };
       });
 
-      return { ...recordedRevisions, query: { ...recordedRevisions.query, pages } };
+      return Response.json({ ...recordedRevisions, query: { ...recordedRevisions.query, pages } });
     }
 
     throw new Error(`No recorded Liquipedia response for ${params.toString()}`);
@@ -120,7 +123,7 @@ export function fakeLiquipedia({
     requests.push({ params, at: clock.now() });
     clock.advance(settings.latencyMs);
 
-    return new Response(JSON.stringify(body(params)), { status: 200 });
+    return respond(params);
   };
 
   return { fetch: fetchImpl, requests, revids, settings };

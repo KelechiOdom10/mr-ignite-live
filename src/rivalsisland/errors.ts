@@ -74,20 +74,20 @@ export function errorFor(
 }
 
 /** The one place a failure becomes something a page can show; anything unexpected is rethrown. */
-export function problemOf(error: unknown): PlayerProblem | null {
-  if (error instanceof MatchHistoryPrivateError) return "history_private";
+export function problemOf(cause: unknown): PlayerProblem | null {
+  if (cause instanceof MatchHistoryPrivateError) return "history_private";
 
-  if (error instanceof CareerPrivateError) return "career_private";
+  if (cause instanceof CareerPrivateError) return "career_private";
 
-  if (error instanceof NotFoundError) return "not_found";
+  if (cause instanceof NotFoundError) return "not_found";
 
-  if (error instanceof CreditBudgetExceededError) return "budget_reached";
+  if (cause instanceof CreditBudgetExceededError) return "budget_reached";
 
-  if (error instanceof InsufficientCreditsError) return "out_of_credits";
+  if (cause instanceof InsufficientCreditsError) return "out_of_credits";
 
-  if (error instanceof NotConfiguredError) return "not_configured";
+  if (cause instanceof NotConfiguredError) return "not_configured";
 
-  if (error instanceof RivalsIslandError) return "unavailable";
+  if (cause instanceof RivalsIslandError) return "unavailable";
 
   return null;
 }

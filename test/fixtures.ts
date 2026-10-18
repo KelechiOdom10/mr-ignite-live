@@ -3,17 +3,21 @@ import { fileURLToPath } from "node:url";
 
 import { z } from "zod";
 
-function fixture(dir: string, name: string): unknown {
+export const JsonSchema = z.json();
+
+export type Json = z.infer<typeof JsonSchema>;
+
+function fixture(dir: string, name: string): Json {
   const path = fileURLToPath(new URL(`./fixtures/${dir}/${name}`, import.meta.url));
 
-  return JSON.parse(readFileSync(path, "utf8"));
+  return JsonSchema.parse(JSON.parse(readFileSync(path, "utf8")));
 }
 
-export function liquipediaFixture(name: string): unknown {
+export function liquipediaFixture(name: string): Json {
   return fixture("liquipedia", name);
 }
 
-export function mrvlFixture(name: string): unknown {
+export function mrvlFixture(name: string): Json {
   return fixture("mrvl", name);
 }
 

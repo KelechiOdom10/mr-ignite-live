@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import {
   type IgniteEvent,
   type MapOverride,
@@ -8,8 +10,8 @@ import {
   type StoredSnapshot,
   type TeamInfo,
 } from "@/domain/model";
-import { STORED_SNAPSHOT_VERSION } from "@/domain/model";
-import type { MatchStats } from "@/domain/stats";
+import { MapOverrideSchema, STORED_SNAPSHOT_VERSION } from "@/domain/model";
+import { type MatchStats, MatchStatsSchema } from "@/domain/stats";
 import type { Revision } from "@/liquipedia/client";
 import { eventIdFor } from "@/liquipedia/parse";
 
@@ -35,9 +37,9 @@ export function planSync(
   revisions: ReadonlyMap<string, Revision>,
   maxChanged: number,
 ): SyncPlan {
-  const changed = [...revisions]
-    .filter(([title, rev]) => pages[title]?.revid !== rev.revid)
-    .map(([title]) => title);
+  const changed = [...revisions].flatMap(([title, rev]) =>
+    pages[title]?.revid === rev.revid ? [] : [title],
+  );
 
   const removed = Object.keys(pages).filter((title) => !revisions.has(title));
 
@@ -86,12 +88,10 @@ export function mergeMapOverrides(maps: MapResult[], overrides: MapOverride[]): 
   return [...byIndex.values()].sort((a, b) => a.index - b.index);
 }
 
-function canonicalJson(value: unknown): string {
-  return JSON.stringify(value, (_key, v: unknown) =>
-    v && typeof v === "object" && !Array.isArray(v)
-      ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => a.localeCompare(b)))
-      : v,
-  );
+// Zod rebuilds objects in schema key order, so a value built in code and the same value read back
+// from KV serialise alike.
+function sameValue<T>(schema: z.ZodType<T>, a: T, b: T): boolean {
+  return JSON.stringify(schema.parse(a)) === JSON.stringify(schema.parse(b));
 }
 
 export function withMapOverrides(
@@ -100,7 +100,7 @@ export function withMapOverrides(
 ): StoredSnapshot | null {
   const changed = Object.entries(incoming).filter(
     ([matchId, overrides]) =>
-      canonicalJson(stored.mapOverrides[matchId]) !== canonicalJson(overrides),
+      !sameValue(z.array(MapOverrideSchema).optional(), stored.mapOverrides[matchId], overrides),
   );
 
   if (changed.length === 0) return null;
@@ -160,7 +160,7 @@ export function statsChanged(previous: MatchStats | null, next: MatchStats): boo
   return (
     previous === null ||
     previous.sourceMatchId !== next.sourceMatchId ||
-    canonicalJson(previous.maps) !== canonicalJson(next.maps)
+    !sameValue(MatchStatsSchema.shape.maps, previous.maps, next.maps)
   );
 }
 

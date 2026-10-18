@@ -5,11 +5,11 @@ import { LiquipediaBudgetSpentError, type LiquipediaRun, type Revision } from "@
 import { parseEventInfo, parsePageMatches } from "@/liquipedia/parse";
 import { fetchTeamInfo } from "@/liquipedia/teams";
 
-import type { KvStore } from "./kv";
+import { kvKey, type KvStore } from "./kv";
 import { applyPages, type LiquipediaChanges, planSync, teamsMissingInfo } from "./plan";
 
-const SNAPSHOT_KEY = "snapshot";
-const TITLES_KEY = "titles:v1";
+const SNAPSHOT_KEY = kvKey("snapshot", StoredSnapshotSchema);
+const TITLES_KEY = kvKey("titles:v1", z.array(z.string()));
 const TITLES_TTL_SECONDS = 30 * 60;
 const PAGE_PREFIX = "MR Ignite/2026";
 
@@ -21,14 +21,13 @@ const ICONS_PER_RUN = 50;
 const EVENT_ICON_WIDTH_PX = 64;
 
 export async function writeStored(store: KvStore, stored: StoredSnapshot): Promise<void> {
-  await store.put(SNAPSHOT_KEY, StoredSnapshotSchema.parse(stored));
+  await store.put(SNAPSHOT_KEY, stored);
 }
 
 export async function readStored(store: KvStore): Promise<StoredSnapshot | null> {
-  const raw = await store.get(SNAPSHOT_KEY);
+  const parsed = await store.get(SNAPSHOT_KEY);
 
-  if (raw === null) return null;
-  const parsed = StoredSnapshotSchema.safeParse(raw);
+  if (parsed === null) return null;
 
   if (parsed.success) return parsed.data;
   console.warn("Discarding stored snapshot that fails the current schema", {
@@ -39,9 +38,9 @@ export async function readStored(store: KvStore): Promise<StoredSnapshot | null>
 }
 
 async function pageTitles(liquipedia: LiquipediaRun, store: KvStore): Promise<string[]> {
-  const cached = z.array(z.string()).safeParse(await store.get(TITLES_KEY));
+  const cached = await store.get(TITLES_KEY);
 
-  if (cached.success) return cached.data;
+  if (cached?.success) return cached.data;
   const titles = await liquipedia.listPages(PAGE_PREFIX);
   await store.put(TITLES_KEY, titles, { ttl: TITLES_TTL_SECONDS });
 

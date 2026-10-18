@@ -12,11 +12,10 @@ import {
   MrvlUnreachableError,
 } from "@/mrvl/client";
 
-import type { KvStore } from "./kv";
+import { kvKey, type KvStore } from "./kv";
 import { statsChanged } from "./plan";
 
-const STATS_PREFIX = "stats:v2:";
-const INDEX_KEY = "stats-index:v2";
+const statsKey = (matchId: string) => kvKey(`stats:v2:${matchId}`, MatchStatsSchema);
 const RECENT_LIMIT = 40;
 const LIVE_LIMIT = 20;
 const MAX_PAGES_PER_SYNC = 6;
@@ -35,10 +34,12 @@ const StatsIndexSchema = z.record(
 
 export type StatsIndex = z.infer<typeof StatsIndexSchema>;
 
-export async function readMatchStats(store: KvStore, matchId: string): Promise<MatchStats | null> {
-  const parsed = MatchStatsSchema.safeParse(await store.get(STATS_PREFIX + matchId));
+const INDEX_KEY = kvKey("stats-index:v2", StatsIndexSchema);
 
-  return parsed.success ? parsed.data : null;
+export async function readMatchStats(store: KvStore, matchId: string): Promise<MatchStats | null> {
+  const parsed = await store.get(statsKey(matchId));
+
+  return parsed?.success ? parsed.data : null;
 }
 
 /** Every stored series' stats; a value that no longer parses is skipped like a missing one. */
@@ -50,9 +51,9 @@ export async function readAllMatchStats(store: KvStore): Promise<MatchStats[]> {
 }
 
 async function readIndex(store: KvStore): Promise<StatsIndex> {
-  const parsed = StatsIndexSchema.safeParse(await store.get(INDEX_KEY));
+  const parsed = await store.get(INDEX_KEY);
 
-  return parsed.success ? parsed.data : {};
+  return parsed?.success ? parsed.data : {};
 }
 
 /** Indexed before draft order or per-hero lines were kept: worth one refetch while in lookback. */
@@ -153,6 +154,7 @@ export async function fetchStatsChanges({
     const page = await seriesPage(mrvl, summary.id);
 
     if (!page) continue;
+
     const stats = toMatchStats(match, page, sourceUpdatedAt, new Date(now));
     index[match.id] = {
       sourceMatchId: summary.id,
@@ -172,7 +174,7 @@ export async function fetchStatsChanges({
 }
 
 export async function writeMatchStats(store: KvStore, stats: MatchStats[]): Promise<void> {
-  for (const s of stats) await store.put(STATS_PREFIX + s.matchId, s);
+  for (const s of stats) await store.put(statsKey(s.matchId), s);
 }
 
 export async function writeStatsIndex(store: KvStore, index: StatsIndex): Promise<void> {

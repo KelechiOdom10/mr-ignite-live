@@ -29,7 +29,8 @@ const CacheRowSchema = z.object({
   body: z
     .string()
     .nullable()
-    .transform((b): unknown => (b === null ? null : JSON.parse(b))),
+    .transform((b) => (b === null ? null : JSON.parse(b)))
+    .pipe(z.json().nullable()),
   fetchedAt: z.number().int(),
   expiresAt: z.number().int().nullable(),
 });

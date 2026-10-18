@@ -33,12 +33,15 @@ const recordedPage = PageEnvelopeSchema.parse(mrvlFixture("page-fly-100t.json"))
  * The recorded FLY–100T page for its own id. Any other series answers as mrvl lists a series it
  * has no replays for yet: the recorded page with every game unplayed (no scoreboard).
  */
-function pageFor(id: string): unknown {
-  if (id === FLY_100T_MRVL_ID) return recordedPage;
+function pageFor(id: string): Response {
+  if (id === FLY_100T_MRVL_ID) return Response.json(recordedPage);
   const match = recordedPage.value.match;
   const games = match.games.filter((g) => !g.scoreboard);
 
-  return { ...recordedPage, value: { ...recordedPage.value, match: { ...match, id, games } } };
+  return Response.json({
+    ...recordedPage,
+    value: { ...recordedPage.value, match: { ...match, id, games } },
+  });
 }
 
 export interface MrvlFakeOptions {
@@ -56,17 +59,17 @@ export function fakeMrvl(options: MrvlFakeOptions = {}) {
   const requests: z.infer<typeof RequestSchema>[] = [];
   const settings = { ...options };
 
-  function list(status: string | undefined): unknown {
+  function list(status: string | undefined): Response {
     const recorded = status === "live" ? recordedLive : status === "recent" ? recordedRecent : null;
 
     // No upcoming list was recorded; an empty one is the live list with its entries removed.
-    if (!recorded) return { ...recordedLive, value: [] };
+    if (!recorded) return Response.json({ ...recordedLive, value: [] });
 
     const value = recorded.value.map((s) =>
       settings.resaved?.includes(s.id) ? { ...s, updatedAt: `${String(s.updatedAt)}+resaved` } : s,
     );
 
-    return { ...recorded, value };
+    return Response.json({ ...recorded, value });
   }
 
   const fetchImpl: typeof fetch = async (_input, init) => {
@@ -84,9 +87,7 @@ export function fakeMrvl(options: MrvlFakeOptions = {}) {
       return new Response("Bad Gateway", { status: 502 });
     }
 
-    const body = request.path === "matches:getPageData" ? pageFor(id) : list(request.args.status);
-
-    return new Response(JSON.stringify(body), { status: 200 });
+    return request.path === "matches:getPageData" ? pageFor(id) : list(request.args.status);
   };
 
   return { fetch: fetchImpl, requests, settings };

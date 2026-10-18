@@ -46,9 +46,9 @@ async function runSync(): Promise<Snapshot> {
 // next run, but mrvl map results only the earlier run saw can be lost until mrvl updates the series.
 export function sync(): Promise<Snapshot> {
   inFlight ??= runSync()
-    .catch((error: unknown) => {
+    .catch((cause: unknown) => {
       lastFailureAt = Date.now();
-      throw error;
+      throw cause;
     })
     .finally(() => {
       inFlight = null;
