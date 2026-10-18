@@ -17,8 +17,9 @@ export function draftHref({ eventId, map, mode }: DraftFilterValues): string {
 export type DraftFilterField = "eventId" | "mode" | "map";
 
 /**
- * The filter after one choice, or null when nothing changes. A map decides its mode, so choosing
- * one clears the other; choosing "all" clears only itself.
+ * The filter after one choice, or null when nothing changes. A map decides its mode (the server
+ * fills it in), so choosing a map clears the mode and any mode choice, "All modes" included,
+ * clears the map.
  */
 export function nextFilter(
   selected: DraftFilterValues,
@@ -28,6 +29,6 @@ export function nextFilter(
   if (selected[field] === value) return null;
   const next = { ...selected, [field]: value };
   if (value !== null && field === "map") next.mode = null;
-  if (value !== null && field === "mode") next.map = null;
+  if (field === "mode") next.map = null;
   return next;
 }

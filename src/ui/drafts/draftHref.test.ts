@@ -34,6 +34,14 @@ describe("nextFilter", () => {
     expect(nextFilter(convoy, "mode", "Convoy")).toBeNull();
   });
 
+  it("lets All modes clear a chosen map, whose mode the server fills in", () => {
+    expect(nextFilter({ eventId: null, map: "Midtown", mode: "Convoy" }, "mode", null)).toEqual({
+      eventId: null,
+      map: null,
+      mode: null,
+    });
+  });
+
   it("keeps the map and mode when only the event changes", () => {
     expect(nextFilter({ eventId: "a", map: "Midtown", mode: null }, "eventId", "b")).toEqual({
       eventId: "b",

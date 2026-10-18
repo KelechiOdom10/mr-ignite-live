@@ -7,13 +7,7 @@ import {
 import type { DraftFormat, DraftStep } from "@/domain/draft";
 import { cn } from "@/lib/utils";
 
-export const ACTOR: Record<DraftStep["actor"], string> = {
-  first: "First team",
-  second: "Second team",
-  both: "Both teams",
-};
-
-const ACTOR_SHORT: Record<DraftStep["actor"], string> = {
+export const ACTOR_SHORT: Record<DraftStep["actor"], string> = {
   first: "1st",
   second: "2nd",
   both: "Both",

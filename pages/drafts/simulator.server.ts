@@ -1,6 +1,6 @@
 import { defineHandler, defineHead, type InferProps } from "void";
 
-import { IGNITE_2026, summariseDrafts, toTeamDrafts } from "@/domain/draft";
+import { IGNITE_2026, statsFollowingFormat, summariseDrafts, toTeamDrafts } from "@/domain/draft";
 import { proRates } from "@/domain/draftSim";
 import { HERO_ROSTER, ROSTER_ICONS } from "@/domain/heroRoster";
 import { scopeSnapshot } from "@/domain/scope";
@@ -19,7 +19,7 @@ export const loader = defineHandler(async () => {
       }
     }
   }
-  const summary = summariseDrafts(toTeamDrafts(stats));
+  const summary = summariseDrafts(toTeamDrafts(statsFollowingFormat(stats, IGNITE_2026)));
   return {
     snapshot: scopeSnapshot(full, { kind: "events" }, Date.now()),
     format: IGNITE_2026,

@@ -18,13 +18,9 @@ import type { Hero } from "@/domain/stats";
 import { cn } from "@/lib/utils";
 
 import { HeroPortrait } from "../StatsPanel";
+import { ACTOR_SHORT } from "./FormatCard";
 
 const TEAM: Record<Camp, string> = { 0: "First team", 1: "Second team" };
-const SHORT: Record<"first" | "second" | "both", string> = {
-  first: "1st",
-  second: "2nd",
-  both: "Both",
-};
 const ROLES = ["All", "Vanguard", "Duelist", "Strategist"] as const;
 
 const PROBLEM: Record<MoveProblem["kind"], string> = {
@@ -274,7 +270,7 @@ export function DraftSimulator({
               >
                 <span className="font-mono">{s.index + 1}</span>
                 <span>
-                  {SHORT[s.actor]} {s.kind}
+                  {ACTOR_SHORT[s.actor]} {s.kind}
                 </span>
                 {s.picks.map((p) => {
                   const hero = byId.get(p.heroId);
@@ -299,8 +295,8 @@ export function DraftSimulator({
             </h2>
             {proDrafts > 0 && (
               <p className="text-xs text-muted-foreground">
-                B and P: how often pros banned and protected each hero in the cached Ignite drafts (
-                {proDrafts} team drafts; protects only where draft order was kept).
+                B and P: how often pros banned and protected each hero, from {proDrafts} team drafts
+                on cached maps that followed this draft step for step.
               </p>
             )}
           </div>
