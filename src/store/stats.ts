@@ -155,7 +155,10 @@ export async function fetchStatsChanges({
 
     if (!page) continue;
 
-    const stats = toMatchStats(match, page, sourceUpdatedAt, new Date(now));
+    const parsed = MatchStatsSchema.safeParse(
+      toMatchStats(match, page, sourceUpdatedAt, new Date(now)),
+    );
+
     index[match.id] = {
       sourceMatchId: summary.id,
       sourceUpdatedAt,
@@ -163,6 +166,18 @@ export async function fetchStatsChanges({
       heroLines: true,
     };
     indexChanged = true;
+
+    // Indexed anyway: refetching can't help until mrvl updates the series.
+    if (!parsed.success) {
+      console.warn("Skipping mrvl stats that fail our schema", {
+        id: summary.id,
+        issues: parsed.error.issues.slice(0, 3),
+      });
+
+      continue;
+    }
+
+    const stats = parsed.data;
 
     if (stats.maps.length === 0) continue;
     mapOverrides[match.id] = toMapOverrides(stats);

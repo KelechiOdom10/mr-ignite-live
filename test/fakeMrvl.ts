@@ -15,7 +15,7 @@ const PageEnvelopeSchema = z.looseObject({
   value: z.looseObject({
     match: z.looseObject({
       id: z.string(),
-      games: z.array(z.looseObject({ scoreboard: z.unknown().optional() })),
+      games: z.array(z.looseObject({ gameNumber: z.number(), scoreboard: z.unknown().optional() })),
     }),
   }),
 });
@@ -33,9 +33,19 @@ const recordedPage = PageEnvelopeSchema.parse(mrvlFixture("page-fly-100t.json"))
  * The recorded FLY–100T page for its own id. Any other series answers as mrvl lists a series it
  * has no replays for yet: the recorded page with every game unplayed (no scoreboard).
  */
-function pageFor(id: string): Response {
-  if (id === FLY_100T_MRVL_ID) return Response.json(recordedPage);
+function pageFor(id: string, misnumbered: boolean): Response {
   const match = recordedPage.value.match;
+
+  if (id === FLY_100T_MRVL_ID && misnumbered) {
+    const games = match.games.map((g) => ({ ...g, gameNumber: g.gameNumber - 1 }));
+
+    return Response.json({
+      ...recordedPage,
+      value: { ...recordedPage.value, match: { ...match, games } },
+    });
+  }
+
+  if (id === FLY_100T_MRVL_ID) return Response.json(recordedPage);
   const games = match.games.filter((g) => !g.scoreboard);
 
   return Response.json({
@@ -53,6 +63,8 @@ export interface MrvlFakeOptions {
   hangingPages?: string[];
   /** mrvl re-saved these series: their `updatedAt` moves on with nothing else changed. */
   resaved?: string[];
+  /** Series whose recorded page numbers its games from 0 instead of 1. */
+  misnumbered?: string[];
 }
 
 export function fakeMrvl(options: MrvlFakeOptions = {}) {
@@ -87,7 +99,9 @@ export function fakeMrvl(options: MrvlFakeOptions = {}) {
       return new Response("Bad Gateway", { status: 502 });
     }
 
-    return request.path === "matches:getPageData" ? pageFor(id) : list(request.args.status);
+    return request.path === "matches:getPageData"
+      ? pageFor(id, settings.misnumbered?.includes(id) ?? false)
+      : list(request.args.status);
   };
 
   return { fetch: fetchImpl, requests, settings };

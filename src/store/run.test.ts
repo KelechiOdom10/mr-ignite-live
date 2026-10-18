@@ -277,6 +277,15 @@ describe("syncOnce on match day", () => {
     expect(heroes.every((h) => h.line)).toBe(true);
   });
 
+  it("still saves Liquipedia's changes when an mrvl series' stats fail our schema", async () => {
+    const day = matchDay({ mrvl: { misnumbered: [FLY_100T_MRVL_ID] } });
+
+    const outcome = await day.sync();
+
+    expect(day.store.putCounts()).toEqual({ snapshot: 1, "stats-index:v2": 1 });
+    expect(outcome.updatedStats).toBe(0);
+  });
+
   it("doesn't let one failing mrvl series page hold back the others, and retries it next run", async () => {
     const day = matchDay({ mrvl: { failingPages: [TLC_SWAMP_MRVL_ID] } });
 
