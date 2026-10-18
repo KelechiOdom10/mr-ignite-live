@@ -9,7 +9,7 @@ import {
 } from "@/components/motion/select";
 import type { GameMode } from "@/domain/maps";
 
-import { draftHref, type DraftFilterValues } from "./draftHref";
+import { draftHref, nextFilter, type DraftFilterField } from "./draftHref";
 
 const ALL = "all";
 
@@ -35,12 +35,15 @@ function Filter({
   className: string;
 }) {
   return (
-    // A label names the trigger button, which the vendored Select doesn't take an aria-label for.
-    <label className={className}>
-      <span className="mb-1 block text-xs text-muted-foreground">{label}</span>
+    <div className={className}>
+      <span aria-hidden="true" className="mb-1 block text-xs text-muted-foreground">
+        {label}
+      </span>
       <Select value={value ?? ALL} onValueChange={(v) => onChange(v === ALL ? null : v)}>
         <SelectTrigger className="w-full">
-          {/* Items register only once the list has opened, so name the current choice here. */}
+          {/* The vendored trigger takes no aria-label, so its name comes from its content. */}
+          <span className="sr-only">{label}: </span>
+          {/* Server HTML has no registered item labels, so name the current choice for first paint. */}
           <SelectValue placeholder={items.find((i) => i.value === value)?.label ?? allLabel} />
         </SelectTrigger>
         <SelectContent>
@@ -52,11 +55,11 @@ function Filter({
           ))}
         </SelectContent>
       </Select>
-    </label>
+    </div>
   );
 }
 
-/** Each choice applies straight away; a map decides its mode, so picking one clears the other. */
+/** Each choice applies straight away. */
 export function DraftFilters({
   options,
   selected,
@@ -65,7 +68,10 @@ export function DraftFilters({
   selected: { eventId: string | null; map: string | null; mode: GameMode | null };
 }) {
   const router = useRouter();
-  const go = (next: DraftFilterValues) => void router.visit(draftHref(next));
+  const pick = (field: DraftFilterField, value: string | null) => {
+    const next = nextFilter(selected, field, value);
+    if (next) void router.visit(draftHref(next));
+  };
   const filtered = selected.eventId !== null || selected.map !== null || selected.mode !== null;
   return (
     <div className="flex flex-wrap items-end gap-3">
@@ -74,7 +80,7 @@ export function DraftFilters({
         value={selected.eventId}
         allLabel="All recorded events"
         items={options.events.map((e) => ({ value: e.id, label: e.name }))}
-        onChange={(eventId) => go({ ...selected, eventId })}
+        onChange={(v) => pick("eventId", v)}
         className="w-full sm:w-72"
       />
       <Filter
@@ -82,7 +88,7 @@ export function DraftFilters({
         value={selected.mode}
         allLabel="All modes"
         items={options.modes.map((m) => ({ value: m, label: m }))}
-        onChange={(mode) => go({ ...selected, mode, map: null })}
+        onChange={(v) => pick("mode", v)}
         className="w-[calc(50%-0.375rem)] sm:w-44"
       />
       <Filter
@@ -90,7 +96,7 @@ export function DraftFilters({
         value={selected.map}
         allLabel="All maps"
         items={options.maps.map((m) => ({ value: m, label: m }))}
-        onChange={(map) => go({ ...selected, map, mode: null })}
+        onChange={(v) => pick("map", v)}
         className="w-[calc(50%-0.375rem)] sm:w-56"
       />
       {filtered && (

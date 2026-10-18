@@ -200,7 +200,7 @@ export function DraftSimulator({
   return (
     <div className="grid gap-5">
       {/* The board stays in view on wider screens, so picking never scrolls the result away. */}
-      <div className="z-20 -mx-4 bg-background/95 px-4 pb-2 backdrop-blur md:sticky md:top-14 sm:mx-0 sm:px-0">
+      <div className="z-20 -mx-4 bg-background/95 px-4 pb-2 backdrop-blur [@media(min-width:768px)_and_(min-height:640px)]:sticky [@media(min-width:768px)_and_(min-height:640px)]:top-14 sm:mx-0 sm:px-0">
         <div className="grid gap-3 rounded-xl border bg-card p-3 sm:p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="font-medium" aria-live="polite">
@@ -281,6 +281,7 @@ export function DraftSimulator({
                   return hero ? (
                     <span key={`${p.camp}-${p.heroId}`} title={`${TEAM[p.camp]}: ${hero.name}`}>
                       <HeroPortrait hero={hero} size={18} />
+                      <span className="sr-only">{`${TEAM[p.camp]}: ${hero.name}`}</span>
                     </span>
                   ) : null;
                 })}
@@ -298,8 +299,8 @@ export function DraftSimulator({
             </h2>
             {proDrafts > 0 && (
               <p className="text-xs text-muted-foreground">
-                Percentages: how often pros banned and protected each hero, from {proDrafts} cached
-                team drafts.
+                B and P: how often pros banned and protected each hero in the cached Ignite drafts (
+                {proDrafts} team drafts; protects only where draft order was kept).
               </p>
             )}
           </div>

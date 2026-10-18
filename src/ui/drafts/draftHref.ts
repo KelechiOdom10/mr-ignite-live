@@ -13,3 +13,21 @@ export function draftHref({ eventId, map, mode }: DraftFilterValues): string {
   const query = params.toString();
   return query ? `/drafts?${query}` : "/drafts";
 }
+
+export type DraftFilterField = "eventId" | "mode" | "map";
+
+/**
+ * The filter after one choice, or null when nothing changes. A map decides its mode, so choosing
+ * one clears the other; choosing "all" clears only itself.
+ */
+export function nextFilter(
+  selected: DraftFilterValues,
+  field: DraftFilterField,
+  value: string | null,
+): DraftFilterValues | null {
+  if (selected[field] === value) return null;
+  const next = { ...selected, [field]: value };
+  if (value !== null && field === "map") next.mode = null;
+  if (value !== null && field === "mode") next.map = null;
+  return next;
+}

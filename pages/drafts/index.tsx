@@ -5,6 +5,8 @@ import { DraftTable } from "@/ui/drafts/DraftTable";
 import { FormatCard } from "@/ui/drafts/FormatCard";
 import { useLiveSnapshot } from "@/ui/useLiveSnapshot";
 
+import type { Props } from "./index.server";
+
 function Stat({ value, label }: { value: number; label: string }) {
   return (
     <div>
@@ -13,8 +15,6 @@ function Stat({ value, label }: { value: number; label: string }) {
     </div>
   );
 }
-
-import type { Props } from "./index.server";
 
 export default function DraftsPage({
   snapshot: initial,
@@ -62,7 +62,7 @@ export default function DraftsPage({
         <div className="min-w-0">
           {summary.sample.teamDrafts > 0 && <DraftTable summary={summary} />}
         </div>
-        <aside className="grid content-start gap-4 self-start lg:sticky lg:top-20">
+        <aside className="grid content-start gap-4 self-start lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:overscroll-contain">
           <DraftSource coverage={coverage} now={now} />
           <FormatCard format={formats.pro} />
           <FormatCard format={formats.ranked} folded />
