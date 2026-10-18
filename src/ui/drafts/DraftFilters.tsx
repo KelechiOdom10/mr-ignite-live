@@ -1,6 +1,17 @@
+import { useRouter } from "@void/react";
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/motion/select";
 import type { GameMode } from "@/domain/maps";
 
-const FIELD = "h-9 rounded-md border bg-background px-2 text-sm";
+import { draftHref, type DraftFilterValues } from "./draftHref";
+
+const ALL = "all";
 
 export interface DraftFilterOptions {
   events: { id: string; name: string }[];
@@ -8,6 +19,44 @@ export interface DraftFilterOptions {
   modes: readonly GameMode[];
 }
 
+function Filter({
+  label,
+  value,
+  allLabel,
+  items,
+  onChange,
+  className,
+}: {
+  label: string;
+  value: string | null;
+  allLabel: string;
+  items: { value: string; label: string }[];
+  onChange: (value: string | null) => void;
+  className: string;
+}) {
+  return (
+    // A label names the trigger button, which the vendored Select doesn't take an aria-label for.
+    <label className={className}>
+      <span className="mb-1 block text-xs text-muted-foreground">{label}</span>
+      <Select value={value ?? ALL} onValueChange={(v) => onChange(v === ALL ? null : v)}>
+        <SelectTrigger className="w-full">
+          {/* Items register only once the list has opened, so name the current choice here. */}
+          <SelectValue placeholder={items.find((i) => i.value === value)?.label ?? allLabel} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ALL}>{allLabel}</SelectItem>
+          {items.map((item) => (
+            <SelectItem key={item.value} value={item.value}>
+              {item.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </label>
+  );
+}
+
+/** Each choice applies straight away; a map decides its mode, so picking one clears the other. */
 export function DraftFilters({
   options,
   selected,
@@ -15,53 +64,43 @@ export function DraftFilters({
   options: DraftFilterOptions;
   selected: { eventId: string | null; map: string | null; mode: GameMode | null };
 }) {
+  const router = useRouter();
+  const go = (next: DraftFilterValues) => void router.visit(draftHref(next));
+  const filtered = selected.eventId !== null || selected.map !== null || selected.mode !== null;
   return (
-    <form method="get" action="/drafts" className="flex flex-wrap items-end gap-3">
-      <label className="grid gap-1 text-xs text-muted-foreground">
-        Event
-        <select name="event" defaultValue={selected.eventId ?? ""} className={FIELD}>
-          <option value="">All recorded events</option>
-          {options.events.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="grid gap-1 text-xs text-muted-foreground">
-        Mode
-        <select name="mode" defaultValue={selected.mode ?? ""} className={FIELD}>
-          <option value="">All modes</option>
-          {options.modes.map((m) => (
-            <option key={m} value={m}>
-              {m}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="grid gap-1 text-xs text-muted-foreground">
-        Map
-        <select name="map" defaultValue={selected.map ?? ""} className={FIELD}>
-          <option value="">All maps</option>
-          {options.maps.map((m) => (
-            <option key={m} value={m}>
-              {m}
-            </option>
-          ))}
-        </select>
-      </label>
-      <button
-        type="submit"
-        className="h-9 rounded-md bg-secondary px-3 text-sm font-medium hover:bg-accent"
-      >
-        Apply
-      </button>
-      <a
-        href="/drafts"
-        className="h-9 px-2 text-sm leading-9 text-muted-foreground hover:text-foreground"
-      >
-        Reset
-      </a>
-    </form>
+    <div className="flex flex-wrap items-end gap-3">
+      <Filter
+        label="Event"
+        value={selected.eventId}
+        allLabel="All recorded events"
+        items={options.events.map((e) => ({ value: e.id, label: e.name }))}
+        onChange={(eventId) => go({ ...selected, eventId })}
+        className="w-full sm:w-72"
+      />
+      <Filter
+        label="Mode"
+        value={selected.mode}
+        allLabel="All modes"
+        items={options.modes.map((m) => ({ value: m, label: m }))}
+        onChange={(mode) => go({ ...selected, mode, map: null })}
+        className="w-[calc(50%-0.375rem)] sm:w-44"
+      />
+      <Filter
+        label="Map"
+        value={selected.map}
+        allLabel="All maps"
+        items={options.maps.map((m) => ({ value: m, label: m }))}
+        onChange={(map) => go({ ...selected, map, mode: null })}
+        className="w-[calc(50%-0.375rem)] sm:w-56"
+      />
+      {filtered && (
+        <a
+          href="/drafts"
+          className="h-9 px-1 text-sm leading-9 text-muted-foreground hover:text-foreground"
+        >
+          Clear filters
+        </a>
+      )}
+    </div>
   );
 }

@@ -1,7 +1,14 @@
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleIndicator,
+  CollapsibleTrigger,
+} from "@/components/motion/collapsible";
 import type { DraftCoverage } from "@/domain/draft";
 
 import { formatRelative, useHydrated } from "../time";
 
+/** The one caveat everyone needs, up front; how the counts are made sits behind a toggle. */
 export function DraftSource({
   coverage,
   now,
@@ -17,38 +24,44 @@ export function DraftSource({
       <h2 id="draft-source" className="font-medium">
         Where this comes from
       </h2>
-      <ul className="mt-2 grid gap-1 text-muted-foreground">
-        <li>
-          mrvl.net scoreboards this site has cached: {coverage.series} series, {coverage.maps} maps
-          {newest ? `, last fetched ${newest}` : ""}.
-        </li>
-        <li>
-          {coverage.mapsWithOrder === 0
-            ? "No cached map has its draft order yet, so protects aren't shown; maps cached from now on keep it."
-            : `Draft order and protects are kept for ${coverage.mapsWithOrder} of ${coverage.maps} maps; older maps count bans and plays only.`}
-        </li>
-        {coverage.mapsWithOrder > 0 && (
-          <li>
-            {coverage.mapsFollowingFormat} of {coverage.mapsWithOrder} ordered maps follow the
-            Ignite 2026 draft below step for step.
-          </li>
-        )}
-        <li>
-          {coverage.bansBroken === 0
-            ? `None of the ${coverage.bans} bans was played by the team it was aimed at.`
-            : `${coverage.bansBroken} of ${coverage.bans} bans were played by the team they were aimed at; check those maps.`}
-        </li>
-        {coverage.finishedSeriesWithoutStats > 0 && (
-          <li>
-            {coverage.finishedSeriesWithoutStats} finished series in scope have no cached
-            scoreboard, so they're missing here.
-          </li>
-        )}
-        <li>
-          Counts describe these pro maps only. They aren't win rates, and ranked drafts work
-          differently.
-        </li>
-      </ul>
+      <p className="mt-1 text-muted-foreground">
+        Scoreboards cached from mrvl.net{newest ? `, updated ${newest}` : ""}.{" "}
+        <span className="text-foreground">
+          Counts describe these pro maps only, not win rates; ranked drafts work differently.
+        </span>
+      </p>
+      <Collapsible className="-mx-2 mt-2">
+        <CollapsibleTrigger className="px-2 text-xs text-muted-foreground">
+          How this is counted
+          <CollapsibleIndicator />
+        </CollapsibleTrigger>
+        <CollapsibleContent contentClassName="px-2 pb-1 pt-1">
+          <ul className="grid gap-1.5 text-xs text-muted-foreground">
+            <li>
+              {coverage.mapsWithOrder === 0
+                ? "No cached map has its draft order yet, so protects aren't counted."
+                : `Draft order and protects are kept for ${coverage.mapsWithOrder} of ${coverage.maps} maps; older maps count bans and plays only.`}
+            </li>
+            {coverage.mapsWithOrder > 0 && (
+              <li>
+                {coverage.mapsFollowingFormat} of {coverage.mapsWithOrder} ordered maps follow the
+                Ignite 2026 draft step for step.
+              </li>
+            )}
+            <li>
+              {coverage.bansBroken === 0
+                ? `None of the ${coverage.bans} bans was played by the team it was aimed at.`
+                : `${coverage.bansBroken} of ${coverage.bans} bans were played by the team they were aimed at.`}
+            </li>
+            {coverage.finishedSeriesWithoutStats > 0 && (
+              <li>
+                {coverage.finishedSeriesWithoutStats} finished series in scope have no cached
+                scoreboard, so they&apos;re missing.
+              </li>
+            )}
+          </ul>
+        </CollapsibleContent>
+      </Collapsible>
     </section>
   );
 }
