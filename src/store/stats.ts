@@ -15,7 +15,7 @@ import {
 import { kvKey, type KvStore } from "./kv";
 import { statsChanged } from "./plan";
 
-const statsKey = (matchId: string) => kvKey(`stats:v2:${matchId}`, MatchStatsSchema);
+export const statsKey = (matchId: string) => kvKey(`stats:v2:${matchId}`, MatchStatsSchema);
 const RECENT_LIMIT = 40;
 const LIVE_LIMIT = 20;
 const MAX_PAGES_PER_SYNC = 6;
@@ -34,7 +34,7 @@ const StatsIndexSchema = z.record(
 
 export type StatsIndex = z.infer<typeof StatsIndexSchema>;
 
-const INDEX_KEY = kvKey("stats-index:v2", StatsIndexSchema);
+export const STATS_INDEX_KEY = kvKey("stats-index:v2", StatsIndexSchema);
 
 export async function readMatchStats(store: KvStore, matchId: string): Promise<MatchStats | null> {
   const parsed = await store.get(statsKey(matchId));
@@ -51,7 +51,7 @@ export async function readAllMatchStats(store: KvStore): Promise<MatchStats[]> {
 }
 
 async function readIndex(store: KvStore): Promise<StatsIndex> {
-  const parsed = await store.get(INDEX_KEY);
+  const parsed = await store.get(STATS_INDEX_KEY);
 
   return parsed?.success ? parsed.data : {};
 }
@@ -193,5 +193,5 @@ export async function writeMatchStats(store: KvStore, stats: MatchStats[]): Prom
 }
 
 export async function writeStatsIndex(store: KvStore, index: StatsIndex): Promise<void> {
-  await store.put(INDEX_KEY, index);
+  await store.put(STATS_INDEX_KEY, index);
 }

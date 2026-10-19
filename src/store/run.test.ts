@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { z } from "zod";
 
-import { MatchStatsSchema as StoredStats } from "@/domain/stats";
 import { createLiquipediaClient } from "@/liquipedia/client";
 import { createMrvlClient } from "@/mrvl/client";
 
@@ -20,12 +18,21 @@ import {
   TLC_SWAMP_MRVL_ID,
 } from "../../test/fakeMrvl";
 import { memoryKvStore } from "../../test/memoryKv";
+import type { KvKey, KvStore } from "./kv";
 import { syncOnce } from "./run";
 import { readStored } from "./snapshot";
-
-const IndexSchema = z.record(z.string(), z.object({ sourceUpdatedAt: z.string() }));
+import { STATS_INDEX_KEY, statsKey } from "./stats";
 
 // Liquipedia ids from the recorded Americas bracket.
+/** A value the sync stored under `key`; fails the test when it's missing or off-schema. */
+async function read<T>(store: KvStore, key: KvKey<T>): Promise<T> {
+  const parsed = await store.get(key);
+
+  if (!parsed?.success) throw new Error(`No valid value at ${key.name}`);
+
+  return parsed.data;
+}
+
 const FLY_100T = "kOKqgtPHq4_R2M1";
 const TLC_SWAMP = "kOKqgtPHq4_R2M2";
 
@@ -198,16 +205,17 @@ describe("syncOnce on match day", () => {
   it("refetches a recent series indexed before draft order was kept, once", async () => {
     const day = matchDay();
     await day.sync();
-    const key = `stats:v2:${FLY_100T}`;
-    const stored = StoredStats.parse(await day.store.get(key));
-    await day.store.put(key, { ...stored, maps: stored.maps.map(({ draft: _, ...m }) => m) });
-    const index = IndexSchema.parse(await day.store.get("stats-index:v2"));
-    await day.store.put("stats-index:v2", {
+    const key = statsKey(FLY_100T);
+    const stored = await read(day.store, key);
+    // Entries saved without a draft read back as `draft: null`.
+    await day.store.put(key, { ...stored, maps: stored.maps.map((m) => ({ ...m, draft: null })) });
+    const index = await read(day.store, STATS_INDEX_KEY);
+    const entry = index[FLY_100T];
+
+    if (!entry) throw new Error("FLY–100T should be indexed after the first sync");
+    await day.store.put(STATS_INDEX_KEY, {
       ...index,
-      [FLY_100T]: {
-        sourceMatchId: FLY_100T_MRVL_ID,
-        sourceUpdatedAt: index[FLY_100T]?.sourceUpdatedAt,
-      },
+      [FLY_100T]: { sourceMatchId: FLY_100T_MRVL_ID, sourceUpdatedAt: entry.sourceUpdatedAt },
     });
 
     const pageRequests = () =>
@@ -221,15 +229,15 @@ describe("syncOnce on match day", () => {
     await day.sync();
 
     expect(pageRequests() - before).toBe(1);
-    const backfilled = StoredStats.parse(await day.store.get(key));
+    const backfilled = await read(day.store, key);
     expect(backfilled.maps.every((m) => m.draft?.length === 14)).toBe(true);
   });
 
   it("refetches a recent series indexed before per-hero lines were kept, once", async () => {
     const day = matchDay();
     await day.sync();
-    const key = `stats:v2:${FLY_100T}`;
-    const stored = StoredStats.parse(await day.store.get(key));
+    const key = statsKey(FLY_100T);
+    const stored = await read(day.store, key);
 
     const withoutLines = {
       ...stored,
@@ -246,12 +254,15 @@ describe("syncOnce on match day", () => {
     };
 
     await day.store.put(key, withoutLines);
-    const index = IndexSchema.parse(await day.store.get("stats-index:v2"));
-    await day.store.put("stats-index:v2", {
+    const index = await read(day.store, STATS_INDEX_KEY);
+    const entry = index[FLY_100T];
+
+    if (!entry) throw new Error("FLY–100T should be indexed after the first sync");
+    await day.store.put(STATS_INDEX_KEY, {
       ...index,
       [FLY_100T]: {
         sourceMatchId: FLY_100T_MRVL_ID,
-        sourceUpdatedAt: index[FLY_100T]?.sourceUpdatedAt,
+        sourceUpdatedAt: entry.sourceUpdatedAt,
         draftOrder: true,
       },
     });
@@ -267,7 +278,7 @@ describe("syncOnce on match day", () => {
     await day.sync();
 
     expect(pageRequests() - before).toBe(1);
-    const backfilled = StoredStats.parse(await day.store.get(key));
+    const backfilled = await read(day.store, key);
 
     const heroes = backfilled.maps.flatMap((m) =>
       m.teams.flatMap((t) => t.players.flatMap((p) => p.heroes)),
