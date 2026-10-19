@@ -4,11 +4,18 @@ const RegionSchema = z.enum(["all", "americas", "emea", "china", "pacific"]);
 const ListTabSchema = z.enum(["upcoming", "results"]);
 const EventPhaseSchema = z.enum(["ongoing", "upcoming", "completed"]);
 
+/** The region filters, in display order. The home page labels these. */
+export const HOME_REGIONS = RegionSchema.options;
+
+export type ListTab = z.infer<typeof ListTabSchema>;
+
+export type EventPhase = z.infer<typeof EventPhaseSchema>;
+
 /** The home page's tabs. A null `tab` means the reader hasn't picked one, so the page chooses. */
 export type HomeView = {
   region: z.infer<typeof RegionSchema>;
-  tab: z.infer<typeof ListTabSchema> | null;
-  events: z.infer<typeof EventPhaseSchema>;
+  tab: ListTab | null;
+  events: EventPhase;
 };
 
 export const DEFAULT_HOME_VIEW: HomeView = { region: "all", tab: null, events: "ongoing" };
@@ -31,7 +38,7 @@ export function homeViewFromQuery(query: {
 /** The query string for a view, leaving out defaults so the plain home URL stays clean. */
 export function homeViewSearch(view: HomeView): string {
   const entries = [
-    ["tab", view.tab ?? DEFAULT_HOME_VIEW.tab],
+    ["tab", view.tab],
     ["region", view.region === DEFAULT_HOME_VIEW.region ? null : view.region],
     ["events", view.events === DEFAULT_HOME_VIEW.events ? null : view.events],
   ].filter((entry): entry is [string, string] => entry[1] !== null);

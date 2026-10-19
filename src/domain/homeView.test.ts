@@ -24,6 +24,13 @@ describe("homeViewSearch", () => {
     expect(homeViewSearch(DEFAULT_HOME_VIEW)).toBe("");
   });
 
+  it("leaves the tab out until the reader picks one", () => {
+    const view = { tab: null, region: "pacific", events: "ongoing" } as const;
+
+    expect(homeViewSearch(view)).toBe("?region=pacific");
+    expect(homeViewFromQuery({ region: "pacific" })).toEqual(view);
+  });
+
   it("round-trips a chosen view", () => {
     const view = { tab: "results", region: "china", events: "upcoming" } as const;
 

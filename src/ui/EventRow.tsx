@@ -1,5 +1,6 @@
 import { Link } from "@void/react";
 
+import type { EventPhase } from "@/domain/homeView";
 import { matchState } from "@/domain/matchState";
 import type { IgniteEvent, Match } from "@/domain/model";
 import { eventSlug } from "@/domain/scope";
@@ -9,8 +10,6 @@ import { proxiedImage } from "./images";
 import { REGION_SHORT, REGION_TEXT, regionKey } from "./region";
 import { LiveDot } from "./StatusLabel";
 import { formatShortRange } from "./time";
-
-export type EventPhase = "ongoing" | "upcoming" | "completed";
 
 export function eventPhase(event: IgniteEvent, now: number): EventPhase {
   const start = event.startDate ? Date.parse(event.startDate) : Number.NaN;
