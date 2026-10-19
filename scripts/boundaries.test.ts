@@ -7,6 +7,7 @@ describe("findViolations", () => {
     const violations = findViolations([
       { path: "src/ui/MatchCard.tsx", source: `import { syncOnce } from "@/store/run";` },
     ]);
+
     expect(violations).toEqual([
       `src/ui/MatchCard.tsx: imports "@/store/run", which ui may not use`,
     ]);
@@ -16,6 +17,7 @@ describe("findViolations", () => {
     const violations = findViolations([
       { path: "src/ui/MatchCard.tsx", source: `import { syncOnce } from "../store/run";` },
     ]);
+
     expect(violations).toEqual([
       `src/ui/MatchCard.tsx: imports "../store/run", which ui may not use`,
     ]);
@@ -25,6 +27,7 @@ describe("findViolations", () => {
     const violations = findViolations([
       { path: "src/marvelrivalsapi/client.ts", source: `import { z } from "zod";` },
     ]);
+
     expect(violations).toEqual([
       "src/marvelrivalsapi/client.ts: no boundary rule covers this file; add one to scripts/boundaries.ts",
     ]);
@@ -34,6 +37,7 @@ describe("findViolations", () => {
     const violations = findViolations([
       { path: "src/ui/MatchCard.tsx", source: `const run = await import("@/store/run");` },
     ]);
+
     expect(violations).toEqual([
       `src/ui/MatchCard.tsx: imports "@/store/run", which ui may not use`,
     ]);
@@ -52,6 +56,7 @@ describe("findViolations", () => {
       "const one = await import(`../store/${name}`);",
       `const any = await import(path);`,
     ].join("\n");
+
     expect(findViolations([{ path: "src/ui/MatchCard.tsx", source }])).toEqual([
       `src/ui/MatchCard.tsx: imports "../store/*.ts", which ui may not use`,
       'src/ui/MatchCard.tsx: imports "../store/${name}", which ui may not use',

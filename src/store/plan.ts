@@ -38,7 +38,9 @@ export function planSync(
   const changed = [...revisions]
     .filter(([title, rev]) => pages[title]?.revid !== rev.revid)
     .map(([title]) => title);
+
   const removed = Object.keys(pages).filter((title) => !revisions.has(title));
+
   return { changed: changed.slice(0, maxChanged), deferred: changed.slice(maxChanged), removed };
 }
 
@@ -48,7 +50,9 @@ export function applyPages(
   updates: Record<string, PageData>,
 ): StoredSnapshot["pages"] {
   const next = { ...pages, ...updates };
+
   for (const title of removed) delete next[title];
+
   return next;
 }
 
@@ -57,22 +61,28 @@ export function teamsMissingInfo(
   known: StoredSnapshot["teams"],
 ): string[] {
   const names = new Set<string>();
+
   for (const page of Object.values(pages)) {
     for (const m of page.matches) {
       if (m.team1) names.add(m.team1.name);
+
       if (m.team2) names.add(m.team2.name);
     }
   }
+
   return [...names].filter((name) => !known[name]);
 }
 
 export function mergeMapOverrides(maps: MapResult[], overrides: MapOverride[]): MapResult[] {
   const byIndex = new Map(maps.map((m) => [m.index, m]));
+
   for (const o of overrides) {
     const existing = byIndex.get(o.index);
+
     if (existing && existing.winner !== 0) continue;
     byIndex.set(o.index, { ...o, map: existing?.map || o.map, vod: existing?.vod ?? null });
   }
+
   return [...byIndex.values()].sort((a, b) => a.index - b.index);
 }
 
@@ -92,7 +102,9 @@ export function withMapOverrides(
     ([matchId, overrides]) =>
       canonicalJson(stored.mapOverrides[matchId]) !== canonicalJson(overrides),
   );
+
   if (changed.length === 0) return null;
+
   return { ...stored, mapOverrides: { ...stored.mapOverrides, ...Object.fromEntries(changed) } };
 }
 
@@ -138,7 +150,9 @@ export function nextStored({
   const fromLiquipedia = hasLiquipediaChanges(liquipedia)
     ? applyLiquipedia(prev, liquipedia)
     : null;
+
   const next = withMapOverrides(fromLiquipedia ?? prev, mapOverrides) ?? fromLiquipedia;
+
   return next && { ...next, builtAt: builtAt.toISOString() };
 }
 
@@ -154,14 +168,17 @@ export function toSnapshot(stored: StoredSnapshot, servedAt: Date): Snapshot {
   const events: IgniteEvent[] = [];
   const matches: Match[] = [];
   let liquipediaUpdatedAt: string | null = null;
+
   const withShort = (team: Match["team1"]) =>
     team ? { ...team, short: stored.teams[team.name]?.short ?? team.short } : null;
 
   for (const [title, page] of Object.entries(stored.pages)) {
     if (page.event) events.push(page.event);
+
     if (!liquipediaUpdatedAt || page.updatedAt > liquipediaUpdatedAt) {
       liquipediaUpdatedAt = page.updatedAt;
     }
+
     for (const m of page.matches) {
       const overrides = stored.mapOverrides[m.id];
       matches.push({

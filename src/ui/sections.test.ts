@@ -17,6 +17,7 @@ describe("sectionOf", () => {
       ["/game/5513337_1", "players"],
       ["/review", "review"],
     ];
+
     for (const [path, section] of cases) expect([path, sectionOf(path)]).toEqual([path, section]);
   });
 

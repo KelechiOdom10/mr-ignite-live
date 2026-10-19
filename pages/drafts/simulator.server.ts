@@ -12,6 +12,7 @@ export type Props = InferProps<typeof loader>;
 export const loader = defineHandler(async () => {
   const [full, stats] = await Promise.all([currentSnapshot(), readAllStats()]);
   const portraits = new Map<string, string>();
+
   for (const map of stats.flatMap((s) => s.maps)) {
     for (const team of map.teams) {
       for (const hero of [...team.bans, ...team.players.flatMap((p) => p.heroes)]) {
@@ -19,7 +20,9 @@ export const loader = defineHandler(async () => {
       }
     }
   }
+
   const summary = summariseDrafts(toTeamDrafts(statsFollowingFormat(stats, IGNITE_2026)));
+
   return {
     snapshot: scopeSnapshot(full, { kind: "events" }, Date.now()),
     format: IGNITE_2026,

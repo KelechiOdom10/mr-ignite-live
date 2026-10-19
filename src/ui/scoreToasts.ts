@@ -22,9 +22,11 @@ export function scoreToasts(
 ): ScoreToast[] {
   const bracket = { matches, now };
   const toasts: ScoreToast[] = [];
+
   for (const match of matches) {
     const prev = before.get(match.id);
     const next = after.get(match.id);
+
     if (!prev || !next) continue;
     const prevView = matchView(match, prev, hidden, bracket);
     const nextView = matchView(match, next, hidden, bracket);
@@ -34,6 +36,7 @@ export function scoreToasts(
     const newMap = next.playedMaps.length > prev.playedMaps.length;
     const latest = next.playedMaps.at(-1);
     const latestSlot = nextView.maps.find((m) => m.index === latest?.index);
+
     const toast = (title: string, description: string, status: ScoreToast["status"]) =>
       toasts.push({ title, description, status, matchId: match.id });
 
@@ -48,5 +51,6 @@ export function scoreToasts(
       toast("Score update", pairing, "info");
     }
   }
+
   return toasts;
 }

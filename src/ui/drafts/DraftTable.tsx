@@ -25,6 +25,7 @@ function Count({ count, of }: { count: number; of: number }) {
 export function DraftTable({ summary }: { summary: DraftSummary }) {
   const { rows, sample } = summary;
   const protectsKnown = sample.withProtects > 0;
+
   return (
     <div className="overflow-x-auto rounded-lg border">
       <table className="w-full text-sm">

@@ -27,6 +27,7 @@ export function StatusLabel({
   className?: string;
 }) {
   const hydrated = useHydrated();
+
   if (view.status === "live") {
     return (
       <span
@@ -39,15 +40,19 @@ export function StatusLabel({
       </span>
     );
   }
+
   if (view.statusText) {
     return (
       <span className={cn("text-xs text-muted-foreground", className)}>{view.statusText}</span>
     );
   }
+
   if (!hydrated || !match.startsAt) {
     return <span className={cn("text-xs text-muted-foreground", className)}>Bo{match.bestOf}</span>;
   }
+
   const soon = Date.parse(match.startsAt) - now < DAY_MS;
+
   return (
     <span
       className={cn(

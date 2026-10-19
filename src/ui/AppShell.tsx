@@ -22,17 +22,21 @@ import type { Connection } from "./useLiveSnapshot";
 function useScoreToasts(snapshot: Snapshot, now: number) {
   const hidden = useSpoilersHidden();
   const router = useRouter();
+
   const { toasts, showToast, dismissToast } = useAnimatedToastStack({
     defaultDuration: 7000,
     limit: 4,
   });
+
   const previous = useRef<Map<string, MatchState> | null>(null);
 
   useEffect(() => {
     const next = new Map(snapshot.matches.map((m) => [m.id, matchState(m, now)]));
     const prev = previous.current;
     previous.current = next;
+
     if (!prev) return;
+
     for (const t of scoreToasts(snapshot.matches, prev, next, hidden, now)) {
       showToast({
         title: t.title,
@@ -56,10 +60,12 @@ function SyncStatus({
   now: number;
 }) {
   const hydrated = useHydrated();
+
   const updated =
     hydrated && snapshot.liquipediaUpdatedAt
       ? formatRelative(snapshot.liquipediaUpdatedAt, now)
       : null;
+
   return (
     <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
       <span
@@ -125,6 +131,7 @@ export function AppShell({
             <nav aria-label="Main" className="hidden items-center gap-1 sm:flex">
               {NAV.map(({ href, label, icon: Icon, section: target }) => {
                 const active = target === section;
+
                 return (
                   <Link
                     key={href}

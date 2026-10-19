@@ -11,10 +11,13 @@ export function memoryKvStore(initial: Record<string, unknown> = {}): MemoryKvSt
   const values = new Map<string, string>(
     Object.entries(initial).map(([key, value]) => [key, JSON.stringify(value)]),
   );
+
   let puts: Record<string, number> = {};
+
   return {
     async get(key) {
       const raw = values.get(key);
+
       return raw === undefined ? null : JSON.parse(raw);
     },
     async put(key, value) {

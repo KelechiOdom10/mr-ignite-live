@@ -23,6 +23,7 @@ function IslandMatch({
   position: string | null;
 }) {
   const { side1, side2, summary } = useMatchView(match, now, snapshot.matches);
+
   return (
     <Link
       href={`/match/${match.id}`}
@@ -61,6 +62,7 @@ export function LiveIsland({ snapshot, now }: { snapshot: Snapshot; now: number 
   useEffect(() => {
     if (live.length < 2 || paused) return;
     const timer = setInterval(() => setIndex((i) => i + 1), ROTATE_MS);
+
     return () => clearInterval(timer);
   }, [live.length, paused]);
 

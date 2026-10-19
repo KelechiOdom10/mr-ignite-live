@@ -33,6 +33,7 @@ export function CareerTiles({ career }: { career: Career }) {
     { label: "Healing", value: compact(career.healing) },
     { label: "Play time", value: hours(career.playSeconds) },
   ];
+
   return (
     <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3">
       {tiles.map((t) => (

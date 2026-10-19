@@ -7,6 +7,7 @@ import { currentSnapshot } from "../../src/sync";
 export const GET = defineHandler(async (c) => {
   c.header("Cache-Control", "no-store");
   const snapshot = await currentSnapshot();
+
   return scopeSnapshot(
     snapshot,
     scopeFromQuery({

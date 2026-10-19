@@ -5,10 +5,13 @@ import { createMrvlClient, MrvlHttpError, MrvlResponseError, MrvlUnreachableErro
 
 function respondWith(body: unknown, status = 200) {
   const calls: RequestInit[] = [];
+
   const fetchImpl: typeof fetch = async (_input, init) => {
     calls.push(init ?? {});
+
     return new Response(JSON.stringify(body), { status });
   };
+
   return { fetchImpl, calls };
 }
 

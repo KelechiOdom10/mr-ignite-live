@@ -66,10 +66,12 @@ function actsIn(step: DraftStep, camp: number): boolean {
 /** Every way a map's recorded draft departs from the format; empty when it follows it exactly. */
 export function formatDeviations(draft: readonly DraftAction[], format: DraftFormat): string[] {
   const deviations: string[] = [];
+
   for (const [phase, step] of format.steps.entries()) {
     for (const camp of [0, 1]) {
       const taken = draft.filter((a) => a.phase === phase && a.camp === camp);
       const expected = actsIn(step, camp) ? 1 : 0;
+
       if (taken.length !== expected || taken.some((a) => a.kind !== step.kind)) {
         deviations.push(
           `step ${phase}: camp ${camp} made ${taken.map((a) => a.kind).join(", ") || "no move"}, expected ${expected ? step.kind : "no move"}`,
@@ -77,9 +79,11 @@ export function formatDeviations(draft: readonly DraftAction[], format: DraftFor
       }
     }
   }
+
   for (const a of draft) {
     if (a.phase >= format.steps.length) deviations.push(`step ${a.phase} is past the format's end`);
   }
+
   return deviations;
 }
 
@@ -89,6 +93,7 @@ function teamOn(map: MapStats, side: 1 | 2): MapStats["teams"][number] {
 
 function playedBy(map: MapStats, side: 1 | 2): Set<string> {
   const team = teamOn(map, side);
+
   return new Set(
     team.players.flatMap((p) => p.heroes.filter((h) => h.playSeconds > 0).map((h) => h.id)),
   );
@@ -98,6 +103,7 @@ function playedBy(map: MapStats, side: 1 | 2): Set<string> {
 export function bansBroken(map: MapStats): string[] {
   return ([1, 2] as const).flatMap((side) => {
     const other = playedBy(map, side === 1 ? 2 : 1);
+
     return teamOn(map, side)
       .bans.filter((h) => other.has(h.id))
       .map((h) => h.id);
@@ -126,6 +132,7 @@ export function toTeamDrafts(stats: readonly MatchStats[]): TeamDraft[] {
     s.maps.flatMap((map) =>
       ([1, 2] as const).map((side) => {
         const team = teamOn(map, side);
+
         return {
           matchId: s.matchId,
           mapIndex: map.index,
@@ -184,40 +191,52 @@ export function filterDrafts(drafts: readonly TeamDraft[], filter: DraftFilter):
 
 export function summariseDrafts(drafts: readonly TeamDraft[]): DraftSummary {
   const rows = new Map<string, HeroDraftRow>();
+
   const row = (hero: Hero): HeroDraftRow => {
     let r = rows.get(hero.id);
+
     if (!r) {
       r = { hero, played: 0, banned: 0, protected: 0, presentMaps: 0 };
       rows.set(hero.id, r);
     }
+
     return r;
   };
+
   const presence = new Map<string, Set<string>>();
+
   for (const d of drafts) {
     const mapKey = `${d.matchId}#${d.mapIndex}`;
+
     const touch = (hero: Hero) => {
       row(hero);
       const maps = presence.get(hero.id) ?? new Set<string>();
       maps.add(mapKey);
       presence.set(hero.id, maps);
     };
+
     for (const h of d.played) {
       row(h).played++;
       touch(h);
     }
+
     for (const h of d.bans) {
       row(h).banned++;
       touch(h);
     }
+
     for (const h of d.protects ?? []) {
       row(h).protected++;
       touch(h);
     }
   }
+
   for (const [id, maps] of presence) {
     const r = rows.get(id);
+
     if (r) r.presentMaps = maps.size;
   }
+
   return {
     rows: [...rows.values()].sort(
       (a, b) =>
@@ -257,6 +276,7 @@ export function statsFollowingFormat(
 ): MatchStats[] {
   return stats.flatMap((s) => {
     const maps = s.maps.filter((m) => m.draft && formatDeviations(m.draft, format).length === 0);
+
     return maps.length > 0 ? [{ ...s, maps }] : [];
   });
 }
@@ -265,6 +285,7 @@ export function draftCoverage(stats: readonly MatchStats[], format: DraftFormat)
   const maps = stats.flatMap((s) => s.maps);
   const ordered = maps.flatMap((m) => (m.draft ? [m.draft] : []));
   const fetched = stats.map((s) => s.fetchedAt).sort();
+
   return {
     series: stats.length,
     maps: maps.length,

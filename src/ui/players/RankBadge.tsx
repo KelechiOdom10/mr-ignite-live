@@ -16,11 +16,13 @@ const TIER_TEXT: Record<string, string> = {
 
 export function rankTierClass(name: string | null): string {
   const tier = (name ?? "").split(" ")[0]?.toLowerCase() ?? "";
+
   return TIER_TEXT[tier] ?? "text-muted-foreground";
 }
 
 export function RankBadge({ rank, className }: { rank: Rank; className?: string }) {
   if (!rank.name) return <span className={cn("text-muted-foreground", className)}>Unranked</span>;
+
   return (
     <span className={cn("inline-flex items-baseline gap-1.5", className)}>
       <span className={cn("font-semibold", rankTierClass(rank.name))}>{rank.name}</span>

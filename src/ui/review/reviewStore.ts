@@ -31,11 +31,14 @@ const StoredShape = z.object({
 function partition<T>(items: readonly unknown[], schema: z.ZodType<T>) {
   const valid: T[] = [];
   const invalid: unknown[] = [];
+
   for (const item of items) {
     const parsed = schema.safeParse(item);
+
     if (parsed.success) valid.push(parsed.data);
     else invalid.push(item);
   }
+
   return { valid, invalid };
 }
 
@@ -45,14 +48,17 @@ function partition<T>(items: readonly unknown[], schema: z.ZodType<T>) {
  */
 export async function loadLibrary(area: KeyValueArea, now: number): Promise<LoadedLibrary> {
   const raw = await area.get(LIBRARY_KEY);
+
   if (raw === undefined || raw === null) {
     return { library: { sessions: [], focuses: [] }, keptAs: null, unreadable: 0 };
   }
+
   const shape = StoredShape.safeParse(raw);
   const stored = shape.success ? shape.data : { sessions: [], focuses: [] };
   const sessions = partition(stored.sessions, ReviewSessionSchema);
   const focuses = partition(stored.focuses, PracticeFocusSchema);
   const unreadable = sessions.invalid.length + focuses.invalid.length;
+
   if (shape.success && unreadable === 0) {
     return {
       library: { sessions: sessions.valid, focuses: focuses.valid },
@@ -60,8 +66,10 @@ export async function loadLibrary(area: KeyValueArea, now: number): Promise<Load
       unreadable,
     };
   }
+
   const keptAs = `${UNREADABLE_PREFIX}${now}`;
   await area.set(keptAs, raw);
+
   return {
     library: { sessions: sessions.valid, focuses: focuses.valid },
     keptAs,
@@ -76,6 +84,7 @@ export function saveLibrary(area: KeyValueArea, library: ReviewLibrary): Promise
   if (!ReviewLibrarySchema.safeParse(library).success) {
     return Promise.reject(new UnsavableLibraryError("Review library failed its own schema"));
   }
+
   return area.set(LIBRARY_KEY, library);
 }
 
@@ -94,15 +103,19 @@ function openDatabase(): Promise<IDBDatabase> {
   req.addEventListener("upgradeneeded", () => {
     if (!req.result.objectStoreNames.contains(STORE)) req.result.createObjectStore(STORE);
   });
+
   return request(req);
 }
 
 export function indexedDbArea(): KeyValueArea {
   let db: Promise<IDBDatabase> | null = null;
+
   const store = async (mode: IDBTransactionMode) => {
     db ??= openDatabase();
+
     return (await db).transaction(STORE, mode).objectStore(STORE);
   };
+
   return {
     async get(key) {
       return request((await store("readonly")).get(key));

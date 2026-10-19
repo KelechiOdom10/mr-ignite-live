@@ -18,6 +18,7 @@ export type Props = InferProps<typeof loader>;
 export const loader = defineHandler(async (c) => {
   const now = Date.now();
   const [full, allStats] = await Promise.all([currentSnapshot(), readAllStats()]);
+
   const scope = draftScope({
     stats: allStats,
     matches: full.matches,
@@ -25,6 +26,7 @@ export const loader = defineHandler(async (c) => {
     query: { event: c.req.query("event"), map: c.req.query("map"), mode: c.req.query("mode") },
     now,
   });
+
   return {
     snapshot: scopeSnapshot(full, { kind: "events" }, now),
     filter: scope.filter,

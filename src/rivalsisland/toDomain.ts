@@ -18,6 +18,7 @@ import type { ResponseOf } from "./endpoints";
 /** A response uid we can link to, or null for bots and hidden players. */
 export function linkableUid(uid: string): Uid | null {
   const parsed = UidSchema.safeParse(uid);
+
   return parsed.success ? parsed.data : null;
 }
 
@@ -27,7 +28,9 @@ export function toLeaderboard(res: ResponseOf<"leaderboard">, freshness: Freshne
     device: res.device_type,
     rows: res.entries.flatMap((e) => {
       const uid = linkableUid(e.player.uid);
+
       if (!uid) return [];
+
       return [
         {
           position: e.position,
@@ -67,6 +70,7 @@ export function toHero(
   catalogue: HeroCatalogue,
 ): Hero {
   const known = catalogue.get(ref.id);
+
   return {
     id: ref.id,
     name: ref.name ? heroDisplayName(ref.name) : (known?.name ?? `Hero ${ref.id}`),
@@ -82,6 +86,7 @@ function isoFromSeconds(seconds: number | null): string | null {
 export function toProfile(res: ResponseOf<"career">, catalogue: HeroCatalogue): PlayerProfile {
   const { player } = res;
   const rank = player.rank;
+
   return {
     uid: player.uid,
     name: player.name,
@@ -104,6 +109,7 @@ export function toProfile(res: ResponseOf<"career">, catalogue: HeroCatalogue): 
 
 export function toCareer(res: ResponseOf<"career">): Career {
   const c = res.career;
+
   return {
     matches: c.matches,
     wins: c.wins,
@@ -197,6 +203,7 @@ export function toHeroCareer(
   freshness: Freshness,
 ): HeroCareer {
   const c = res.career;
+
   return {
     hero: toHero(res.hero, catalogue),
     matches: c.matches,

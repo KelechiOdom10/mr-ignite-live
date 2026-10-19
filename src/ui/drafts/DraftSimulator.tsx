@@ -46,6 +46,7 @@ function Slot({ hero, kind }: { hero: Hero | undefined; kind: "ban" | "protect" 
       />
     );
   }
+
   return (
     <span
       className={cn(
@@ -85,6 +86,7 @@ function TeamBoard({
   onChoose: () => void;
 }) {
   const plan = slotPlan(format, camp);
+
   const row = (ids: string[], count: number, kind: "ban" | "protect") => (
     <div className="flex gap-1 sm:flex-wrap sm:gap-1.5">
       {Array.from({ length: count }, (_, i) => (
@@ -92,6 +94,7 @@ function TeamBoard({
       ))}
     </div>
   );
+
   const heading = (
     <span className="flex items-center justify-between gap-2">
       <span className="font-medium whitespace-nowrap">{TEAM[camp]}</span>
@@ -107,6 +110,7 @@ function TeamBoard({
       )}
     </span>
   );
+
   return (
     <section
       aria-label={TEAM[camp]}
@@ -164,14 +168,17 @@ export function DraftSimulator({
 
   const byId = useMemo(() => new Map(heroes.map((h) => [h.id, h])), [heroes]);
   const turn = currentTurn(format, moves);
+
   const acting: Camp | null = turn
     ? turn.waiting.includes(camp)
       ? camp
       : (turn.waiting[0] ?? null)
     : null;
+
   const choosable = turn !== null && turn.waiting.length > 1;
   const sides = outcome(moves);
   const steps = timeline(format, moves);
+
   const shown = heroes.filter(
     (h) =>
       (role === "All" || h.role === role) &&
@@ -181,10 +188,13 @@ export function DraftSimulator({
   function choose(heroId: string) {
     if (acting === null) {
       setProblem(PROBLEM.finished);
+
       return;
     }
+
     const why = moveProblem(format, moves, acting, heroId);
     setProblem(why ? PROBLEM[why.kind] : null);
+
     if (!why) setMoves(applyMove(format, moves, acting, heroId));
   }
 
@@ -274,6 +284,7 @@ export function DraftSimulator({
                 </span>
                 {s.picks.map((p) => {
                   const hero = byId.get(p.heroId);
+
                   return hero ? (
                     <span key={`${p.camp}-${p.heroId}`} title={`${TEAM[p.camp]}: ${hero.name}`}>
                       <HeroPortrait hero={hero} size={18} />
@@ -336,6 +347,7 @@ export function DraftSimulator({
             const protectedBy = ([0, 1] as const).filter((c) => sides[c].protects.includes(h.id));
             const rate = rates[h.id];
             const outForActing = acting !== null && outFor.includes(acting);
+
             const state = [
               outFor.length === 2
                 ? "Out for both teams"
@@ -344,9 +356,11 @@ export function DraftSimulator({
                   : null,
               protectedBy.length > 0 ? "Protected" : null,
             ].filter(Boolean);
+
             const proLine = rate
               ? `Pro drafts: banned ${percent(rate.banned)}${rate.protected === null ? "" : `, protected ${percent(rate.protected)}`}`
               : "Not seen in cached pro drafts";
+
             return (
               <li key={h.id}>
                 <button

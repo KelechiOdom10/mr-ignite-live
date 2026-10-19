@@ -30,6 +30,7 @@ describe("MatchStatsSchema", () => {
         },
       ],
     };
+
     expect(MatchStatsSchema.parse(stored).maps[0]?.draft).toBeNull();
   });
 });
@@ -78,6 +79,7 @@ describe("hero lines", () => {
       isMvp: false,
       isSvp: false,
     });
+
     expect(stored.heroes[0]?.line ?? null).toBeNull();
   });
 });
@@ -93,6 +95,7 @@ describe("combinePlayers", () => {
     healing: 0,
     accuracy: 50,
   });
+
   const hero = (id: string, playSeconds: number, l: HeroLine | null) => ({
     id,
     name: id,
@@ -101,6 +104,7 @@ describe("combinePlayers", () => {
     playSeconds,
     line: l,
   });
+
   const player = (heroes: PlayerStats["heroes"], kills: number, isMvp = false): PlayerStats => ({
     name: "Tonez",
     nationality: null,
@@ -117,6 +121,7 @@ describe("combinePlayers", () => {
     isMvp,
     isSvp: false,
   });
+
   const team = (p: PlayerStats): TeamMapStats => ({
     name: "100T",
     won: true,
@@ -130,6 +135,7 @@ describe("combinePlayers", () => {
       team(player([hero("hulk", 100, line(3))], 3, true)),
       team(player([hero("hulk", 50, line(2)), hero("groot", 400, line(1))], 3)),
     ]);
+
     expect(row?.heroes.map((h) => [h.id, h.playSeconds, h.line?.kills])).toEqual([
       ["groot", 400, 1],
       ["hulk", 150, 5],
@@ -142,6 +148,7 @@ describe("combinePlayers", () => {
       team(player([hero("hulk", 100, line(3))], 3)),
       team(player([hero("hulk", 50, null)], 2)),
     ]);
+
     expect(row?.heroes[0]?.line).toBeNull();
   });
 });

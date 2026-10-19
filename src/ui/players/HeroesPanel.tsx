@@ -11,6 +11,7 @@ function hours(seconds: number): string {
 
 function LoadHeroCard({ uid, hero, label }: { uid: Uid; hero: Hero; label: string }) {
   const form = useForm("/player/:uid", { intent: "hero", heroId: hero.id }, { params: { uid } });
+
   return (
     <Form form={form} className="contents">
       <button
@@ -107,6 +108,7 @@ export function HeroesPanel({
 }) {
   const cardFor = (id: number) => cards.find((c) => c.hero.id === id);
   const others = recent.filter((h) => h.id !== signature?.id);
+
   return (
     <section aria-labelledby="heroes" className="space-y-2">
       <h2 id="heroes" className="text-sm font-semibold text-muted-foreground">

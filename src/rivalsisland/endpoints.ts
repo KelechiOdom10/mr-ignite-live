@@ -40,6 +40,7 @@ const SCHEMAS = {
 } satisfies Record<keyof EndpointParams, z.ZodType>;
 
 export type EndpointName = keyof EndpointParams;
+
 export type ResponseOf<E extends EndpointName> = z.output<(typeof SCHEMAS)[E]>;
 
 export interface Endpoint<E extends EndpointName> {
@@ -102,5 +103,6 @@ export const ENDPOINTS: { [E in EndpointName]: Endpoint<E> } = {
 /** Stable cache and ledger key: the request path is unique per endpoint and params. */
 export function requestKey<E extends EndpointName>(name: E, params: EndpointParams[E]): string {
   const endpoint: Endpoint<E> = ENDPOINTS[name];
+
   return `${name}:${endpoint.path(params)}`;
 }

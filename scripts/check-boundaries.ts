@@ -9,6 +9,7 @@ function* walk(dir: string): Generator<string> {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (SKIP.has(entry.name) || entry.name.startsWith(".")) continue;
     const path = join(dir, entry.name);
+
     if (entry.isDirectory()) yield* walk(path);
     else if (/\.tsx?$/.test(entry.name)) yield path;
   }
@@ -18,6 +19,7 @@ const files: SourceFile[] = [...walk(".")].map((path) => ({
   path,
   source: readFileSync(path, "utf8"),
 }));
+
 const violations = findViolations(files);
 
 if (violations.length > 0) {
@@ -27,4 +29,5 @@ if (violations.length > 0) {
   );
   process.exit(1);
 }
+
 console.info(`Boundaries hold across ${files.length} files.`);

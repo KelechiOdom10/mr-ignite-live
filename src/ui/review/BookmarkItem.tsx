@@ -29,6 +29,7 @@ const fieldClass =
 
 function Field({ label, children }: { label: string; children: (id: string) => ReactNode }) {
   const id = useId();
+
   return (
     <div className="space-y-1">
       <label htmlFor={id} className="block text-xs text-muted-foreground">
@@ -67,6 +68,7 @@ function Choice<T extends string>({
           value={value}
           onChange={(e) => {
             const picked = choices.find((c) => c.value === e.target.value);
+
             if (picked) onChange(picked.value);
           }}
           className={fieldClass}
@@ -177,11 +179,15 @@ export function BookmarkItem({
             type="button"
             onClick={() => {
               const now = currentTime();
+
               if (now === null) return;
+
               if (now < bookmark.at) {
                 setEndError("Play past the fight's start, then mark its end.");
+
                 return;
               }
+
               setEndError(null);
               onChange({ ...bookmark, endAt: now });
             }}

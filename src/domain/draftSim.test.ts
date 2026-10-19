@@ -43,6 +43,7 @@ describe("draft simulator", () => {
       [0, "gambit"],
       [1, "loki"],
     ]);
+
     expect(moveProblem(IGNITE_2026, moves, 1, "mantis")).toEqual({ kind: "not-your-turn" });
     expect(applyMove(IGNITE_2026, moves, 1, "mantis")).toEqual(moves);
   });
@@ -53,6 +54,7 @@ describe("draft simulator", () => {
       [1, "loki"],
       [0, "mantis"],
     ]);
+
     expect(moveProblem(IGNITE_2026, moves, 1, "mantis")).toEqual({ kind: "protected-by-opponent" });
   });
 
@@ -62,6 +64,7 @@ describe("draft simulator", () => {
       [1, "loki"],
       [0, "gambit"],
     ]);
+
     expect(outcome(moves)[0]).toEqual({
       bans: ["gambit"],
       protects: ["gambit"],
@@ -77,6 +80,7 @@ describe("draft simulator edges", () => {
       [1, "loki"],
       [0, "mantis"],
     ]);
+
     // Step 3 is the second team's ban; it already banned Loki.
     expect(moveProblem(IGNITE_2026, moves, 1, "loki")).toEqual({ kind: "repeat" });
   });
@@ -86,6 +90,7 @@ describe("draft simulator edges", () => {
       [0, "gambit"],
       [1, "gambit"],
     ]);
+
     expect(outcome(moves).map((o) => o.bans)).toEqual([["gambit"], ["gambit"]]);
   });
 
@@ -94,6 +99,7 @@ describe("draft simulator edges", () => {
       [0, "gambit"],
       [1, "loki"],
     ]);
+
     expect(currentTurn(IGNITE_2026, moves.slice(0, -1))).toEqual({
       step: 0,
       kind: "ban",
@@ -103,11 +109,13 @@ describe("draft simulator edges", () => {
 
   it("finishes after all 14 moves and refuses more", () => {
     let moves: SimMove[] = [];
+
     for (let n = 0; n < 40 && currentTurn(IGNITE_2026, moves); n++) {
       const turn = currentTurn(IGNITE_2026, moves);
       const camp = turn?.waiting[0] ?? 0;
       moves = applyMove(IGNITE_2026, moves, camp, `hero-${moves.length}`);
     }
+
     expect(moves).toHaveLength(14);
     expect(moveProblem(IGNITE_2026, moves, 0, "anyone")).toEqual({ kind: "finished" });
   });
@@ -127,6 +135,7 @@ describe("draft board", () => {
         [0, "mantis"],
       ]),
     );
+
     expect(steps).toHaveLength(11);
     expect(steps[0]).toMatchObject({
       state: "done",
@@ -146,10 +155,12 @@ describe("draft board", () => {
 
   it("reads pro shares against their own denominators, and none when protects aren't known", () => {
     const hero = { id: "loki", name: "Loki", role: "Strategist", portraitUrl: null };
+
     const rates = proRates({
       rows: [{ hero, played: 3, banned: 6, protected: 2, presentMaps: 5 }],
       sample: { teamDrafts: 8, maps: 4, series: 2, withProtects: 4 },
     });
+
     expect(rates.loki).toEqual({ banned: 0.75, protected: 0.5 });
     expect(
       proRates({

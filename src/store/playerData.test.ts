@@ -31,6 +31,7 @@ function setup({
   const fake = fakeRivalsIsland(scripted);
   const ledger = memoryCreditLedger();
   let time = Date.parse("2026-10-17T12:00:00Z");
+
   const data = createPlayerData({
     client: createRivalsIslandClient({ apiKey: "k", fetch: fake.fetch }),
     cache,
@@ -38,6 +39,7 @@ function setup({
     budget,
     now: () => time,
   });
+
   return { data, fake, ledger, advance: (ms: number) => (time += ms) };
 }
 
@@ -58,10 +60,12 @@ describe("player data", () => {
 
   it("reserves credits before calling, so concurrent calls can't jointly pass the budget", async () => {
     const { data, fake } = setup({ budget: 15 });
+
     const results = await Promise.allSettled([
       data.get("career", { uid: trqstMe }),
       data.get("heroCareer", { uid: sypeh, heroId: 1011 }),
     ]);
+
     expect(fake.calls).toHaveLength(1);
     expect(results.filter((r) => r.status === "rejected")).toMatchObject([
       { reason: expect.any(CreditBudgetExceededError) },
@@ -70,6 +74,7 @@ describe("player data", () => {
 
   it("books the credits RivalsIsland charged, not the price we expected", async () => {
     const path = `/players/${trqstMe}/career`;
+
     const { data, ledger } = setup({
       scripted: {
         [path]: {
@@ -79,6 +84,7 @@ describe("player data", () => {
         },
       },
     });
+
     await data.get("career", { uid: trqstMe });
     expect((await ledger.summary()).spent).toBe(7);
   });
@@ -131,10 +137,12 @@ describe("player data", () => {
 
   it("still books a paid call when saving it to the cache fails", async () => {
     const cache = memoryPlayerCache();
+
     const failing: PlayerCache = {
       get: (key) => cache.get(key),
       put: () => Promise.reject(new Error("D1 unavailable")),
     };
+
     const { data, ledger } = setup({ cache: failing });
     await expect(data.get("career", { uid: trqstMe })).rejects.toThrow("D1 unavailable");
     expect(await ledger.summary()).toMatchObject({ spent: 10, pending: 0 });
@@ -150,9 +158,11 @@ describe("player data", () => {
 
   it("remembers a response that broke our schema instead of paying for it on every visit", async () => {
     const path = `/players/${trqstMe}/career`;
+
     const { data, fake } = setup({
       scripted: { [path]: { status: 200, cost: 10, body: { player: {} } } },
     });
+
     await expect(data.get("career", { uid: trqstMe })).rejects.toBeInstanceOf(
       RivalsIslandContractError,
     );

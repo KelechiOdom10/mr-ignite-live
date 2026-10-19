@@ -10,6 +10,7 @@ import type { Props } from "./players.server";
 
 export default function PlayersPage({ snapshot: initial, favourites, prefill }: Props) {
   const { snapshot, connection, now } = useLiveSnapshot(initial, { view: "events" });
+
   return (
     <AppShell snapshot={snapshot} connection={connection} now={now}>
       <h1 className="text-2xl font-semibold tracking-tight">Players</h1>

@@ -6,6 +6,7 @@ export const HeroSchema = z.object({
   role: z.string().nullable(),
   portraitUrl: z.string().nullable(),
 });
+
 export type Hero = z.infer<typeof HeroSchema>;
 
 /** One hero's share of a player's map: mrvl splits a player's stats by hero. */
@@ -19,6 +20,7 @@ export const HeroLineSchema = z.object({
   healing: z.number(),
   accuracy: z.number().nullable(),
 });
+
 export type HeroLine = z.infer<typeof HeroLineSchema>;
 
 export const HeroUsageSchema = HeroSchema.extend({
@@ -26,6 +28,7 @@ export const HeroUsageSchema = HeroSchema.extend({
   // Copies stored before per-hero lines were kept have none; they read as unknown, not zero.
   line: HeroLineSchema.nullish(),
 });
+
 export type HeroUsage = z.infer<typeof HeroUsageSchema>;
 
 /**
@@ -37,6 +40,7 @@ export function addHeroLines(
   b: HeroLine | null | undefined,
 ): HeroLine | null {
   if (!a || !b) return null;
+
   return {
     kills: a.kills + b.kills,
     deaths: a.deaths + b.deaths,
@@ -65,6 +69,7 @@ export const PlayerStatsSchema = z.object({
   isMvp: z.boolean(),
   isSvp: z.boolean(),
 });
+
 export type PlayerStats = z.infer<typeof PlayerStatsSchema>;
 
 export const TeamMapStatsSchema = z.object({
@@ -74,6 +79,7 @@ export const TeamMapStatsSchema = z.object({
   bans: z.array(HeroSchema),
   players: z.array(PlayerStatsSchema),
 });
+
 export type TeamMapStats = z.infer<typeof TeamMapStatsSchema>;
 
 export const DraftActionSchema = z.object({
@@ -86,6 +92,7 @@ export const DraftActionSchema = z.object({
   kind: z.enum(["ban", "protect"]),
   hero: HeroSchema,
 });
+
 export type DraftAction = z.infer<typeof DraftActionSchema>;
 
 export const MapStatsSchema = z.object({
@@ -97,6 +104,7 @@ export const MapStatsSchema = z.object({
   /** Bans and protects in draft order; null for maps stored before it was kept, or without a timeline. */
   draft: z.array(DraftActionSchema).nullable().default(null),
 });
+
 export type MapStats = z.infer<typeof MapStatsSchema>;
 
 export const MatchStatsSchema = z.object({
@@ -107,6 +115,7 @@ export const MatchStatsSchema = z.object({
   fetchedAt: z.iso.datetime(),
   maps: z.array(MapStatsSchema),
 });
+
 export type MatchStats = z.infer<typeof MatchStatsSchema>;
 
 export interface SeriesPlayer extends PlayerStats {
@@ -120,14 +129,18 @@ export interface SeriesPlayer extends PlayerStats {
  */
 export function combinePlayers(teams: readonly TeamMapStats[]): SeriesPlayer[] {
   const byName = new Map<string, SeriesPlayer>();
+
   for (const team of teams) {
     for (const p of team.players) {
       const prev = byName.get(p.name);
+
       if (!prev) {
         byName.set(p.name, { ...p, mvpCount: p.isMvp ? 1 : 0, svpCount: p.isSvp ? 1 : 0 });
         continue;
       }
+
       const heroes = new Map(prev.heroes.map((h) => [h.id, { ...h }]));
+
       for (const h of p.heroes) {
         const existing = heroes.get(h.id);
         heroes.set(
@@ -141,6 +154,7 @@ export function combinePlayers(teams: readonly TeamMapStats[]): SeriesPlayer[] {
             : h,
         );
       }
+
       byName.set(p.name, {
         ...prev,
         heroes: [...heroes.values()].sort((a, b) => b.playSeconds - a.playSeconds),
@@ -157,5 +171,6 @@ export function combinePlayers(teams: readonly TeamMapStats[]): SeriesPlayer[] {
       });
     }
   }
+
   return [...byName.values()];
 }

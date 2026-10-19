@@ -6,10 +6,13 @@ import { useState } from "react";
  */
 export function useDraft(saved: string) {
   const [state, setState] = useState({ text: saved, dirty: false, saved });
+
   if (state.saved !== saved && !state.dirty) {
     setState({ text: saved, dirty: false, saved });
   }
+
   const text = state.saved !== saved && !state.dirty ? saved : state.text;
+
   return {
     text,
     dirty: state.dirty,

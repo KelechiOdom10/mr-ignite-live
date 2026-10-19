@@ -32,14 +32,19 @@ const SHORT_NAMES: Record<string, string> = {
 
 export function teamShortName(name: string): string {
   const known = SHORT_NAMES[name];
+
   if (known) return known;
+
   const words = name
     .replace(/\b(Esports|Gaming|Team|Club)\b/gi, "")
     .trim()
     .split(/\s+/)
     .filter(Boolean);
+
   const [only] = words;
+
   if (words.length === 1 && only) return only.slice(0, 5).toUpperCase();
+
   return words
     .map((w) => w[0])
     .join("")
@@ -49,6 +54,8 @@ export function teamShortName(name: string): string {
 
 export function teamHue(name: string): number {
   let h = 0;
+
   for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) % 360;
+
   return h;
 }

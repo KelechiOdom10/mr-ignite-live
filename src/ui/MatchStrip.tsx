@@ -17,21 +17,25 @@ const RESULT_CHIPS = 6;
 export function stripMatches(snapshot: Snapshot, now: number): Match[] {
   const withState = snapshot.matches.map((m) => ({ m, s: matchState(m, now) }));
   const live = withState.filter(({ s }) => s.status === "live").map(({ m }) => m);
+
   const upcoming = withState
     .filter(({ m, s }) => s.status === "upcoming" && m.startsAt && m.team1 && m.team2)
     .slice(0, UPCOMING_CHIPS)
     .map(({ m }) => m);
+
   const recent = withState
     .filter(({ s }) => s.status === "finished" && s.playedMaps.length > 0)
     .slice(-RESULT_CHIPS)
     .reverse()
     .map(({ m }) => m);
+
   return [...live, ...upcoming, ...recent];
 }
 
 function Chip({ match, snapshot, now }: { match: Match; snapshot: Snapshot; now: number }) {
   const view = useMatchView(match, now, snapshot.matches);
   const event = snapshot.events.find((e) => e.id === match.eventId);
+
   const row = (side: SideView) => (
     <div
       className={cn("flex items-center gap-2", side.outcome === "lost" && "text-muted-foreground")}
@@ -47,6 +51,7 @@ function Chip({ match, snapshot, now }: { match: Match; snapshot: Snapshot; now:
       <span className="font-mono text-xs tabular-nums">{side.score ?? ""}</span>
     </div>
   );
+
   return (
     <Link
       href={`/match/${match.id}`}
@@ -78,12 +83,14 @@ function useOverflowEdges() {
   // starts empty and fills in from a live update.
   const [el, ref] = useState<HTMLDivElement | null>(null);
   const [edges, setEdges] = useState<keyof typeof EDGE_MASKS>("none");
+
   const measure = useCallback(() => {
     if (!el) return;
     const left = el.scrollLeft > 1;
     const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
     setEdges(left && right ? "both" : left ? "left" : right ? "right" : "none");
   }, [el]);
+
   useEffect(() => {
     if (!el) return;
     // A ResizeObserver reports once on observe, which takes the first measurement.
@@ -92,18 +99,22 @@ function useOverflowEdges() {
     // Chips come and go as matches start and finish without the strip itself resizing.
     const changed = new MutationObserver(measure);
     changed.observe(el, { childList: true });
+
     return () => {
       resized.disconnect();
       changed.disconnect();
     };
   }, [el, measure]);
+
   return { ref, edges, measure };
 }
 
 export function MatchStrip({ snapshot, now }: { snapshot: Snapshot; now: number }) {
   const matches = stripMatches(snapshot, now);
   const { ref, edges, measure } = useOverflowEdges();
+
   if (matches.length === 0) return null;
+
   return (
     <nav aria-label="Live, upcoming and recent matches" className="border-b bg-background">
       {/* Scroll padding keeps snapping in line with the header's padding, so the first chip lines up with the logo. */}

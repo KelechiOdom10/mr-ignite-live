@@ -13,10 +13,12 @@ import {
 // IndexedDB structured-clones what it stores; cloning here keeps a value it couldn't hold failing.
 function memoryArea(initial: Record<string, unknown> = {}) {
   const values = new Map(Object.entries(initial).map(([k, v]) => [k, structuredClone(v)]));
+
   const area: KeyValueArea = {
     get: async (key) => structuredClone(values.get(key)),
     set: async (key, value) => void values.set(key, structuredClone(value)),
   };
+
   return { area, values };
 }
 
@@ -70,9 +72,12 @@ describe("review store", () => {
   it("refuses to save a review the loader would reject, leaving the stored copy intact", async () => {
     const { area, values } = memoryArea({ [LIBRARY_KEY]: library });
     const [session] = library.sessions;
+
     if (!session) throw new Error("fixture has a session");
     const [mark] = session.bookmarks;
+
     if (!mark) throw new Error("fixture has a mark");
+
     const overfull = {
       ...library,
       sessions: [

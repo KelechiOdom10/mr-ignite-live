@@ -66,6 +66,7 @@ describe("recentHeroes", () => {
       ]),
       match([player(me, [hero(1031, "Luna Snow", 200), hero(1011, "Bruce Banner", 400)])]),
     ];
+
     expect(recentHeroes(me, matches).map((h) => [h.name, h.playSeconds])).toEqual([
       ["Luna Snow", 500],
       ["Bruce Banner", 400],
@@ -75,6 +76,7 @@ describe("recentHeroes", () => {
 
 function profile(season: string | null, seasonMatches: number | null, seasonWins: number | null) {
   const rank = { name: null, level: null, score: null };
+
   const p: PlayerProfile = {
     uid: me,
     name: "me",
@@ -89,6 +91,7 @@ function profile(season: string | null, seasonMatches: number | null, seasonWins
     seasonMatches,
     lastOnline: null,
   };
+
   return p;
 }
 
@@ -158,6 +161,7 @@ describe("recent players", () => {
       uid: UidSchema.parse(String(i + 1)),
       name: `p${i + 1}`,
     }));
+
     const next = rememberPlayer(many, { uid: UidSchema.parse("3"), name: "p3 renamed" });
     expect(next).toHaveLength(RECENT_PLAYERS_LIMIT);
     expect(next[0]).toEqual({ uid: "3", name: "p3 renamed" });

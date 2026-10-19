@@ -20,12 +20,14 @@ let lastFailureAt = Number.NEGATIVE_INFINITY;
 
 async function runSync(): Promise<Snapshot> {
   const started = Date.now();
+
   const { snapshot, changed, ...counts } = await syncOnce({
     store: voidKvStore,
     liquipedia,
     mrvl,
     now: Date.now,
   });
+
   if (changed) {
     await live.publish(
       SCORES_TOPIC,
@@ -33,7 +35,9 @@ async function runSync(): Promise<Snapshot> {
       { type: "updated", eventId: `${snapshot.builtAt}:${Date.now()}` },
     );
   }
+
   console.info(JSON.stringify({ event: "sync", ...counts, durationMs: Date.now() - started }));
+
   return snapshot;
 }
 
@@ -49,6 +53,7 @@ export function sync(): Promise<Snapshot> {
     .finally(() => {
       inFlight = null;
     });
+
   return inFlight;
 }
 
@@ -60,18 +65,22 @@ export class SyncBackoffError extends Error {
 export async function currentSnapshot(): Promise<Snapshot> {
   const stored = await readStored(voidKvStore);
   const devDue = import.meta.env.DEV && Date.now() - lastDevSync > DEV_SYNC_INTERVAL_MS;
+
   if (stored && !devDue) return toSnapshot(stored, new Date());
+
   // Without this, every request after a failed first sync would refetch all of Liquipedia.
   if (!stored && Date.now() - lastFailureAt < FAILURE_BACKOFF_MS) {
     throw new SyncBackoffError("Waiting before retrying the Liquipedia sync");
   }
 
   lastDevSync = Date.now();
+
   try {
     return await sync();
   } catch (error) {
     if (!stored) throw error;
     console.error("Sync failed, serving stored snapshot", error);
+
     return toSnapshot(stored, new Date());
   }
 }

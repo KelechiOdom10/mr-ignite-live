@@ -11,6 +11,7 @@ export function RegionTag({
   className?: string;
 }) {
   const region = regionKey(event?.region);
+
   return (
     <span
       title={event?.name}

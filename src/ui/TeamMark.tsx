@@ -20,6 +20,7 @@ export function TeamLogo({
 }) {
   const box = { width: size, height: size };
   const src = logoUrl(info);
+
   if (src) {
     return (
       <img
@@ -31,6 +32,7 @@ export function TeamLogo({
       />
     );
   }
+
   return (
     <span
       style={box}

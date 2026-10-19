@@ -4,6 +4,7 @@ import { MatchCard } from "./MatchCard";
 
 function bracketKey(id: string): [number, number] {
   const m = /_R(\d+)M(\d+)$/.exec(id);
+
   return m ? [Number(m[1]), Number(m[2])] : [Number.MAX_SAFE_INTEGER, 0];
 }
 
@@ -11,10 +12,14 @@ export function roundsOf(matches: Match[]): { name: string; matches: Match[] }[]
   const sorted = matches.toSorted((a, b) => {
     const [ra, ma] = bracketKey(a.id);
     const [rb, mb] = bracketKey(b.id);
+
     return ra - rb || ma - mb;
   });
+
   const rounds = new Map<string, Match[]>();
+
   for (const m of sorted) rounds.set(m.round, [...(rounds.get(m.round) ?? []), m]);
+
   return [...rounds].map(([name, ms]) => ({ name, matches: ms }));
 }
 
@@ -32,7 +37,9 @@ export function Bracket({
   now: number;
 }) {
   const rounds = roundsOf(matches);
+
   if (rounds.length === 0) return null;
+
   return (
     <section aria-label={title} className="space-y-3">
       <h2 className="text-lg font-semibold">{title}</h2>

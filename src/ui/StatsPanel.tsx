@@ -35,11 +35,14 @@ export function useMatchStats(matchId: string, initial: MatchStats | null, refre
       .then((res) => (res.ok ? res.json() : null))
       .then((body: unknown) => {
         const parsed = StatsResponseSchema.safeParse(body);
+
         if (parsed.success) setStats(parsed.data.stats);
       })
       .catch(() => {});
+
     return () => controller.abort();
   }, [matchId, refreshKey]);
+
   return stats;
 }
 
@@ -60,6 +63,7 @@ export function HeroPortrait({
 }) {
   const src = proxiedImage(hero.portraitUrl);
   const box = { width: size, height: size };
+
   return src ? (
     <img
       src={src}
@@ -91,7 +95,9 @@ function HeroName({ hero }: { hero: Hero }) {
 function heroSummary(hero: HeroUsage, share: number | null): string {
   const time = `${formatDuration(hero.playSeconds)} played${share === null ? "" : ` (${share}%)`}`;
   const line = hero.line;
+
   if (!line) return `${hero.name}: ${time}; per-hero stats not saved`;
+
   return `${hero.name}: ${time}; ${line.kills} kills, ${line.deaths} deaths, ${line.assists} assists, ${number.format(line.damage)} damage, ${number.format(line.healing)} healing`;
 }
 
@@ -118,6 +124,7 @@ function HeroBreakdown({
   const triggerRef = useRef<HTMLSpanElement>(null);
   const share = totalSeconds > 0 ? Math.round((hero.playSeconds / totalSeconds) * 100) : null;
   const summary = heroSummary(hero, share);
+
   const face = (
     <>
       <HeroPortrait hero={hero} size={26} />
@@ -143,6 +150,7 @@ function HeroBreakdown({
   }
 
   const line = hero.line;
+
   const cells: [string, string][] = line
     ? [
         ["K / D / A", `${line.kills} / ${line.deaths} / ${line.assists}`],
@@ -155,6 +163,7 @@ function HeroBreakdown({
           : ([["Accuracy", `${Math.round(line.accuracy)}%`]] as [string, string][])),
       ]
     : [];
+
   return (
     <span ref={triggerRef} className="inline-flex">
       <Popover defaultOpen side="bottom" align="center" sideOffset={10} gooStrength={6}>
@@ -201,6 +210,7 @@ function HeroBreakdown({
 function HeroesPlayed({ player, combined }: { player: Row; combined: boolean }) {
   const heroes = player.heroes.toSorted((a, b) => b.playSeconds - a.playSeconds);
   const totalSeconds = heroes.reduce((sum, h) => sum + h.playSeconds, 0);
+
   return (
     <span className="flex flex-wrap items-center gap-1">
       {heroes.map((h) => (
@@ -358,7 +368,9 @@ function asRows(team: TeamMapStats): Row[] {
  */
 function RankedLookup({ name }: { name: string }) {
   const query = searchableName(name);
+
   if (!query) return null;
+
   return (
     <Link
       href={`/players?name=${encodeURIComponent(query)}`}

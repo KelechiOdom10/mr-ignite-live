@@ -20,6 +20,7 @@ function subscribe(listener: () => void) {
   listeners.add(listener);
   const onStorage = (e: StorageEvent) => e.key === STORAGE_KEY && listener();
   window.addEventListener("storage", onStorage);
+
   return () => {
     listeners.delete(listener);
     window.removeEventListener("storage", onStorage);
@@ -28,27 +29,32 @@ function subscribe(listener: () => void) {
 
 function read(): boolean {
   if (hasCookie()) return spoilersHiddenIn(document.cookie);
+
   return window.localStorage.getItem(STORAGE_KEY) === "1";
 }
 
 function write(hidden: boolean) {
   document.cookie = spoilerCookie(hidden);
   window.localStorage.setItem(STORAGE_KEY, hidden ? "1" : "0");
+
   for (const l of listeners) l();
 }
 
 export function useSpoilersHidden(): boolean {
   const { spoilersHidden } = useShared();
+
   return useSyncExternalStore(subscribe, read, () => spoilersHidden);
 }
 
 export function useMatchView(match: Match, now: number, matches?: readonly Match[]): MatchView {
   const bracket = matches ? { matches, now } : undefined;
+
   return matchView(match, matchState(match, now), useSpoilersHidden(), bracket);
 }
 
 export function SpoilerToggle({ compact = false }: { compact?: boolean }) {
   const hidden = useSpoilersHidden();
+
   return (
     <Switch
       checked={hidden}

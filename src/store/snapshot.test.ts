@@ -11,6 +11,7 @@ describe("readStored", () => {
     const store = memoryKvStore({
       snapshot: { ...emptyStored(), version: STORED_SNAPSHOT_VERSION - 1 },
     });
+
     expect(await readStored(store)).toBeNull();
   });
 

@@ -27,14 +27,20 @@ export function useLiveSnapshot(initial: Snapshot, scope: LiveScope = {}) {
 
   const refetch = useCallback(async () => {
     const params = new URLSearchParams();
+
     if (eventId) params.set("event", eventId);
+
     if (matchId) params.set("match", matchId);
+
     if (view) params.set("view", view);
     const query = params.size > 0 ? `?${params}` : "";
+
     try {
       const res = await fetch(`/api/snapshot${query}`);
+
       if (!res.ok) throw new Error(`Snapshot request failed with HTTP ${res.status}`);
       const parsed = SnapshotSchema.safeParse(await res.json());
+
       if (!parsed.success) throw new Error("Snapshot response did not match the expected shape");
       setSnapshot((current) => newerSnapshot(current, parsed.data));
       setRefreshError(null);
@@ -47,6 +53,7 @@ export function useLiveSnapshot(initial: Snapshot, scope: LiveScope = {}) {
     const poll = setInterval(() => void refetch(), POLL_MS);
     const onVisible = () => document.visibilityState === "visible" && void refetch();
     document.addEventListener("visibilitychange", onVisible);
+
     return () => {
       clearInterval(poll);
       document.removeEventListener("visibilitychange", onVisible);
@@ -55,12 +62,14 @@ export function useLiveSnapshot(initial: Snapshot, scope: LiveScope = {}) {
 
   useEffect(() => {
     let disposed = false;
+
     const stream = connectLiveStream("/live", {
       retryDelay: 2_000,
       onError() {
         if (!disposed) setConnection("polling");
       },
     });
+
     stream
       .subscribe({
         id: "scores",
@@ -76,6 +85,7 @@ export function useLiveSnapshot(initial: Snapshot, scope: LiveScope = {}) {
       .catch(() => {
         if (!disposed) setConnection("polling");
       });
+
     return () => {
       disposed = true;
       stream.close();

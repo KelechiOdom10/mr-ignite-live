@@ -37,6 +37,7 @@ function aSnapshot(events: IgniteEvent[], matches: Snapshot["matches"]): Snapsho
 describe("scopeSnapshot", () => {
   const current = anEvent("current", "2026-10-18");
   const old = anEvent("old", "2026-08-01");
+
   const snapshot = aSnapshot(
     [current, old],
     [
@@ -77,11 +78,13 @@ describe("scopeSnapshot", () => {
   it("keeps the requested event on its page before its bracket has any matches", () => {
     // Announced stages showed "Event not found" because events without matches were dropped.
     const announced = anEvent("announced", null);
+
     const scoped = scopeSnapshot(
       aSnapshot([announced, old], []),
       { kind: "event", eventId: "announced" },
       NOW,
     );
+
     expect(scoped.events.map((e) => e.id)).toEqual(["announced"]);
   });
 
@@ -97,17 +100,20 @@ describe("scopeSnapshot", () => {
     const final = aMatch({ id: "kOK_R4M1", eventId: "current", startsAt: daysAgo(-1) });
     const semi = aMatch({ id: "kOK_R2M1", eventId: "current", startsAt: daysAgo(4) });
     const otherBracket = aMatch({ id: "zzz_R2M1", eventId: "current", startsAt: daysAgo(4) });
+
     const groupGame = aMatch({
       id: "kOK_R1M9",
       eventId: "current",
       phase: "Group Stage",
       startsAt: daysAgo(4),
     });
+
     const scoped = scopeSnapshot(
       aSnapshot([current], [semi, otherBracket, groupGame, final]),
       { kind: "events" },
       NOW,
     );
+
     expect(scoped.matches.map((m) => m.id)).toEqual(["kOK_R2M1", "kOK_R4M1"]);
   });
 
@@ -124,6 +130,7 @@ describe("matchesOfEvent", () => {
       [anEvent("mine", "2026-10-18"), anEvent("other", "2026-10-18")],
       [aMatch({ id: "theirs-live", eventId: "other" }), aMatch({ id: "mine", eventId: "mine" })],
     );
+
     expect(matchesOfEvent(snapshot, "mine").map((m) => m.id)).toEqual(["mine"]);
   });
 });

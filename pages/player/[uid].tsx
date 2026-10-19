@@ -29,6 +29,7 @@ export default function PlayerPage({
 }: Props) {
   const { snapshot, connection, now } = useLiveSnapshot(initial, { view: "events" });
   useRememberPlayer(uid && player?.ok ? { uid, name: player.value.profile.name } : null);
+
   if (!uid || !player || !history || !heroes) {
     return (
       <AppShell snapshot={snapshot} connection={connection} now={now}>
@@ -36,7 +37,9 @@ export default function PlayerPage({
       </AppShell>
     );
   }
+
   const historyCost = history.ok || history.problem !== "history_private" ? 10 : 0;
+
   return (
     <AppShell snapshot={snapshot} connection={connection} now={now}>
       {player.ok ? (

@@ -18,11 +18,13 @@ export function eventIdFor(title: string): string {
 function parseNumber(value: string | undefined): number | null {
   if (value === undefined || value.trim() === "") return null;
   const n = Number(value);
+
   return Number.isFinite(n) ? n : null;
 }
 
 function templateIn(raw: string, name: string): Template | null {
   const start = raw.indexOf(`{{${name}`);
+
   return start < 0 ? null : parseTemplateAt(raw, start);
 }
 
@@ -30,15 +32,19 @@ function parseTeam(raw: string | undefined): Team | null {
   if (!raw) return null;
   const tpl = templateIn(raw, "");
   const name = stripMarkup(tpl ? (tpl.params["1"] ?? tpl.params.template ?? "") : raw);
+
   if (!name || /^tbd$/i.test(name)) return null;
+
   return { name, short: teamShortName(name) };
 }
 
 function parseMaps(params: Record<string, string>): MapResult[] {
   const maps: MapResult[] = [];
+
   for (let index = 1; index <= 9; index++) {
     const raw = params[`map${index}`];
     const tpl = raw ? templateIn(raw, "Map") : null;
+
     if (!tpl) continue;
     const winner = tpl.params.winner;
     maps.push({
@@ -50,11 +56,13 @@ function parseMaps(params: Record<string, string>): MapResult[] {
       vod: tpl.params.vod || null,
     });
   }
+
   return maps;
 }
 
 function phaseFor(title: string, kind: ContainerKind): string {
   if (title.endsWith(GROUP_STAGE_SUFFIX)) return "Group Stage";
+
   return kind === "bracket" ? "Playoffs" : "Matches";
 }
 
@@ -64,28 +72,36 @@ function firstToken(value: string): string {
 
 function lastCommentBefore(text: string, end: number): string | null {
   const comments = [...text.slice(0, end).matchAll(/<!--\s*([\s\S]*?)\s*-->/g)];
+
   return comments.at(-1)?.[1]?.trim() ?? null;
 }
 
 export function parsePageMatches(title: string, text: string): Match[] {
   const eventId = eventIdFor(title);
+
   const containers: { tpl: Template; kind: ContainerKind }[] = [
     ...findTemplates(text, "Bracket").map((tpl) => ({ tpl, kind: "bracket" as const })),
     ...findTemplates(text, "Matchlist").map((tpl) => ({ tpl, kind: "matchlist" as const })),
   ];
+
   const matches: Match[] = [];
+
   for (const { tpl, kind } of containers) {
     const containerId = firstToken(stripMarkup(tpl.params.id ?? "")) || String(tpl.start);
     const containerText = text.slice(tpl.start, tpl.end);
+
     for (const [key, value] of Object.entries(tpl.params)) {
       if (!MATCH_KEY.test(key)) continue;
       const matchTpl = templateIn(value, "Match");
+
       if (!matchTpl) continue;
       const p = matchTpl.params;
+
       const round =
         kind === "bracket"
           ? (lastCommentBefore(containerText, containerText.indexOf(`|${key}=`)) ?? key)
           : stripMarkup(tpl.params.title ?? "Matches");
+
       matches.push({
         id: `${containerId}_${key}`,
         eventId,
@@ -102,6 +118,7 @@ export function parsePageMatches(title: string, text: string): Match[] {
       });
     }
   }
+
   return matches;
 }
 
@@ -111,6 +128,7 @@ export function parseEventInfo(title: string, text: string, updatedAt: string): 
   const parts = title.split("/");
   const region = parts.findLast((p) => REGIONS.includes(p)) ?? "Global";
   const name = stripMarkup(info.name ?? `Ignite 2026 ${parts.slice(2).join(" ")}`);
+
   return {
     id: title,
     name,

@@ -17,6 +17,7 @@ export default function EventPage({ snapshot: initial, eventId }: Props) {
   const { snapshot, connection, now } = useLiveSnapshot(initial, { event: eventId ?? undefined });
   const hydrated = useHydrated();
   const event = snapshot.events.find((e) => e.id === eventId);
+
   if (!event) {
     return (
       <AppShell snapshot={snapshot} connection={connection} now={now}>
@@ -29,6 +30,7 @@ export default function EventPage({ snapshot: initial, eventId }: Props) {
       </AppShell>
     );
   }
+
   const matches = matchesOfEvent(snapshot, event.id);
   const playoffs = matches.filter((m) => m.phase === "Playoffs");
   const groups = matches.filter((m) => m.phase !== "Playoffs");

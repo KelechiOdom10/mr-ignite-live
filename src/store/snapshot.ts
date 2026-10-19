@@ -12,6 +12,7 @@ const SNAPSHOT_KEY = "snapshot";
 const TITLES_KEY = "titles:v1";
 const TITLES_TTL_SECONDS = 30 * 60;
 const PAGE_PREFIX = "MR Ignite/2026";
+
 // Sized so a run's worst case fits its request budget: one contents request for the pages, one
 // template expansion and at most two logo lookups for the teams, one lookup for event icons.
 const PAGES_PER_RUN = 50;
@@ -25,20 +26,25 @@ export async function writeStored(store: KvStore, stored: StoredSnapshot): Promi
 
 export async function readStored(store: KvStore): Promise<StoredSnapshot | null> {
   const raw = await store.get(SNAPSHOT_KEY);
+
   if (raw === null) return null;
   const parsed = StoredSnapshotSchema.safeParse(raw);
+
   if (parsed.success) return parsed.data;
   console.warn("Discarding stored snapshot that fails the current schema", {
     issues: parsed.error.issues.slice(0, 3),
   });
+
   return null;
 }
 
 async function pageTitles(liquipedia: LiquipediaRun, store: KvStore): Promise<string[]> {
   const cached = z.array(z.string()).safeParse(await store.get(TITLES_KEY));
+
   if (cached.success) return cached.data;
   const titles = await liquipedia.listPages(PAGE_PREFIX);
   await store.put(TITLES_KEY, titles, { ttl: TITLES_TTL_SECONDS });
+
   return titles;
 }
 
@@ -58,11 +64,14 @@ async function fetchPages(
   prevPages: StoredSnapshot["pages"],
 ): Promise<Record<string, PageData>> {
   const updates: Record<string, PageData> = {};
+
   for (const [title, text] of await liquipedia.fetchContents(titles)) {
     const rev = revisions.get(title);
+
     if (!rev) continue;
     const event = parseEventInfo(title, text, rev.timestamp);
     const known = prevPages[title]?.event;
+
     if (event && known?.iconUrl && known.iconFile === event.iconFile) event.iconUrl = known.iconUrl;
     updates[title] = {
       revid: rev.revid,
@@ -71,6 +80,7 @@ async function fetchPages(
       matches: parsePageMatches(title, text),
     };
   }
+
   return updates;
 }
 
@@ -84,18 +94,23 @@ async function resolvePendingIcons(
   pages: StoredSnapshot["pages"],
 ): Promise<Record<string, PageData>> {
   const pending = Object.entries(pages).filter(([, p]) => p.event?.iconFile && !p.event.iconUrl);
+
   const files = [...new Set(pending.map(([, p]) => p.event?.iconFile ?? ""))].slice(
     0,
     ICONS_PER_RUN,
   );
+
   if (files.length === 0) return {};
+
   const urls = await unlessBudgetSpent(
     () => liquipedia.imageUrls(files, EVENT_ICON_WIDTH_PX),
     null,
   );
+
   if (!urls) return {};
 
   const resolved: Record<string, PageData> = {};
+
   for (const [title, page] of pending) {
     if (!page.event?.iconFile || !files.includes(page.event.iconFile)) continue;
     const iconUrl = urls.get(page.event.iconFile) ?? null;
@@ -104,6 +119,7 @@ async function resolvePendingIcons(
       event: { ...page.event, iconUrl, iconFile: iconUrl ? page.event.iconFile : null },
     };
   }
+
   return resolved;
 }
 
@@ -118,14 +134,17 @@ export async function fetchLiquipediaChanges({
 }): Promise<LiquipediaChanges> {
   const revisions = await liquipedia.fetchRevisions(await pageTitles(liquipedia, store));
   const plan = planSync(prev.pages, revisions, PAGES_PER_RUN);
+
   const fetched = await unlessBudgetSpent(
     () => fetchPages(liquipedia, plan.changed, revisions, prev.pages),
     {},
   );
+
   const pages = applyPages(prev.pages, plan.removed, fetched);
 
   // Teams go before icons: a cut-off icon lookup is retried next run, a cut-off logo lookup isn't.
   const missing = teamsMissingInfo(pages, prev.teams);
+
   const teams =
     missing.length > 0
       ? await unlessBudgetSpent(
@@ -133,6 +152,7 @@ export async function fetchLiquipediaChanges({
           {},
         )
       : {};
+
   const icons = await resolvePendingIcons(liquipedia, pages);
 
   return {

@@ -12,12 +12,19 @@ export class RivalsIslandError extends Error {
 }
 
 export class MatchHistoryPrivateError extends RivalsIslandError {}
+
 export class CareerPrivateError extends RivalsIslandError {}
+
 export class PremiumRequiredError extends RivalsIslandError {}
+
 export class InsufficientCreditsError extends RivalsIslandError {}
+
 export class NotFoundError extends RivalsIslandError {}
+
 export class RateLimitedError extends RivalsIslandError {}
+
 export class UpstreamUnavailableError extends RivalsIslandError {}
+
 export class NotConfiguredError extends RivalsIslandError {}
 
 /** The response didn't match our schema: the API changed, so we stop rather than guess. */
@@ -50,23 +57,37 @@ export function errorFor(
   if (code === "match_history_private") {
     return new MatchHistoryPrivateError("Match history is private", cost);
   }
+
   if (code === "career_private") return new CareerPrivateError("Career is private", cost);
+
   if (code === "premium_required") return new PremiumRequiredError("Needs a premium key", cost);
+
   if (status === 402) return new InsufficientCreditsError("Out of RivalsIsland credits", cost);
+
   if (status === 401) return new NotConfiguredError("RivalsIsland rejected the API key", cost);
+
   if (status === 404) return new NotFoundError("Not found on RivalsIsland", cost);
+
   if (status === 429) return new RateLimitedError("Rate limited by RivalsIsland", cost);
+
   return new UpstreamUnavailableError(`RivalsIsland returned HTTP ${status}`, cost);
 }
 
 /** The one place a failure becomes something a page can show; anything unexpected is rethrown. */
 export function problemOf(error: unknown): PlayerProblem | null {
   if (error instanceof MatchHistoryPrivateError) return "history_private";
+
   if (error instanceof CareerPrivateError) return "career_private";
+
   if (error instanceof NotFoundError) return "not_found";
+
   if (error instanceof CreditBudgetExceededError) return "budget_reached";
+
   if (error instanceof InsufficientCreditsError) return "out_of_credits";
+
   if (error instanceof NotConfiguredError) return "not_configured";
+
   if (error instanceof RivalsIslandError) return "unavailable";
+
   return null;
 }

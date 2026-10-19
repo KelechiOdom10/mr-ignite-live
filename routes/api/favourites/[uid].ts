@@ -13,10 +13,12 @@ export const PUT = defineHandler.withValidator({ params: Params, body: SaveBody 
   { params, body },
 ) => {
   await favourites.save({ uid: params.uid, name: body.name, addedAt: Date.now() });
+
   return { saved: true };
 });
 
 export const DELETE = defineHandler.withValidator({ params: Params })(async (_c, { params }) => {
   await favourites.remove(params.uid);
+
   return { removed: true };
 });

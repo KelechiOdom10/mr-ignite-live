@@ -46,7 +46,9 @@ describe("scoreToasts", () => {
       team2: { name: "FlyQuest", short: "FLY" },
       maps: [aMap(1, 1), aMap(2, 1), aMap(3, 1)],
     });
+
     const final = aMatch({ id: "b_R4M1", round: "Upper Bracket Final" });
+
     const toasts = scoreToasts(
       [semi, final],
       states([semi, final], START_OF_FINAL - 60_000),
@@ -54,6 +56,7 @@ describe("scoreToasts", () => {
       true,
       START_OF_FINAL + 60_000,
     );
+
     expect(toasts.map((t) => t.description)).toEqual([
       "Winner of UB Semifinals vs SG · Upper Bracket Final",
     ]);

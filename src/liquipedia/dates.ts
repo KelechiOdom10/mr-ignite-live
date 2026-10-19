@@ -36,14 +36,20 @@ const DATE_PATTERN = /(\d{4})-(\d{2})-(\d{2})(?:\s*-\s*(\d{1,2}):(\d{2}))?/;
 export function parseLiquipediaDate(raw: string | undefined): string | null {
   if (!raw) return null;
   const m = DATE_PATTERN.exec(raw);
+
   if (!m) return null;
   const [, year, month, day, hour = "0", minute = "0"] = m;
+
   if (year === undefined || month === undefined || day === undefined) return null;
+
   const zone =
     /Abbr\/([A-Z]+)/.exec(raw)?.[1] ?? /\b([A-Z]{3,4})\s*$/.exec(raw.trim())?.[1] ?? "UTC";
+
   const offsetHours = TZ_OFFSET_HOURS[zone] ?? 0;
+
   const utc =
     Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute)) -
     offsetHours * 3_600_000;
+
   return new Date(utc).toISOString();
 }

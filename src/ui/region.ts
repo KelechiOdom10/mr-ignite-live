@@ -12,10 +12,15 @@ export type RegionFilter = (typeof REGION_FILTERS)[number]["value"];
 
 export function regionKey(region: string | undefined): RegionKey {
   const r = (region ?? "").toLowerCase();
+
   if (r.startsWith("americas")) return "americas";
+
   if (r.startsWith("emea")) return "emea";
+
   if (r.startsWith("china")) return "china";
+
   if (r.startsWith("pacific") || r === "asia" || r === "oceania") return "pacific";
+
   return "global";
 }
 

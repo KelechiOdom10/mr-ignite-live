@@ -40,6 +40,7 @@ function key(name: string): string {
 
 export function mapInfo(name: string): { mode: GameMode; imageUrl: string } | null {
   const info = MAPS[key(name)];
+
   return info ? { mode: info.mode, imageUrl: MRVL_IMAGES + info.image } : null;
 }
 
@@ -50,11 +51,13 @@ export function mapInfo(name: string): { mode: GameMode; imageUrl: string } | nu
 function knownMap(name: string): MapInfo | null {
   const words = ` ${key(name)} `;
   let best: { length: number; info: MapInfo } | null = null;
+
   for (const [k, info] of Object.entries(MAPS)) {
     if (words.includes(` ${k} `) && (!best || k.length > best.length)) {
       best = { length: k.length, info };
     }
   }
+
   return best?.info ?? null;
 }
 
@@ -75,9 +78,12 @@ export function mapNameConflicts(
 ): MapNameConflict[] {
   return liquipedia.flatMap((slot) => {
     const other = mrvl.find((m) => m.index === slot.index);
+
     if (!other) return [];
     const [ours, theirs] = [knownMap(slot.map), knownMap(other.map)];
+
     if (!ours || !theirs || ours.image === theirs.image) return [];
+
     return [{ index: slot.index, liquipedia: slot.map, mrvl: other.map }];
   });
 }

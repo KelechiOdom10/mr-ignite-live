@@ -20,6 +20,7 @@ import { MrvlMatchPageSchema } from "./client";
 const page = z
   .object({ value: MrvlMatchPageSchema })
   .parse(mrvlFixture("page-fly-100t.json")).value;
+
 const stats = toMatchStats(
   aMatch({
     id: "kOKqgtPHq4_R2M1",
@@ -45,12 +46,15 @@ describe("recorded Ignite 2026 drafts", () => {
 
   it("never let the other team play a banned hero, though the banning team often does", () => {
     expect(stats.maps.flatMap(bansBroken)).toEqual([]);
+
     const ownUse = stats.maps.flatMap((m) =>
       m.teams.flatMap((t) => {
         const own = new Set(t.players.flatMap((p) => p.heroes.map((h) => h.id)));
+
         return t.bans.filter((h) => own.has(h.id));
       }),
     );
+
     expect(ownUse.length).toBeGreaterThan(10);
   });
 
@@ -81,14 +85,18 @@ describe("the simulator on recorded drafts", () => {
   it("accepts every recorded map's draft move for move and ends with the same bans", () => {
     for (const map of stats.maps) {
       let moves: SimMove[] = [];
+
       for (const a of map.draft ?? []) {
         const camp = a.camp === 0 ? 0 : 1;
         expect(moveProblem(IGNITE_2026, moves, camp, a.hero.id)).toBeNull();
         moves = applyMove(IGNITE_2026, moves, camp, a.hero.id);
       }
+
       expect(currentTurn(IGNITE_2026, moves)).toBeNull();
+
       const bySide = (side: 1 | 2) =>
         (map.draft ?? []).find((a) => a.side === side)?.camp === 0 ? 0 : 1;
+
       const [first, second] = outcome(moves);
       const sideOf = { 0: first, 1: second };
       expect(sideOf[bySide(1)].bans).toEqual(map.teams[0].bans.map((h) => h.id));
@@ -100,9 +108,11 @@ describe("the simulator on recorded drafts", () => {
 describe("HERO_ROSTER", () => {
   it("uses mrvl's id for every hero the recorded series played or banned", () => {
     const ids = new Set(HERO_ROSTER.map((h) => h.id));
+
     const seen = stats.maps.flatMap((m) =>
       m.teams.flatMap((t) => [...t.bans, ...t.players.flatMap((p) => p.heroes)]),
     );
+
     expect(seen.filter((h) => !ids.has(h.id)).map((h) => h.id)).toEqual([]);
   });
 });

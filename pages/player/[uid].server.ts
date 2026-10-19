@@ -38,6 +38,7 @@ function readPlayer(uid: Uid, query: z.infer<typeof QuerySchema>, refresh: boole
         data.get("career", { uid }, { refresh }),
         heroCatalogueOrEmpty(data),
       ]);
+
       return {
         profile: toProfile(res, catalogue),
         career: toCareer(res),
@@ -47,6 +48,7 @@ function readPlayer(uid: Uid, query: z.infer<typeof QuerySchema>, refresh: boole
     }),
     loadPlayers(async (data) => {
       const params = { uid, page: query.page, category: categoryId(query.category) };
+
       const {
         data: res,
         fetchedAt,
@@ -55,6 +57,7 @@ function readPlayer(uid: Uid, query: z.infer<typeof QuerySchema>, refresh: boole
       } = await data.get("history", params, {
         refresh,
       });
+
       return { ...toHistoryPage(res, { fetchedAt, stale }), refreshFailed };
     }),
   ]);
@@ -71,37 +74,47 @@ async function heroesFromCache(
     const peeked = await Promise.all(matchUids.map((matchUid) => data.peek("match", { matchUid })));
     const matches = peeked.flatMap((m) => (m ? [toMatchDetail(m.data, catalogue)] : []));
     const recent = recentHeroes(uid, matches);
+
     const ids = [...new Set([signatureHeroId, ...recent.map((h) => h.id)])].filter(
       (id): id is number => id !== null,
     );
+
     const cards = await Promise.all(
       ids.map(async (heroId) => {
         const card = await data.peek("heroCareer", { uid, heroId });
+
         return card
           ? [toHeroCareer(card.data, catalogue, { fetchedAt: card.fetchedAt, stale: card.stale })]
           : [];
       }),
     );
+
     return { recent, coveredMatches: matches.length, cards: cards.flat() };
   });
+
   return loaded.ok ? loaded.value : { recent: [], coveredMatches: 0, cards: [] };
 }
 
 /** A private history or career answering again is a successful refresh; anything else that failed isn't. */
 function refreshDidNotHappen(result: Loaded<{ refreshFailed: boolean }>): boolean {
   if (result.ok) return result.value.refreshFailed;
+
   return result.problem !== "history_private" && result.problem !== "career_private";
 }
 
 export const loader = defineHandler(async (c) => {
   const uid = UidSchema.safeParse(c.req.param("uid"));
+
   const query = QuerySchema.parse({
     category: c.req.query("category"),
     page: c.req.query("page"),
   });
+
   const snapshot = await shellSnapshot();
+
   if (!uid.success) {
     c.set("notFound", true);
+
     return {
       snapshot,
       uid: null,
@@ -112,17 +125,21 @@ export const loader = defineHandler(async (c) => {
       isFavourite: false,
     };
   }
+
   const [[player, history], saved] = await Promise.all([
     readPlayer(uid.data, query, false),
     favourites.list(),
   ]);
+
   if (!player.ok && player.problem === "not_found") c.set("notFound", true);
   const isFavourite = saved.some((f) => f.uid === uid.data);
+
   const heroes = await heroesFromCache(
     uid.data,
     history.ok ? history.value.rows.map((r) => r.matchUid) : [],
     player.ok ? (player.value.profile.signatureHero?.id ?? null) : null,
   );
+
   return { snapshot, uid: uid.data, query, player, history, heroes, isFavourite };
 });
 
@@ -139,27 +156,39 @@ const ActionBody = z.discriminatedUnion("intent", [
 
 export const action = defineHandler.withValidator({ body: ActionBody })(async (c, { body }) => {
   const parsed = UidSchema.safeParse(c.req.param("uid"));
+
   if (!parsed.success) return c.json({ errors: { intent: "Unknown player." } }, 404);
   const uid = parsed.data;
+
   if (body.intent === "favourite") {
     await favourites.save({ uid, name: body.name, addedAt: Date.now() });
+
     return;
   }
+
   if (body.intent === "unfavourite") {
     await favourites.remove(uid);
+
     return;
   }
+
   if (body.intent === "hero") {
     const heroId = body.heroId;
+
     const loaded = await loadPlayers(async (data) => {
       const cached = await data.peek("heroCareer", { uid, heroId });
+
       return data.get("heroCareer", { uid, heroId }, { refresh: cached?.stale ?? false });
     });
+
     if (!loaded.ok) return c.json({ errors: { intent: problemMessage(loaded.problem) } }, 422);
+
     return;
   }
+
   const [player, history] = await readPlayer(uid, body, true);
   const refused = [player, history].some((r) => refreshDidNotHappen(r));
+
   if (refused) {
     return c.json(
       {

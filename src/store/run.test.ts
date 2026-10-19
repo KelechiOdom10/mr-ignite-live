@@ -36,11 +36,14 @@ const TLC_SWAMP = "kOKqgtPHq4_R2M2";
 function matchDay({ mrvl: mrvlOptions }: { mrvl?: MrvlFakeOptions } = {}) {
   const clock = fakeClock("2026-10-16T22:30:00Z");
   const store = memoryKvStore({ "titles:v1": RECORDED_TITLES });
+
   const liquipedia = fakeLiquipedia({
     clock,
     revids: { [AMERICAS]: 60100, [PACIFIC]: 60081, [AMERICAS_GROUPS]: 60050 },
   });
+
   const mrvl = fakeMrvl(mrvlOptions);
+
   const deps = {
     store,
     liquipedia: createLiquipediaClient({
@@ -51,6 +54,7 @@ function matchDay({ mrvl: mrvlOptions }: { mrvl?: MrvlFakeOptions } = {}) {
     mrvl: createMrvlClient({ fetch: mrvl.fetch, timeoutMs: 20 }),
     now: clock.now,
   };
+
   return {
     store,
     liquipedia,
@@ -59,6 +63,7 @@ function matchDay({ mrvl: mrvlOptions }: { mrvl?: MrvlFakeOptions } = {}) {
     /** One cron run, a minute after the last. */
     sync: async () => {
       clock.advance(60_000);
+
       return syncOnce(deps);
     },
   };
@@ -115,6 +120,7 @@ describe("syncOnce on match day", () => {
     day.liquipedia.settings.latencyMs = 16_000;
     const runOffsets: number[][] = [];
     const runPuts: Record<string, number>[] = [];
+
     for (let run = 0; run < 4; run++) {
       const startsAt = day.clock.now() + 60_000;
       const before = day.liquipedia.requests.length;
@@ -154,6 +160,7 @@ describe("syncOnce on match day", () => {
     const lookups = day.liquipedia.requests
       .slice(before)
       .filter((r) => r.params.get("prop") === "imageinfo");
+
     expect(lookups).toEqual([]);
     const americas = (await readStored(day.store))?.pages[AMERICAS];
     expect([americas?.revid, americas?.event?.iconUrl]).toEqual([60101, iconUrl]);
@@ -182,6 +189,7 @@ describe("syncOnce on match day", () => {
     const refetched = day.mrvl.requests
       .slice(earlierRequests)
       .filter((r) => r.path === "matches:getPageData");
+
     expect(refetched.map((r) => r.args.id)).toEqual([FLY_100T_MRVL_ID]);
     expect(day.store.putCounts()).toEqual({ "stats-index:v2": 1 });
     expect(outcome.changed).toBe(false);
@@ -201,10 +209,12 @@ describe("syncOnce on match day", () => {
         sourceUpdatedAt: index[FLY_100T]?.sourceUpdatedAt,
       },
     });
+
     const pageRequests = () =>
       day.mrvl.requests.filter(
         (r) => r.path === "matches:getPageData" && r.args.id === FLY_100T_MRVL_ID,
       ).length;
+
     const before = pageRequests();
 
     await day.sync();
@@ -220,6 +230,7 @@ describe("syncOnce on match day", () => {
     await day.sync();
     const key = `stats:v2:${FLY_100T}`;
     const stored = StoredStats.parse(await day.store.get(key));
+
     const withoutLines = {
       ...stored,
       maps: stored.maps.map((m) => ({
@@ -233,6 +244,7 @@ describe("syncOnce on match day", () => {
         })),
       })),
     };
+
     await day.store.put(key, withoutLines);
     const index = IndexSchema.parse(await day.store.get("stats-index:v2"));
     await day.store.put("stats-index:v2", {
@@ -243,10 +255,12 @@ describe("syncOnce on match day", () => {
         draftOrder: true,
       },
     });
+
     const pageRequests = () =>
       day.mrvl.requests.filter(
         (r) => r.path === "matches:getPageData" && r.args.id === FLY_100T_MRVL_ID,
       ).length;
+
     const before = pageRequests();
 
     await day.sync();
@@ -254,9 +268,11 @@ describe("syncOnce on match day", () => {
 
     expect(pageRequests() - before).toBe(1);
     const backfilled = StoredStats.parse(await day.store.get(key));
+
     const heroes = backfilled.maps.flatMap((m) =>
       m.teams.flatMap((t) => t.players.flatMap((p) => p.heroes)),
     );
+
     expect(heroes.length).toBeGreaterThan(0);
     expect(heroes.every((h) => h.line)).toBe(true);
   });
@@ -274,9 +290,11 @@ describe("syncOnce on match day", () => {
     day.mrvl.settings.failingPages = [];
     const earlierRequests = day.mrvl.requests.length;
     await day.sync();
+
     const fetched = day.mrvl.requests
       .slice(earlierRequests)
       .filter((r) => r.path === "matches:getPageData");
+
     expect(fetched.map((r) => r.args.id)).toEqual([TLC_SWAMP_MRVL_ID]);
   });
 

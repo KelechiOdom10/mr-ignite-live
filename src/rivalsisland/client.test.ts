@@ -16,6 +16,7 @@ const trqstMe = UidSchema.parse(RECORDED_UIDS.trqstMe);
 
 function client(scripted?: Parameters<typeof fakeRivalsIsland>[0]) {
   const fake = fakeRivalsIsland(scripted);
+
   return { fake, client: createRivalsIslandClient({ apiKey: "test-key", fetch: fake.fetch }) };
 }
 
@@ -70,6 +71,7 @@ describe("RivalsIsland client against recorded responses", () => {
     const { client: c } = client({
       "/heroes": { status: 402, cost: 0, body: { error: "premium", code: "premium_required" } },
     });
+
     await expect(c.call("heroes", {})).rejects.toBeInstanceOf(PremiumRequiredError);
     await expect(c.call("career", { uid: UidSchema.parse("1") })).rejects.toBeInstanceOf(
       NotFoundError,
@@ -81,6 +83,7 @@ describe("RivalsIsland client against recorded responses", () => {
     const { client: c } = client({
       [`/players/${trqstMe}/career`]: { status: 200, cost: 10, body: { player: {} } },
     });
+
     const call = c.call("career", { uid: trqstMe });
     await expect(call).rejects.toBeInstanceOf(RivalsIslandContractError);
     await expect(call).rejects.toMatchObject({ endpoint: "career", creditCost: 10 });
@@ -88,14 +91,17 @@ describe("RivalsIsland client against recorded responses", () => {
 
   it("sends the key only in the x-api-key header", async () => {
     let seen: Headers | undefined;
+
     const c = createRivalsIslandClient({
       apiKey: "secret-key",
       fetch: async (input, init) => {
         seen = new Headers(init?.headers);
         expect(String(input)).not.toContain("secret-key");
+
         return fakeRivalsIsland().fetch(input);
       },
     });
+
     await c.call("heroes", {});
     expect(seen?.get("x-api-key")).toBe("secret-key");
   });

@@ -99,6 +99,7 @@ describe("parseTeamShortExpansion on a recorded expansion", () => {
   const body = z
     .object({ expandtemplates: z.object({ wikitext: z.string() }) })
     .parse(liquipediaFixture("teamshort.json"));
+
   const [known, unknown, allmode] = body.expandtemplates.wikitext
     .split(TEAM_TEMPLATE_SEPARATOR)
     .map(parseTeamShortExpansion);
