@@ -34,6 +34,22 @@ function IslandMatch({
 }) {
   const { side1, side2, summary } = useMatchView(match, now, snapshot.matches);
 
+  // Hidden spoilers swap teams for bracket placeholders like "Winner of UB Final", which would
+  // stretch the island across the nav, so it names the round instead.
+  if (!side1.team || !side2.team) {
+    return (
+      <Link
+        href={`/match/${match.id}`}
+        aria-label={summary}
+        className="flex h-9 items-center gap-2.5 px-4 text-xs font-medium whitespace-nowrap"
+      >
+        <LiveDot />
+        <span>{match.round}</span>
+        {position && <span className="text-muted-foreground">{position}</span>}
+      </Link>
+    );
+  }
+
   return (
     <Link
       href={`/match/${match.id}`}
