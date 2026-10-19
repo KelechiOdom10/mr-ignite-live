@@ -17,6 +17,7 @@ import {
 import type { Hero } from "@/domain/stats";
 import { cn } from "@/lib/utils";
 
+import { RoleIcon } from "../RoleIcon";
 import { HeroPortrait } from "../StatsPanel";
 import { ACTOR_SHORT } from "./FormatCard";
 
@@ -323,10 +324,11 @@ export function DraftSimulator({
                 aria-pressed={role === r}
                 onClick={() => setRole(r)}
                 className={cn(
-                  "rounded-lg px-2.5 py-1 text-sm text-muted-foreground hover:text-foreground",
+                  "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-sm text-muted-foreground hover:text-foreground",
                   role === r && "bg-secondary text-foreground",
                 )}
               >
+                <RoleIcon role={r} />
                 {r}
               </button>
             ))}
