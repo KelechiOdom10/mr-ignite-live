@@ -1,7 +1,15 @@
 import { useMemo, useState } from "react";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/motion/tabs";
-import { type EventPhase, type HomeView, homeViewSearch, type ListTab } from "@/domain/homeView";
+import {
+  type EventPhase,
+  type HomeView,
+  homeViewSearch,
+  isEventPhase,
+  isHomeRegion,
+  isListTab,
+  type ListTab,
+} from "@/domain/homeView";
 import { matchState } from "@/domain/matchState";
 import type { IgniteEvent, Match } from "@/domain/model";
 import { AppShell } from "@/ui/AppShell";
@@ -30,18 +38,6 @@ function smartDefaultTab(live: Match[], upcoming: Match[], results: Match[], now
   return playedToday && !moreToday ? "results" : "upcoming";
 }
 
-function isListTab(value: string): value is ListTab {
-  return value === "upcoming" || value === "results";
-}
-
-function isRegionFilter(value: string): value is RegionFilter {
-  return REGION_FILTERS.some((r) => r.value === value);
-}
-
-function isEventPhase(value: string): value is EventPhase {
-  return value === "ongoing" || value === "upcoming" || value === "completed";
-}
-
 /**
  * Records the tabs in the current entry's query, so back from a match returns to them. It runs
  * only from tab clicks: an effect could fire before the router has pushed a new entry and
@@ -65,12 +61,13 @@ export default function HomePage({ snapshot: initial, view }: Props) {
   );
 
   const [eventTab, setEventTab] = useState<EventPhase>(view.events);
-  const [loadedSearch, setLoadedSearch] = useState(() => homeViewSearch(view));
+  const [loadedView, setLoadedView] = useState(view);
 
   // Void keeps this component mounted between two home entries, so back, forward or the logo link
-  // bring a new view without a remount. Taking it on here keeps the tabs in step with the URL.
-  if (homeViewSearch(view) !== loadedSearch) {
-    setLoadedSearch(homeViewSearch(view));
+  // bring a new view without a remount. Every navigation builds new props, so a new object means
+  // the URL changed, even when tab clicks had already rewritten it to the same query.
+  if (view !== loadedView) {
+    setLoadedView(view);
     setRegion(view.region);
     setChosenTab(view.tab === null ? null : { region: view.region, tab: view.tab });
     setEventTab(view.events);
@@ -143,7 +140,7 @@ export default function HomePage({ snapshot: initial, view }: Props) {
               <Tabs
                 value={region}
                 onValueChange={(v) => {
-                  if (!isRegionFilter(v)) return;
+                  if (!isHomeRegion(v)) return;
                   setRegion(v);
                   rememberView({ region: v, tab: null, events: eventTab });
                 }}

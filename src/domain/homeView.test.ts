@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_HOME_VIEW, homeViewFromQuery, homeViewSearch } from "./homeView";
+import {
+  DEFAULT_HOME_VIEW,
+  homeViewFromQuery,
+  homeViewSearch,
+  isEventPhase,
+  isHomeRegion,
+  isListTab,
+} from "./homeView";
 
 describe("homeViewFromQuery", () => {
   it("reads the tabs the reader left", () => {
@@ -37,5 +44,13 @@ describe("homeViewSearch", () => {
     expect(
       homeViewFromQuery(Object.fromEntries(new URLSearchParams(homeViewSearch(view)))),
     ).toEqual(view);
+  });
+});
+
+describe("tab guards", () => {
+  it("accept only the values the URL can hold", () => {
+    expect([isListTab("results"), isListTab("live")]).toEqual([true, false]);
+    expect([isHomeRegion("emea"), isHomeRegion("mars")]).toEqual([true, false]);
+    expect([isEventPhase("completed"), isEventPhase("done")]).toEqual([true, false]);
   });
 });

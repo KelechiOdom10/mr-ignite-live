@@ -11,6 +11,15 @@ export type ListTab = z.infer<typeof ListTabSchema>;
 
 export type EventPhase = z.infer<typeof EventPhaseSchema>;
 
+export const isHomeRegion = (value: string): value is HomeView["region"] =>
+  RegionSchema.safeParse(value).success;
+
+export const isListTab = (value: string): value is ListTab =>
+  ListTabSchema.safeParse(value).success;
+
+export const isEventPhase = (value: string): value is EventPhase =>
+  EventPhaseSchema.safeParse(value).success;
+
 /** The home page's tabs. A null `tab` means the reader hasn't picked one, so the page chooses. */
 export type HomeView = {
   region: z.infer<typeof RegionSchema>;
