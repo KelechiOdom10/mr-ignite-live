@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { liquipediaFixture } from "../../test/fixtures";
+import { type Json, liquipediaFixture } from "../../test/fixtures";
 import {
   createLiquipediaClient,
   LIQUIPEDIA_USER_AGENT,
@@ -13,15 +13,18 @@ import {
 
 function fakeFetch(respond: () => Response) {
   const calls: { url: string; init: RequestInit | undefined }[] = [];
+
   const fetchImpl: typeof fetch = async (input, init) => {
     calls.push({ url: String(input), init });
+
     return respond();
   };
+
   return { fetchImpl, calls };
 }
 
 const json =
-  (body: unknown, status = 200) =>
+  (body: Json, status = 200) =>
   () =>
     new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
@@ -39,6 +42,7 @@ function pacedClient() {
   let clock = 1_000;
   const waits: number[] = [];
   const { fetchImpl, calls } = fakeFetch(json(liquipediaFixture("revisions.json")));
+
   const client = createLiquipediaClient({
     fetch: fetchImpl,
     now: () => clock,
@@ -48,6 +52,7 @@ function pacedClient() {
       clock += ms;
     },
   });
+
   return {
     client,
     waits,
@@ -119,9 +124,11 @@ describe("createLiquipediaClient", () => {
 
   it("raises the recorded API error as a typed error", async () => {
     const { fetchImpl } = fakeFetch(json(liquipediaFixture("api-error.json")));
+
     const call = createLiquipediaClient({ fetch: fetchImpl, wait: noWait })
       .startRun(unlimited)
       .listPages("x");
+
     await expect(call).rejects.toBeInstanceOf(LiquipediaApiError);
     await expect(call).rejects.toMatchObject({ code: "badvalue" });
   });
@@ -129,22 +136,28 @@ describe("createLiquipediaClient", () => {
   it("distinguishes rate limiting from other HTTP failures", async () => {
     const limited = fakeFetch(json({}, 429)).fetchImpl;
     const down = fakeFetch(json({}, 503)).fetchImpl;
+
     const rateCall = createLiquipediaClient({ fetch: limited, wait: noWait })
       .startRun(unlimited)
       .listPages("x");
+
     await expect(rateCall).rejects.toBeInstanceOf(LiquipediaRateLimitedError);
+
     const downCall = createLiquipediaClient({ fetch: down, wait: noWait })
       .startRun(unlimited)
       .listPages("x");
+
     await expect(downCall).rejects.toBeInstanceOf(LiquipediaHttpError);
     await expect(downCall).rejects.not.toBeInstanceOf(LiquipediaRateLimitedError);
   });
 
   it("rejects a response with an unexpected shape instead of trusting it", async () => {
     const { fetchImpl } = fakeFetch(json({ query: { allpages: "nope" } }));
+
     const call = createLiquipediaClient({ fetch: fetchImpl, wait: noWait })
       .startRun(unlimited)
       .listPages("x");
+
     await expect(call).rejects.toBeInstanceOf(LiquipediaResponseError);
   });
 
@@ -152,6 +165,7 @@ describe("createLiquipediaClient", () => {
     const call = createLiquipediaClient({ fetch: hangingFetch, wait: noWait, timeoutMs: 20 })
       .startRun(unlimited)
       .listPages("x");
+
     await expect(call).rejects.toMatchObject({ name: "TimeoutError" });
   });
 });

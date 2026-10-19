@@ -15,6 +15,7 @@ export function PlayerAvatar({
 }) {
   const src = proxiedImage(iconUrl);
   const box = { width: size, height: size };
+
   return src ? (
     <img
       src={src}

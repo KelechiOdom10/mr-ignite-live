@@ -12,16 +12,19 @@ describe("toMatchDetail", () => {
       MatchDetailSchema.parse(rivalsIslandFixture("match-detail")),
       new Map(),
     );
+
     expect(match.teams.map((t) => [t.id, t.result, t.players.length])).toEqual([
       [1, "loss", 6],
       [0, "win", 6],
     ]);
     const sypeh = match.teams[1]?.players.find((p) => p.uid === RECORDED_UIDS.sypeh);
     expect(sypeh?.heroes[0]?.name).toBe("Invisible Woman");
+
     for (const p of match.teams.flatMap((t) => t.players)) {
       const times = p.heroes.map((h) => h.playSeconds);
       expect(times).toEqual([...times].sort((a, b) => b - a));
     }
+
     expect(match.draft.filter((d) => d.action === "ban")).toHaveLength(6);
   });
 });
@@ -34,6 +37,7 @@ describe("season scope", () => {
       MatchHistoryResponseSchema.parse(rivalsIslandFixture("history-sypeh")),
       freshness,
     );
+
     expect(groupBySeason(page.rows).map((g) => [g.season, g.rows.length])).toEqual([
       ["10.5", 1],
       ["10.0", 19],
@@ -45,11 +49,14 @@ describe("season scope", () => {
       CareerResponseSchema.parse(rivalsIslandFixture("career-sypeh")),
       new Map(),
     );
+
     expect(seasonRecord(sypeh)).toEqual({ kind: "few", season: "10.5", matches: 1, wins: 1 });
+
     const trqstMe = toProfile(
       CareerResponseSchema.parse(rivalsIslandFixture("player-career")),
       new Map(),
     );
+
     expect(seasonRecord(trqstMe)).toMatchObject({ kind: "enough", matches: 58, wins: 37 });
   });
 });

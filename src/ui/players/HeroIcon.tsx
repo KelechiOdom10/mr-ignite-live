@@ -21,6 +21,7 @@ export function HeroIcon({
   const src = proxiedImage(hero.iconUrl);
   const box = { width: size, height: size };
   const ring = hero.role ? ROLE_RING[hero.role] : "ring-border";
+
   return src ? (
     <img
       src={src}

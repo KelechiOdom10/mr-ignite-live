@@ -12,6 +12,7 @@ function percent(rate: number | null): string {
 
 export function LeaderboardTable({ rows, now }: { rows: LeaderboardRow[]; now: number }) {
   const hydrated = useHydrated();
+
   return (
     <div className="overflow-x-auto rounded-lg border">
       <table className="w-full text-sm">

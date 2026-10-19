@@ -14,9 +14,11 @@ import {
 } from "./client";
 
 const Summaries = z.object({ value: z.array(MrvlMatchSummarySchema) });
+
 const page = z
   .object({ value: MrvlMatchPageSchema })
   .parse(mrvlFixture("page-fly-100t.json")).value;
+
 const recent = Summaries.parse(mrvlFixture("recent.json")).value;
 const live = Summaries.parse(mrvlFixture("live.json")).value;
 
@@ -40,6 +42,7 @@ describe("findMrvlMatch", () => {
       team1: { name: "Liquid Citadel", short: "TLC" },
       team2: { name: "Swamp Gaming", short: "SG" },
     });
+
     expect(findMrvlMatch(tlcVsSwamp, live)?.teamTwoName).toMatch(/swamp/i);
   });
 
@@ -76,6 +79,7 @@ describe("toMatchStats on a recorded series", () => {
     const tonez = stats.maps
       .flatMap((m) => m.teams.flatMap((t) => t.players))
       .find((p) => p.name === "Tonez" && p.heroes.length === 4);
+
     expect(tonez?.heroes.map((h) => [h.name, h.line?.kills])).toEqual([
       ["The Thing", 5],
       ["Hulk", 6],
@@ -138,6 +142,7 @@ describe("toMatchStats on a recorded series", () => {
         })),
       },
     };
+
     const maps = toMatchStats(flyVs100t, untimed, "u1", new Date("2026-10-17T00:00:00Z")).maps;
     expect(maps.map((m) => m.draft)).toEqual([null, null, null, null]);
     expect(maps[0]?.teams[0].bans).toHaveLength(5);
@@ -167,9 +172,11 @@ describe("toMatchStats on a recorded series", () => {
     const odd = withTimelines((team) =>
       (team.draftTimeline ?? []).map((step, j) => (j === 0 ? { ...step, phaseIndex: -1 } : step)),
     );
+
     const parsed = MatchStatsSchema.safeParse(
       toMatchStats(flyVs100t, odd, "u1", new Date("2026-10-17T00:00:00Z")),
     );
+
     expect(parsed.success).toBe(true);
     expect(parsed.data?.maps.map((m) => m.draft)).toEqual([null, null, null, null]);
     expect(parsed.data?.maps[0]?.teams[0].bans).toHaveLength(5);
@@ -179,8 +186,10 @@ describe("toMatchStats on a recorded series", () => {
     const merged = withTimelines((team, i) => {
       const game = page.match.games.find((g) => g.scoreboard?.teams.includes(team));
       const other = game?.scoreboard?.teams[1 - i];
+
       return [...(team.draftTimeline ?? []), ...(other?.draftTimeline ?? [])];
     });
+
     const repeated = toMatchStats(flyVs100t, merged, "u1", new Date("2026-10-17T00:00:00Z"));
     expect(repeated.maps.map((m) => m.draft)).toEqual(stats.maps.map((m) => m.draft));
   });
@@ -204,6 +213,7 @@ describe("toMatchStats on a recorded series", () => {
         })),
       },
     };
+
     const unaligned = toMatchStats(flyVs100t, unnamed, "u1", new Date("2026-10-17T00:00:00Z"));
     expect(unaligned.maps).toEqual([]);
     expect(toMapOverrides(unaligned)).toEqual([]);

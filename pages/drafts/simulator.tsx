@@ -12,6 +12,7 @@ export default function DraftSimulatorPage({
   proDrafts,
 }: Props) {
   const { snapshot, connection, now } = useLiveSnapshot(initial, { view: "events" });
+
   return (
     <AppShell snapshot={snapshot} connection={connection} now={now}>
       <a href="/drafts" className="text-sm text-muted-foreground hover:text-foreground">

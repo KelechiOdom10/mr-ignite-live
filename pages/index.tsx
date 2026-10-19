@@ -27,6 +27,7 @@ function smartDefaultTab(live: Match[], upcoming: Match[], results: Match[], now
   const today = dayKey(new Date(now).toISOString());
   const playedToday = results.some((m) => m.startsAt && dayKey(m.startsAt) === today);
   const moreToday = upcoming.some((m) => m.startsAt && dayKey(m.startsAt) === today);
+
   return playedToday && !moreToday ? "results" : "upcoming";
 }
 
@@ -56,9 +57,11 @@ export default function HomePage({ snapshot: initial }: Props) {
       upcoming: [],
       finished: [],
     };
+
     for (const m of snapshot.matches) {
       if (inRegion(events.get(m.eventId), region)) byStatus[matchState(m, now).status].push(m);
     }
+
     return {
       live: byStatus.live,
       upcoming: byStatus.upcoming.filter((m) => m.startsAt),
@@ -69,8 +72,10 @@ export default function HomePage({ snapshot: initial }: Props) {
   const fallbackTab = hydrated ? smartDefaultTab(live, upcoming, results, now) : "upcoming";
   const tab = chosenTab?.region === region ? chosenTab.tab : fallbackTab;
   const nextUp = upcoming.find((m) => m.team1 && m.team2) ?? upcoming[0];
+
   const shown =
     tab === "upcoming" ? upcoming.slice(0, UPCOMING_LIMIT) : results.slice(0, RESULTS_LIMIT);
+
   const sidebarEvents = snapshot.events.filter(
     (e) => inRegion(e, region) && eventPhase(e, now) === eventTab,
   );

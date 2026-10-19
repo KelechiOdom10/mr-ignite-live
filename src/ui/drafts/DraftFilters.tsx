@@ -68,11 +68,15 @@ export function DraftFilters({
   selected: { eventId: string | null; map: string | null; mode: GameMode | null };
 }) {
   const router = useRouter();
+
   const pick = (field: DraftFilterField, value: string | null) => {
     const next = nextFilter(selected, field, value);
+
     if (next) void router.visit(draftHref(next));
   };
+
   const filtered = selected.eventId !== null || selected.map !== null || selected.mode !== null;
+
   return (
     <div className="flex flex-wrap items-end gap-3">
       <Filter

@@ -11,14 +11,18 @@ import { formatDay } from "./time";
 
 function streak(results: FormResult[]): string | null {
   const last = results.at(-1);
+
   if (!last) return null;
   let n = 0;
+
   for (let i = results.length - 1; i >= 0 && results[i]?.won === last.won; i--) n++;
+
   return n >= 2 ? `${n}-${last.won ? "win" : "loss"} streak` : null;
 }
 
 export function TeamForm({ team, snapshot, now }: { team: Team; snapshot: Snapshot; now: number }) {
   const form = formView(team, snapshot.matches, now, useSpoilersHidden());
+
   if (form.kind === "hidden") {
     return (
       <div className="flex items-center gap-3 rounded-xl border border-dashed p-4">
@@ -32,10 +36,13 @@ export function TeamForm({ team, snapshot, now }: { team: Team; snapshot: Snapsh
       </div>
     );
   }
+
   const { results } = form;
+
   if (results.length === 0) return null;
   const wins = results.filter((r) => r.won).length;
   const run = streak(results);
+
   return (
     <div className="space-y-3 rounded-xl border bg-card p-4">
       <div className="flex items-center gap-3">

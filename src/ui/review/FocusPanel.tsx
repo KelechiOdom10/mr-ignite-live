@@ -13,8 +13,11 @@ import {
 
 function describe(count: FactorCount, factor: DeathFactor | null): string {
   const sessions = `${count.sessions} ${count.sessions === 1 ? "review" : "reviews"}`;
+
   if (count.deaths === 0) return `No deaths marked (${sessions})`;
+
   if (factor === null) return `${count.deaths} deaths marked (${sessions})`;
+
   return `${count.matching} of ${count.deaths} deaths (${sessions})`;
 }
 
@@ -28,6 +31,7 @@ function FocusCard({
   onSave: (focus: PracticeFocus) => void;
 }) {
   const progress = focusProgress(library, focus);
+
   return (
     <li className="space-y-2 rounded-lg border bg-card p-3 text-sm">
       <div className="flex items-start justify-between gap-2">
@@ -81,6 +85,7 @@ export function FocusPanel({
   function submit(event: FormEvent) {
     event.preventDefault();
     const trimmed = title.trim();
+
     if (!trimmed) return;
     const now = Date.now();
     onSave({

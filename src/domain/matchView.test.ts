@@ -12,6 +12,7 @@ function view(match: Match, hidden: boolean) {
 }
 
 const sweep = aMatch({ maps: [aMap(1, 1), aMap(2, 1), aMap(3, 1)] });
+
 const fullDistance = aMatch({
   maps: [aMap(1, 1), aMap(2, 2), aMap(3, 1), aMap(4, 2), aMap(5, 1)],
 });
@@ -44,6 +45,7 @@ describe("matchView with spoilers hidden", () => {
       ...sweep,
       maps: sweep.maps.map((m) => ({ ...m, vod: `https://vod.example/${m.index}` })),
     };
+
     expect(view(withVods, true).vods).toEqual([
       { index: 1, url: "https://vod.example/1", label: "Watch from map 1" },
     ]);
@@ -57,6 +59,7 @@ describe("matchView with spoilers hidden", () => {
         vod: m.index === 4 ? "https://vod.example/4" : null,
       })),
     };
+
     expect(view(lateVod, true).vods).toEqual([]);
   });
 
@@ -71,6 +74,7 @@ describe("matchView in a hidden bracket", () => {
   const team = (short: string) => ({ name: short, short });
   const at = (hour: number) => `2026-10-16T${String(hour).padStart(2, "0")}:00:00.000Z`;
   const won = (winner: 1 | 2) => [aMap(1, winner), aMap(2, winner), aMap(3, winner)];
+
   const semi1 = aMatch({
     id: "kOK_R2M1",
     round: "Upper Bracket Semifinals",
@@ -79,6 +83,7 @@ describe("matchView in a hidden bracket", () => {
     team2: team("100T"),
     maps: won(1),
   });
+
   const semi2 = aMatch({
     id: "kOK_R2M2",
     round: "Upper Bracket Semifinals",
@@ -87,6 +92,7 @@ describe("matchView in a hidden bracket", () => {
     team2: team("SG"),
     maps: won(1),
   });
+
   const upperFinal = aMatch({
     id: "kOK_R4M1",
     round: "Upper Bracket Final",
@@ -94,6 +100,7 @@ describe("matchView in a hidden bracket", () => {
     team1: team("FLY"),
     team2: team("TLC"),
   });
+
   const lowerQuarter = aMatch({
     id: "kOK_R2M3",
     round: "Lower Bracket Quarterfinals",
@@ -101,7 +108,9 @@ describe("matchView in a hidden bracket", () => {
     team1: team("SG"),
     team2: null,
   });
+
   const bracket = [semi1, semi2, upperFinal, lowerQuarter];
+
   const viewIn = (m: Match, matches: Match[], hidden = true) =>
     matchView(m, matchState(m, NOW), hidden, { matches, now: NOW });
 
@@ -159,6 +168,7 @@ describe("matchView in a hidden bracket", () => {
   it("doesn't relabel group-stage teams by their earlier group results", () => {
     const group = (id: string, hour: number, maps: Match["maps"]) =>
       aMatch({ id, phase: "Group Stage", round: "Week 1", startsAt: at(hour), maps });
+
     const second = group("grp_0002", 12, []);
     expect(viewIn(second, [group("grp_0001", 10, won(1)), second]).side1.short).toBe("TLC");
   });

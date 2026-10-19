@@ -9,6 +9,7 @@ export function SearchForm({
   autoFocus?: boolean;
 }) {
   const form = useForm("/players", { name: initialName });
+
   return (
     <Form form={form} className="space-y-1.5">
       <label htmlFor="player-name" className="text-sm font-medium">

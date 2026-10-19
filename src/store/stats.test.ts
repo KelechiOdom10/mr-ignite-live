@@ -34,12 +34,14 @@ describe("readAllMatchStats", () => {
       "stats:v2:a": stored("a"),
       "stats:v2:b": { matchId: "b", maps: "not a list" },
     });
+
     expect((await readAllMatchStats(store)).map((s) => s.matchId)).toEqual(["a"]);
   });
 });
 
 describe("fetchStatsChanges with draft-order backfills waiting", () => {
   const now = Date.parse("2026-10-17T20:00:00Z");
+
   const series = Array.from({ length: 8 }, (_, i) =>
     aMatch({
       id: `m${i}`,
@@ -49,6 +51,7 @@ describe("fetchStatsChanges with draft-order backfills waiting", () => {
       markedFinished: true,
     }),
   );
+
   const summaries: MrvlMatchSummary[] = series.map((m, i) => ({
     id: `s${i}`,
     teamOneName: m.team1?.name,
@@ -56,25 +59,30 @@ describe("fetchStatsChanges with draft-order backfills waiting", () => {
     scheduledAt: m.startsAt,
     updatedAt: i === 7 ? "changed" : "same",
   }));
+
   const recorded = z
     .object({ value: MrvlMatchPageSchema })
     .parse(mrvlFixture("page-fly-100t.json")).value;
 
   it("fetches a changed series before any backfill and stays within six pages", async () => {
     const requested: string[] = [];
+
     const mrvl: MrvlClient = {
       ...createMrvlClient(),
       listMatches: async (status) => (status === "recent" ? summaries : []),
       matchPage: async (id) => {
         requested.push(id);
+
         return { match: { ...recorded.match, id, games: [] } };
       },
     };
+
     const store = memoryKvStore({
       "stats-index:v2": Object.fromEntries(
         series.map((m, i) => [m.id, { sourceMatchId: `s${i}`, sourceUpdatedAt: "same" }]),
       ),
     });
+
     const snapshot: Snapshot = {
       builtAt: new Date(now).toISOString(),
       servedAt: new Date(now).toISOString(),

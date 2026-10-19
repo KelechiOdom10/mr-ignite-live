@@ -9,10 +9,13 @@ export type Props = InferProps<typeof loader>;
 export const loader = defineHandler(async (c) => {
   const eventId = eventIdFromSlug(c.req.path.replace(/^\/event\//, ""));
   const full = await currentSnapshot();
+
   if (eventId === null || !full.events.some((e) => e.id === eventId)) {
     c.set("notFound", true);
+
     return { eventId: null, snapshot: scopeSnapshot(full, { kind: "recent" }, Date.now()) };
   }
+
   return { eventId, snapshot: scopeSnapshot(full, { kind: "event", eventId }, Date.now()) };
 });
 

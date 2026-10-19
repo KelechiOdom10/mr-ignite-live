@@ -20,7 +20,9 @@ export function scopeSnapshot(snapshot: Snapshot, scope: SnapshotScope, now: num
     const nearTerm = snapshot.matches.filter(
       (m) => m.startsAt && Date.parse(m.startsAt) > now - EVENTS_LIST_MATCH_WINDOW_MS,
     );
+
     const brackets = new Set(nearTerm.filter((m) => m.phase === PLAYOFFS).map(bracketContainer));
+
     return {
       ...snapshot,
       servedAt: new Date(now).toISOString(),
@@ -29,14 +31,19 @@ export function scopeSnapshot(snapshot: Snapshot, scope: SnapshotScope, now: num
       ),
     };
   }
+
   const isRecent = (eventId: string) => {
     const event = snapshot.events.find((e) => e.id === eventId);
     const end = event?.endDate ? Date.parse(event.endDate) : Number.NaN;
+
     return Number.isNaN(end) || now - end < RECENT_WINDOW_MS;
   };
+
   const focus =
     scope.kind === "match" ? snapshot.matches.find((m) => m.id === scope.matchId) : undefined;
+
   const focusEventId = scope.kind === "event" ? scope.eventId : focus?.eventId;
+
   const focusTeams = new Set(
     [focus?.team1?.name, focus?.team2?.name].filter((n) => n !== undefined),
   );
@@ -48,7 +55,9 @@ export function scopeSnapshot(snapshot: Snapshot, scope: SnapshotScope, now: num
       m.eventId === focusEventId ||
       involvesTeam(m, focusTeams),
   );
+
   const eventIds = new Set(matches.map((m) => m.eventId));
+
   return {
     ...snapshot,
     servedAt: new Date(now).toISOString(),
@@ -67,8 +76,11 @@ export function scopeFromQuery(query: {
   view?: string;
 }): SnapshotScope {
   if (query.view === "events") return { kind: "events" };
+
   if (query.match) return { kind: "match", matchId: query.match };
+
   if (query.event) return { kind: "event", eventId: query.event };
+
   return { kind: "recent" };
 }
 

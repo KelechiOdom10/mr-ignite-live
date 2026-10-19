@@ -33,15 +33,20 @@ function usePaletteQuery(open: boolean) {
   const [query, setQuery] = useState("");
   useEffect(() => {
     if (!open) return;
+
     const onInput = (e: Event) => {
       const field = e.target;
+
       if (field instanceof HTMLInputElement && field.placeholder === PLACEHOLDER) {
         setQuery(field.value);
       }
     };
+
     document.addEventListener("input", onInput, true);
+
     return () => document.removeEventListener("input", onInput, true);
   }, [open]);
+
   return { query: open ? query : "", clear: () => setQuery("") };
 }
 
@@ -61,6 +66,7 @@ export function SearchPalette({
   const recent = useRecentPlayers();
   const palette = usePaletteQuery(open);
   const lookup = searchableName(palette.query);
+
   const items = useMemo<CommandItem[]>(() => {
     const events: CommandItem[] = snapshot.events.map((e) => ({
       id: `event:${e.id}`,
@@ -71,19 +77,24 @@ export function SearchPalette({
       keywords: [e.ticker, e.region],
       onSelect: () => void router.visit(`/event/${eventSlug(e.id)}`),
     }));
+
     const rank = { live: 0, upcoming: 1, finished: 2 } as const;
     const bracket = { matches: snapshot.matches, now };
+
     const matches: CommandItem[] = snapshot.matches
       .filter((m) => m.team1 && m.team2)
       .map((m) => ({ m, status: matchState(m, now).status }))
       .toSorted((a, b) => {
         const byStatus = rank[a.status] - rank[b.status];
+
         if (byStatus !== 0) return byStatus;
         const order = (a.m.startsAt ?? "").localeCompare(b.m.startsAt ?? "");
+
         return a.status === "finished" ? -order : order;
       })
       .map(({ m, status }) => {
         const { side1, side2 } = matchView(m, matchState(m, now), hidden, bracket);
+
         return {
           id: `match:${m.id}`,
           label: `${side1.name} vs ${side2.name}`,
@@ -94,6 +105,7 @@ export function SearchPalette({
           onSelect: () => void router.visit(`/match/${m.id}`),
         };
       });
+
     const players: CommandItem[] = [
       ...recent.map((p) => ({
         id: `player:${p.uid}`,
@@ -136,6 +148,7 @@ export function SearchPalette({
         onSelect: () => void router.visit("/leaderboard"),
       },
     ];
+
     const pages: CommandItem[] = [
       {
         id: "page:drafts",
@@ -165,6 +178,7 @@ export function SearchPalette({
         onSelect: () => void router.visit(GO_TO_ROUTES.review),
       },
     ];
+
     return [...pages, ...matches, ...players, ...events];
   }, [snapshot, now, router, hidden, recent, lookup]);
 

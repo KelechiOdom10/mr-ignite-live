@@ -5,6 +5,7 @@ const RELATIVE = new Set(["Today", "Tomorrow", "Yesterday"]);
 export function DayHeading({ date, now }: { date: string | null; now: number }) {
   if (!date) return <h3 className="h-6" aria-hidden />;
   const relative = formatDay(date, now);
+
   return (
     <h3 className="flex items-center gap-2 text-sm font-semibold">
       {formatDate(date)}

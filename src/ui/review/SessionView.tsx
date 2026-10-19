@@ -73,6 +73,7 @@ function MatchField({
   const id = useId();
   const draft = useDraft(value ?? "");
   const [invalid, setInvalid] = useState(false);
+
   return (
     <div className="space-y-1">
       <label htmlFor={id} className="block text-xs text-muted-foreground">
@@ -87,13 +88,17 @@ function MatchField({
         onBlur={() => {
           if (!draft.dirty) return;
           const trimmed = draft.text.trim();
+
           if (trimmed !== "" && !field.valid(trimmed)) {
             setInvalid(true);
+
             return;
           }
+
           setInvalid(false);
           draft.settle(trimmed);
           const next = trimmed === "" ? null : trimmed;
+
           if (next !== value) onSave(next);
         }}
         className="h-9 w-full rounded-md border bg-background px-2 text-sm focus-visible:outline-2 focus-visible:outline-ring aria-[invalid]:border-destructive"
@@ -143,11 +148,13 @@ export function SessionView({
 
   function currentTime(): number | null {
     const el = video.current;
+
     return el && playable ? el.currentTime : null;
   }
 
   function mark(kind: BookmarkKind) {
     const at = currentTime();
+
     if (at === null) return;
     const bookmark = blankBookmark(kind, crypto.randomUUID(), at);
     onChange((s) => upsertBookmark(s, bookmark, Date.now()));
@@ -155,19 +162,24 @@ export function SessionView({
 
   const onKey = useEffectEvent((event: KeyboardEvent) => {
     if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
+
     if (isTyping(event.target)) return;
     const found = MARKS.find((m) => m.key === event.key.toLowerCase());
+
     if (!found || !playable) return;
     event.preventDefault();
     mark(found.kind);
   });
+
   useEffect(() => {
     window.addEventListener("keydown", onKey);
+
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
   function jump(at: number) {
     const el = video.current;
+
     if (!el) return;
     el.currentTime = at;
     el.focus();
@@ -176,6 +188,7 @@ export function SessionView({
   function reopen(event: ChangeEvent<HTMLInputElement>) {
     const picked = event.target.files?.[0];
     event.target.value = "";
+
     if (picked) onAttachFile(picked);
   }
 
@@ -194,10 +207,13 @@ export function SessionView({
             onBlur={() => {
               if (!title.dirty) return;
               const next = title.text.trim();
+
               if (next === "" || next === session.title) {
                 title.settle();
+
                 return;
               }
+
               title.settle(next);
               onChange((s) => ({ ...s, title: next, updatedAt: Date.now() }));
             }}
@@ -243,7 +259,9 @@ export function SessionView({
           aria-label={`Recording: ${file?.name ?? session.title}`}
           onLoadedMetadata={(e) => {
             const duration = e.currentTarget.duration;
+
             if (mismatch || !Number.isFinite(duration)) return;
+
             if (session.video?.durationSeconds === duration) return;
             onChange((s) =>
               s.video ? { ...s, video: { ...s.video, durationSeconds: duration } } : s,

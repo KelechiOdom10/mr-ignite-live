@@ -79,20 +79,28 @@ const REFETCH_ON_VISIT: ReadonlySet<EndpointName> = new Set(["search", "leaderbo
 function negativeError(status: CachedStatus): RivalsIslandError | null {
   if (status === "history_private")
     return new MatchHistoryPrivateError("Match history is private", 0);
+
   if (status === "career_private") return new CareerPrivateError("Career is private", 0);
+
   if (status === "not_found") return new NotFoundError("Not found on RivalsIsland", 0);
+
   if (status === "broken") {
     return new UpstreamUnavailableError("RivalsIsland's last answer didn't match our schema", 0);
   }
+
   return null;
 }
 
-function negativeStatus(error: unknown): CachedStatus | null {
-  if (error instanceof MatchHistoryPrivateError) return "history_private";
-  if (error instanceof CareerPrivateError) return "career_private";
-  if (error instanceof NotFoundError) return "not_found";
+function negativeStatus(cause: unknown): CachedStatus | null {
+  if (cause instanceof MatchHistoryPrivateError) return "history_private";
+
+  if (cause instanceof CareerPrivateError) return "career_private";
+
+  if (cause instanceof NotFoundError) return "not_found";
+
   // A changed response would fail again; remembering it stops a paid retry on every view.
-  if (error instanceof RivalsIslandContractError) return "broken";
+  if (cause instanceof RivalsIslandContractError) return "broken";
+
   return null;
 }
 
@@ -106,10 +114,12 @@ export function createPlayerData(options: PlayerDataOptions) {
     refreshFailed = false,
   ): Fetched<ResponseOf<E>> {
     const negative = negativeError(entry.status);
+
     if (negative) throw negative;
     const endpoint: Endpoint<E> = ENDPOINTS[name];
     const stale = entry.expiresAt !== null && entry.expiresAt <= now();
     const data = endpoint.schema.parse(entry.body);
+
     return { data, fetchedAt: entry.fetchedAt, stale, refreshFailed };
   }
 
@@ -122,11 +132,14 @@ export function createPlayerData(options: PlayerDataOptions) {
     const endpoint: Endpoint<E> = ENDPOINTS[name];
     const at = now();
     const id = await ledger.reserve({ endpoint: name, key, expected: endpoint.cost, budget, at });
+
     if (id === null) {
       if (fallback?.status === "ok") return fromCache(name, fallback, true);
       throw new CreditBudgetExceededError(endpoint.cost, budget);
     }
+
     let charged: Awaited<ReturnType<typeof client.call<E>>>;
+
     try {
       charged = await client.call(name, params);
     } catch (error) {
@@ -136,11 +149,14 @@ export function createPlayerData(options: PlayerDataOptions) {
         httpStatus: 0,
       });
       const status = negativeStatus(error);
+
       if (status === "broken" && fallback?.status === "ok") {
         // Keep the last good copy readable, and hold off paying for another broken answer.
         await cache.put(key, name, { ...fallback, expiresAt: at + NEGATIVE_TTL_MS });
+
         return fromCache(name, fallback, true);
       }
+
       if (status) {
         await cache.put(key, name, {
           status,
@@ -152,17 +168,23 @@ export function createPlayerData(options: PlayerDataOptions) {
         console.warn(
           JSON.stringify({ event: "rivalsisland_failed_serving_stale", endpoint: name }),
         );
+
         return fromCache(name, fallback, true);
       }
+
       throw error;
     }
+
     const { data, cost, balance } = charged;
+
     if (cost !== null && cost !== endpoint.cost) {
       console.warn(JSON.stringify({ event: "credit_cost_mismatch", endpoint: name, cost }));
     }
+
     await ledger.settle(id, { cost: cost ?? endpoint.cost, balance, httpStatus: 200 });
     const expiresAt = endpoint.ttlSeconds === null ? null : at + endpoint.ttlSeconds * 1000;
     await cache.put(key, name, { status: "ok", body: data, fetchedAt: at, expiresAt });
+
     return { data, fetchedAt: at, stale: false, refreshFailed: false };
   }
 
@@ -174,16 +196,24 @@ export function createPlayerData(options: PlayerDataOptions) {
     ): Promise<Fetched<ResponseOf<E>>> {
       const key = requestKey(name, params);
       const cached = await cache.get(key);
+
       if (cached && !refresh) {
         const fresh = cached.expiresAt === null || cached.expiresAt > now();
         const keepStale = cached.status === "ok" && !REFETCH_ON_VISIT.has(name);
+
         if (fresh || keepStale) return fromCache(name, cached);
       }
+
       const running = inFlight.get(key);
-      // SAFETY: inFlight is keyed by requestKey(name, params), which includes the endpoint name, so a hit holds a promise for this same E.
-      if (running) return running as Promise<Fetched<ResponseOf<E>>>;
+
+      if (running) {
+        // SAFETY: inFlight is keyed by requestKey(name, params), which includes the endpoint name, so a hit holds a promise for this same E.
+        return running as Promise<Fetched<ResponseOf<E>>>;
+      }
+
       const request = fetchAndStore(name, params, key, cached).finally(() => inFlight.delete(key));
       inFlight.set(key, request);
+
       return request;
     },
     /** What the cache already holds, without calling RivalsIsland or touching the budget. */
@@ -192,12 +222,15 @@ export function createPlayerData(options: PlayerDataOptions) {
       params: EndpointParams[E],
     ): Promise<Fetched<ResponseOf<E>> | null> {
       const cached = await cache.get(requestKey(name, params));
+
       if (cached?.status !== "ok") return null;
       const endpoint: Endpoint<E> = ENDPOINTS[name];
       // An entry saved before a schema change shouldn't take down a page that only peeks at it.
       const parsed = endpoint.schema.safeParse(cached.body);
+
       if (!parsed.success) return null;
       const stale = cached.expiresAt !== null && cached.expiresAt <= now();
+
       return { data: parsed.data, fetchedAt: cached.fetchedAt, stale, refreshFailed: false };
     },
     credits: () => ledger.summary(),

@@ -7,15 +7,19 @@ let timer: ReturnType<typeof setInterval> | null = null;
 
 function subscribe(listener: () => void) {
   listeners.add(listener);
+
   if (!timer) {
     current = Date.now();
     timer = setInterval(() => {
       current = Date.now();
+
       for (const l of listeners) l();
     }, TICK_MS);
   }
+
   return () => {
     listeners.delete(listener);
+
     if (listeners.size === 0 && timer) {
       clearInterval(timer);
       timer = null;

@@ -5,6 +5,7 @@ export const UidSchema = z
   .string()
   .regex(/^[1-9][0-9]{0,19}$/)
   .brand<"Uid">();
+
 export type Uid = z.infer<typeof UidSchema>;
 
 export const MatchUidSchema = z.string().regex(/^[0-9_]{5,80}$/);
@@ -14,9 +15,11 @@ export const FavouriteSchema = z.object({
   name: z.string().min(1).max(64),
   addedAt: z.number().int(),
 });
+
 export type Favourite = z.infer<typeof FavouriteSchema>;
 
 export const DeviceSchema = z.enum(["pc", "ps", "xbox"]);
+
 export type Device = z.infer<typeof DeviceSchema>;
 
 /** Why player data couldn't be shown. Private history and career are ordinary states, not failures. */
@@ -29,6 +32,7 @@ export const PlayerProblemSchema = z.enum([
   "not_configured",
   "unavailable",
 ]);
+
 export type PlayerProblem = z.infer<typeof PlayerProblemSchema>;
 
 export const PROBLEM_MESSAGES: Record<PlayerProblem, { title: string; detail: string }> = {
@@ -61,10 +65,12 @@ export const PROBLEM_MESSAGES: Record<PlayerProblem, { title: string; detail: st
 
 export function problemMessage(problem: PlayerProblem): string {
   const { title, detail } = PROBLEM_MESSAGES[problem];
+
   return `${title}. ${detail}`;
 }
 
 export const FreshnessSchema = z.object({ fetchedAt: z.number().int(), stale: z.boolean() });
+
 export type Freshness = z.infer<typeof FreshnessSchema>;
 
 export const RankSchema = z.object({
@@ -72,6 +78,7 @@ export const RankSchema = z.object({
   level: z.number().int().nullable(),
   score: z.number().nullable(),
 });
+
 export type Rank = z.infer<typeof RankSchema>;
 
 export const LeaderboardRowSchema = z.object({
@@ -84,6 +91,7 @@ export const LeaderboardRowSchema = z.object({
   winRate: z.number().nullable(),
   lastPlayedAt: z.iso.datetime().nullable(),
 });
+
 export type LeaderboardRow = z.infer<typeof LeaderboardRowSchema>;
 
 export const LeaderboardSchema = z.object({
@@ -92,9 +100,11 @@ export const LeaderboardSchema = z.object({
   rows: z.array(LeaderboardRowSchema),
   freshness: FreshnessSchema,
 });
+
 export type Leaderboard = z.infer<typeof LeaderboardSchema>;
 
 export const HeroRoleSchema = z.enum(["Vanguard", "Duelist", "Strategist"]);
+
 export type HeroRole = z.infer<typeof HeroRoleSchema>;
 
 export const HeroSchema = z.object({
@@ -103,6 +113,7 @@ export const HeroSchema = z.object({
   role: HeroRoleSchema.nullable(),
   iconUrl: z.string().nullable(),
 });
+
 export type Hero = z.infer<typeof HeroSchema>;
 
 export const PlayerProfileSchema = z.object({
@@ -119,6 +130,7 @@ export const PlayerProfileSchema = z.object({
   seasonMatches: z.number().int().nullable(),
   lastOnline: z.iso.datetime().nullable(),
 });
+
 export type PlayerProfile = z.infer<typeof PlayerProfileSchema>;
 
 export const CareerSchema = z.object({
@@ -136,9 +148,11 @@ export const CareerSchema = z.object({
   mvp: z.number().int(),
   svp: z.number().int(),
 });
+
 export type Career = z.infer<typeof CareerSchema>;
 
 export const ResultSchema = z.enum(["win", "loss", "draw", "abandoned"]);
+
 export type Result = z.infer<typeof ResultSchema>;
 
 export const HistoryRowSchema = z.object({
@@ -160,6 +174,7 @@ export const HistoryRowSchema = z.object({
   rankChange: z.number().nullable(),
   durationSeconds: z.number(),
 });
+
 export type HistoryRow = z.infer<typeof HistoryRowSchema>;
 
 export const HistoryPageSchema = z.object({
@@ -168,9 +183,11 @@ export const HistoryPageSchema = z.object({
   hasMore: z.boolean(),
   freshness: FreshnessSchema,
 });
+
 export type HistoryPage = z.infer<typeof HistoryPageSchema>;
 
 export const HeroPlaySchema = HeroSchema.extend({ playSeconds: z.number() });
+
 export type HeroPlay = z.infer<typeof HeroPlaySchema>;
 
 export const MatchPlayerSchema = z.object({
@@ -190,6 +207,7 @@ export const MatchPlayerSchema = z.object({
   svp: z.boolean(),
   heroes: z.array(HeroPlaySchema),
 });
+
 export type MatchPlayer = z.infer<typeof MatchPlayerSchema>;
 
 export const MatchTeamSchema = z.object({
@@ -217,6 +235,7 @@ export const MatchDetailSchema = z.object({
   teams: z.array(MatchTeamSchema),
   draft: z.array(DraftActionSchema),
 });
+
 export type MatchDetail = z.infer<typeof MatchDetailSchema>;
 
 export const HeroCareerSchema = z.object({
@@ -232,6 +251,7 @@ export const HeroCareerSchema = z.object({
   svp: z.number().int(),
   freshness: FreshnessSchema,
 });
+
 export type HeroCareer = z.infer<typeof HeroCareerSchema>;
 
 /**
@@ -240,15 +260,18 @@ export type HeroCareer = z.infer<typeof HeroCareerSchema>;
  */
 export function recentHeroes(uid: Uid, matches: readonly MatchDetail[], limit = 3): HeroPlay[] {
   const byHero = new Map<number, HeroPlay>();
+
   for (const match of matches) {
     for (const player of match.teams.flatMap((t) => t.players)) {
       if (player.uid !== uid) continue;
+
       for (const hero of player.heroes) {
         const seen = byHero.get(hero.id);
         byHero.set(hero.id, { ...hero, playSeconds: (seen?.playSeconds ?? 0) + hero.playSeconds });
       }
     }
   }
+
   return [...byHero.values()].sort((a, b) => b.playSeconds - a.playSeconds).slice(0, limit);
 }
 
@@ -267,12 +290,17 @@ export type SeasonRecord =
  */
 export function seasonRecord(profile: PlayerProfile): SeasonRecord {
   const { season, seasonMatches: matches, seasonWins } = profile;
+
   if (season === null || matches === null) return { kind: "unknown", season };
+
   if (matches === 0) return { kind: "none", season };
+
   // A missing win count isn't zero wins.
   if (seasonWins === null) return { kind: "unknown", season };
   const wins = seasonWins;
+
   if (matches < MIN_MATCHES_FOR_WIN_RATE) return { kind: "few", season, matches, wins };
+
   return { kind: "enough", season, matches, wins, winRate: wins / matches };
 }
 
@@ -284,15 +312,19 @@ export interface SeasonGroup {
 /** Consecutive history rows from the same season, newest first, so the list can mark each reset. */
 export function groupBySeason(rows: readonly HistoryRow[]): SeasonGroup[] {
   const groups: SeasonGroup[] = [];
+
   for (const row of rows) {
     const last = groups.at(-1);
+
     if (last && last.season === row.season) last.rows.push(row);
     else groups.push({ season: row.season, rows: [row] });
   }
+
   return groups;
 }
 
 export const RecentPlayerSchema = z.object({ uid: UidSchema, name: z.string().min(1).max(64) });
+
 export type RecentPlayer = z.infer<typeof RecentPlayerSchema>;
 
 export const RECENT_PLAYERS_LIMIT = 8;
@@ -300,12 +332,16 @@ export const RECENT_PLAYERS_LIMIT = 8;
 /** Players opened in this browser, newest first; anything malformed is dropped rather than trusted. */
 export function parseRecentPlayers(raw: string | null): RecentPlayer[] {
   if (!raw) return [];
+
   try {
     const parsed = z.array(z.unknown()).safeParse(JSON.parse(raw));
+
     if (!parsed.success) return [];
+
     return parsed.data
       .flatMap((item) => {
         const player = RecentPlayerSchema.safeParse(item);
+
         return player.success ? [player.data] : [];
       })
       .slice(0, RECENT_PLAYERS_LIMIT);
@@ -327,6 +363,7 @@ export const PlayerNameQuerySchema = z.string().trim().min(1).max(16);
 /** A name worth offering as a ranked lookup; esports names can be longer than an in-game name. */
 export function searchableName(name: string): string | null {
   const parsed = PlayerNameQuerySchema.safeParse(name);
+
   return parsed.success ? parsed.data : null;
 }
 
@@ -337,5 +374,6 @@ export function searchableName(name: string): string | null {
 export function searchPrefill(name: string | undefined, focus: string | undefined) {
   const parsed = PlayerNameQuerySchema.safeParse(name ?? "");
   const prefilled = parsed.success ? parsed.data : "";
+
   return { name: prefilled, focus: prefilled !== "" || focus === "name" };
 }

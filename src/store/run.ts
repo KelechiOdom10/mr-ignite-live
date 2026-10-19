@@ -41,6 +41,7 @@ export interface SyncOutcome {
 async function statsOrNothing(deps: SyncDeps, stored: StoredSnapshot): Promise<StatsChanges> {
   try {
     const now = deps.now();
+
     return await fetchStatsChanges({
       store: deps.store,
       mrvl: deps.mrvl,
@@ -49,6 +50,7 @@ async function statsOrNothing(deps: SyncDeps, stored: StoredSnapshot): Promise<S
     });
   } catch (error) {
     console.error("mrvl stats sync failed; scores still come from Liquipedia", error);
+
     return noStatsChanges();
   }
 }
@@ -56,6 +58,7 @@ async function statsOrNothing(deps: SyncDeps, stored: StoredSnapshot): Promise<S
 export async function syncOnce(deps: SyncDeps): Promise<SyncOutcome> {
   const { store } = deps;
   const prev = (await readStored(store)) ?? emptyStored();
+
   const liquipedia = await fetchLiquipediaChanges({
     liquipedia: deps.liquipedia.startRun({
       maxRequests: LIQUIPEDIA_REQUESTS_PER_RUN,
@@ -64,7 +67,9 @@ export async function syncOnce(deps: SyncDeps): Promise<SyncOutcome> {
     store,
     prev,
   });
+
   const stats = await statsOrNothing(deps, applyLiquipedia(prev, liquipedia));
+
   const next = nextStored({
     prev,
     liquipedia,
@@ -73,7 +78,9 @@ export async function syncOnce(deps: SyncDeps): Promise<SyncOutcome> {
   });
 
   await writeMatchStats(store, stats.updated);
+
   if (next) await writeStored(store, next);
+
   // Last, so a run that fails before here refetches those series and re-emits their map results.
   if (stats.index) await writeStatsIndex(store, stats.index);
 

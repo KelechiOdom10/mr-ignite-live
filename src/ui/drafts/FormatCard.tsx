@@ -15,9 +15,11 @@ export const ACTOR_SHORT: Record<DraftStep["actor"], string> = {
 
 function summary(format: DraftFormat): string {
   const who = format.banBlocks === "opponent" ? "the other team only" : "both teams";
+
   if (format.confirmed) {
     return `A ban keeps the hero from ${who}; ${format.sharedBans ? "both teams may ban the same hero" : "each hero can be banned once"}.`;
   }
+
   return `In the one recorded match, bans kept the hero from ${who} and ${format.sharedBans ? "both teams banned the same hero" : "no hero was banned twice"}.`;
 }
 
@@ -53,6 +55,7 @@ export function FormatCard({ format, folded = false }: { format: DraftFormat; fo
       <p className="mt-3 text-xs text-muted-foreground">{format.basis}</p>
     </>
   );
+
   if (folded) {
     return (
       <Collapsible className="rounded-lg border p-2 text-sm">
@@ -64,6 +67,7 @@ export function FormatCard({ format, folded = false }: { format: DraftFormat; fo
       </Collapsible>
     );
   }
+
   return (
     <section aria-label={format.name} className="rounded-lg border p-4 text-sm">
       <h3 className="mb-1 font-medium">{format.name}</h3>

@@ -49,6 +49,7 @@ export const RULES: readonly BoundaryRule[] = [
   { name: "test helpers", files: /^test\//, allow: "any" },
   { name: "D1 schema", files: /^db\//, allow: ["void/schema-d1"] },
   { name: "scripts", files: /^scripts\//, allow: "any" },
+  { name: "anti-slop (vendored)", files: /^tools\/oxlint\/anti-slop\//, allow: "any" },
   { name: "root config", files: /^[^/]+\.ts$/, allow: "any" },
 ];
 
@@ -68,15 +69,20 @@ const TYPE_ONLY =
 function scopeOfPath(path: string): string {
   if (path.startsWith("src/")) {
     const [first = ""] = path.slice("src/".length).split("/");
+
     return `@/${first.replace(/\.tsx?$/, "")}`;
   }
+
   const [top = ""] = path.split("/");
+
   return /\.server(\.tsx?)?$/.test(path) ? `${top}:server` : top;
 }
 
 function scopeOfImport(file: string, spec: string): string {
   if (spec.startsWith(".")) return scopeOfPath(posix.join(posix.dirname(file), spec));
+
   if (spec.startsWith("@/")) return scopeOfPath(`src/${spec.slice(2)}`);
+
   return spec;
 }
 
@@ -86,30 +92,37 @@ function permits(allow: readonly string[], spec: string): boolean {
 
 export function findViolations(files: readonly SourceFile[], rules = RULES): string[] {
   const violations: string[] = [];
+
   for (const { path, source } of files) {
     const rule = rules.find((r) => r.files.test(path));
+
     if (!rule) {
       violations.push(
         `${path}: no boundary rule covers this file; add one to scripts/boundaries.ts`,
       );
       continue;
     }
+
     if (rule.allow === "any") continue;
     const allow = /\.test\.tsx?$/.test(path) ? [...rule.allow, ...TEST_ONLY] : rule.allow;
     const own = scopeOfPath(path);
     const code = source.replace(TYPE_ONLY, "");
+
     for (const [, spec = ""] of [
       ...code.matchAll(STATIC_IMPORT),
       ...code.matchAll(DYNAMIC_IMPORT),
     ]) {
       if (spec.startsWith("node:") && /\.test\.tsx?$/.test(path)) continue;
       const scope = scopeOfImport(path, spec);
+
       if (scope === own || permits(allow, scope)) continue;
       violations.push(`${path}: imports "${spec}", which ${rule.name} may not use`);
     }
+
     if (COMPUTED_IMPORT.test(code)) {
       violations.push(`${path}: has a dynamic import with a computed path, which can't be checked`);
     }
   }
+
   return violations;
 }

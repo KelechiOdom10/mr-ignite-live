@@ -22,6 +22,7 @@ function aPage(revid: number, overrides: Partial<PageData> = {}): PageData {
 
 describe("planSync", () => {
   const pages = { A: aPage(1), B: aPage(2), Gone: aPage(3) };
+
   const revisions = new Map([
     ["A", { revid: 1, timestamp: "t" }],
     ["B", { revid: 5, timestamp: "t" }],
@@ -63,9 +64,11 @@ describe("teamsMissingInfo", () => {
         matches: [aMatch(), aMatch({ id: "x", team2: { name: "Dreamland", short: "DRE" } })],
       }),
     };
+
     const known: StoredSnapshot["teams"] = {
       "Liquid Citadel": { short: "TLC", logoDark: null, logoLight: null },
     };
+
     expect(teamsMissingInfo(pages, known).sort()).toEqual(["Dreamland", "Swamp Gaming"]);
   });
 });
@@ -83,6 +86,7 @@ describe("toSnapshot", () => {
       },
       teams: { "Swamp Gaming": { short: "SWAMP", logoDark: null, logoLight: null } },
     };
+
     const snapshot = toSnapshot(stored, new Date("2026-10-17T00:00:00Z"));
     expect(snapshot.matches[0]?.team2?.short).toBe("SWAMP");
     expect(snapshot.matches[0]?.eventId).toBe("MR Ignite/2026/Stage 2/Americas");
@@ -103,6 +107,7 @@ describe("mergeMapOverrides", () => {
         { index: 2, map: "Midtown", score1: 3, score2: 1, winner: 1 },
       ],
     );
+
     expect(merged.map((m) => [m.index, m.winner, m.score1, m.vod])).toEqual([
       [1, 1, 2, "v1"],
       [2, 1, 3, null],
@@ -146,6 +151,7 @@ describe("nextStored", () => {
   it("keeps Liquipedia's map winner over mrvl's when both arrive in the same write", () => {
     const title = "MR Ignite/2026/Stage 2/Americas";
     const match = aMatch({ maps: [aMap(1, 1), aMap(2, 0)] });
+
     const next = nextStored({
       prev: emptyStored(),
       liquipedia: { ...noLiquipediaChanges, updates: { [title]: aPage(7, { matches: [match] }) } },
@@ -157,6 +163,7 @@ describe("nextStored", () => {
       },
       builtAt,
     });
+
     expect(next?.builtAt).toBe(builtAt.toISOString());
     const maps = next ? toSnapshot(next, builtAt).matches[0]?.maps : [];
     expect(maps?.map((m) => [m.index, m.winner])).toEqual([

@@ -12,11 +12,10 @@ import {
   MrvlUnreachableError,
 } from "@/mrvl/client";
 
-import type { KvStore } from "./kv";
+import { kvKey, type KvStore } from "./kv";
 import { statsChanged } from "./plan";
 
-const STATS_PREFIX = "stats:v2:";
-const INDEX_KEY = "stats-index:v2";
+export const statsKey = (matchId: string) => kvKey(`stats:v2:${matchId}`, MatchStatsSchema);
 const RECENT_LIMIT = 40;
 const LIVE_LIMIT = 20;
 const MAX_PAGES_PER_SYNC = 6;
@@ -32,23 +31,29 @@ const StatsIndexSchema = z.record(
     heroLines: z.literal(true).optional(),
   }),
 );
+
 export type StatsIndex = z.infer<typeof StatsIndexSchema>;
 
+export const STATS_INDEX_KEY = kvKey("stats-index:v2", StatsIndexSchema);
+
 export async function readMatchStats(store: KvStore, matchId: string): Promise<MatchStats | null> {
-  const parsed = MatchStatsSchema.safeParse(await store.get(STATS_PREFIX + matchId));
-  return parsed.success ? parsed.data : null;
+  const parsed = await store.get(statsKey(matchId));
+
+  return parsed?.success ? parsed.data : null;
 }
 
 /** Every stored series' stats; a value that no longer parses is skipped like a missing one. */
 export async function readAllMatchStats(store: KvStore): Promise<MatchStats[]> {
   const ids = Object.keys(await readIndex(store));
   const stats = await Promise.all(ids.map((id) => readMatchStats(store, id)));
+
   return stats.filter((s) => s !== null);
 }
 
 async function readIndex(store: KvStore): Promise<StatsIndex> {
-  const parsed = StatsIndexSchema.safeParse(await store.get(INDEX_KEY));
-  return parsed.success ? parsed.data : {};
+  const parsed = await store.get(STATS_INDEX_KEY);
+
+  return parsed?.success ? parsed.data : {};
 }
 
 /** Indexed before draft order or per-hero lines were kept: worth one refetch while in lookback. */
@@ -59,8 +64,11 @@ function needsBackfill(entry: StatsIndex[string] | undefined): boolean {
 export function statsCandidates(snapshot: Snapshot, now: number): Match[] {
   return snapshot.matches.filter((m) => {
     const status = matchState(m, now).status;
+
     if (status === "live") return true;
+
     if (status !== "finished" || !m.startsAt) return false;
+
     return now - Date.parse(m.startsAt) < LOOKBACK_MS;
   });
 }
@@ -79,6 +87,7 @@ async function seriesPage(mrvl: MrvlClient, id: string): Promise<MrvlMatchPage |
     )
       throw error;
     console.warn("Skipping an mrvl series page until the next sync", { id, error: error.message });
+
     return null;
   }
 }
@@ -108,6 +117,7 @@ export async function fetchStatsChanges({
   now: number;
 }): Promise<StatsChanges> {
   const candidates = statsCandidates(snapshot, now);
+
   if (candidates.length === 0) return noStatsChanges();
 
   // mrvl can list a just-finished series under "upcoming" for a while, so search all three lists.
@@ -116,6 +126,7 @@ export async function fetchStatsChanges({
     ...(await mrvl.listMatches("recent", RECENT_LIMIT)),
     ...(await mrvl.listMatches("upcoming", LIVE_LIMIT)),
   ];
+
   const index = await readIndex(store);
   const updated: MatchStats[] = [];
   const mapOverrides: Record<string, MapOverride[]> = {};
@@ -126,10 +137,13 @@ export async function fetchStatsChanges({
   const work = candidates
     .flatMap((match) => {
       const summary = findMrvlMatch(match, summaries);
+
       if (!summary) return [];
       const sourceUpdatedAt = String(summary.updatedAt ?? "");
       const changed = index[match.id]?.sourceUpdatedAt !== sourceUpdatedAt;
+
       if (!changed && !needsBackfill(index[match.id])) return [];
+
       return [{ match, summary, sourceUpdatedAt, changed }];
     })
     .sort((a, b) => Number(b.changed) - Number(a.changed));
@@ -138,8 +152,13 @@ export async function fetchStatsChanges({
     if (pagesRequested >= MAX_PAGES_PER_SYNC) break;
     pagesRequested++;
     const page = await seriesPage(mrvl, summary.id);
+
     if (!page) continue;
-    const stats = toMatchStats(match, page, sourceUpdatedAt, new Date(now));
+
+    const parsed = MatchStatsSchema.safeParse(
+      toMatchStats(match, page, sourceUpdatedAt, new Date(now)),
+    );
+
     index[match.id] = {
       sourceMatchId: summary.id,
       sourceUpdatedAt,
@@ -147,8 +166,22 @@ export async function fetchStatsChanges({
       heroLines: true,
     };
     indexChanged = true;
+
+    // Indexed anyway: refetching can't help until mrvl updates the series.
+    if (!parsed.success) {
+      console.warn("Skipping mrvl stats that fail our schema", {
+        id: summary.id,
+        issues: parsed.error.issues.slice(0, 3),
+      });
+
+      continue;
+    }
+
+    const stats = parsed.data;
+
     if (stats.maps.length === 0) continue;
     mapOverrides[match.id] = toMapOverrides(stats);
+
     if (statsChanged(await readMatchStats(store, match.id), stats)) updated.push(stats);
   }
 
@@ -156,9 +189,9 @@ export async function fetchStatsChanges({
 }
 
 export async function writeMatchStats(store: KvStore, stats: MatchStats[]): Promise<void> {
-  for (const s of stats) await store.put(STATS_PREFIX + s.matchId, s);
+  for (const s of stats) await store.put(statsKey(s.matchId), s);
 }
 
 export async function writeStatsIndex(store: KvStore, index: StatsIndex): Promise<void> {
-  await store.put(INDEX_KEY, index);
+  await store.put(STATS_INDEX_KEY, index);
 }

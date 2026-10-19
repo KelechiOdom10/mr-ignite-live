@@ -26,8 +26,10 @@ export function currentTurn(format: DraftFormat, moves: readonly SimMove[]): Tur
     const waiting = actors(s).filter(
       (camp) => !moves.some((m) => m.step === step && m.camp === camp),
     );
+
     if (waiting.length > 0) return { step, kind: s.kind, waiting };
   }
+
   return null;
 }
 
@@ -44,17 +46,22 @@ export function moveProblem(
   heroId: string,
 ): MoveProblem | null {
   const turn = currentTurn(format, moves);
+
   if (!turn) return { kind: "finished" };
+
   if (!turn.waiting.includes(camp)) return { kind: "not-your-turn" };
+
   if (moves.some((m) => m.camp === camp && m.kind === turn.kind && m.heroId === heroId)) {
     return { kind: "repeat" };
   }
+
   if (
     turn.kind === "ban" &&
     moves.some((m) => m.camp !== camp && m.kind === "protect" && m.heroId === heroId)
   ) {
     return { kind: "protected-by-opponent" };
   }
+
   return null;
 }
 
@@ -66,7 +73,9 @@ export function applyMove(
   heroId: string,
 ): SimMove[] {
   const turn = currentTurn(format, moves);
+
   if (!turn || moveProblem(format, moves, camp, heroId)) return [...moves];
+
   return [...moves, { step: turn.step, camp, kind: turn.kind, heroId }];
 }
 
@@ -79,12 +88,14 @@ export interface CampOutcome {
 
 export function outcome(moves: readonly SimMove[]): [CampOutcome, CampOutcome] {
   const of = (camp: Camp, kind: DraftStep["kind"]) =>
-    moves.filter((m) => m.camp === camp && m.kind === kind).map((m) => m.heroId);
+    moves.flatMap((m) => (m.camp === camp && m.kind === kind ? [m.heroId] : []));
+
   const side = (camp: Camp): CampOutcome => ({
     bans: of(camp, "ban"),
     protects: of(camp, "protect"),
     unavailable: [...new Set(of(camp === 0 ? 1 : 0, "ban"))],
   });
+
   return [side(0), side(1)];
 }
 
@@ -96,6 +107,7 @@ export interface SlotPlan {
 /** How many bans and protects a team makes over the whole format: the slots its board shows. */
 export function slotPlan(format: DraftFormat, camp: Camp): SlotPlan {
   const mine = format.steps.filter((s) => actors(s).includes(camp));
+
   return {
     bans: mine.filter((s) => s.kind === "ban").length,
     protects: mine.filter((s) => s.kind === "protect").length,
@@ -113,11 +125,12 @@ export interface TimelineStep {
 /** Every step of the format with what was picked in it, and which step is being played. */
 export function timeline(format: DraftFormat, moves: readonly SimMove[]): TimelineStep[] {
   const current = currentTurn(format, moves)?.step ?? null;
+
   return format.steps.map((s, index) => ({
     index,
     actor: s.actor,
     kind: s.kind,
-    picks: moves.filter((m) => m.step === index).map((m) => ({ camp: m.camp, heroId: m.heroId })),
+    picks: moves.flatMap((m) => (m.step === index ? [{ camp: m.camp, heroId: m.heroId }] : [])),
     state:
       current === null || index < current ? "done" : index === current ? "current" : "upcoming",
   }));
@@ -133,7 +146,9 @@ export interface ProRate {
 /** Pro ban and protect shares per hero, to show beside the pool while practising. */
 export function proRates(summary: DraftSummary): Record<string, ProRate> {
   const { teamDrafts, withProtects } = summary.sample;
+
   if (teamDrafts === 0) return {};
+
   return Object.fromEntries(
     summary.rows.map((r) => [
       r.hero.id,

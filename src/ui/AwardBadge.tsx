@@ -20,6 +20,7 @@ export function AwardBadge({
 }) {
   const Icon = award === "MVP" ? Crown : Medal;
   const label = count && count > 1 ? `${count}× ${award}` : award;
+
   return (
     <span
       aria-label={label}

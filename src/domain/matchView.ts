@@ -3,6 +3,7 @@ import { matchState, type MatchState } from "./matchState";
 import type { MapResult, Match, Team } from "./model";
 
 export type SideOutcome = "won" | "lost" | "open";
+
 export type Side = 1 | 2;
 
 export interface SideView {
@@ -69,11 +70,13 @@ export function matchView(
   const unplayed = state.status === "finished" && state.playedMaps.length === 0;
   const scored = revealed && state.status !== "upcoming" && !unplayed;
   const winner = revealed && state.winner !== 0 ? state.winner : null;
+
   const side = (n: Side): SideView => {
     const team = n === 1 ? match.team1 : match.team2;
     const score = scored ? (n === 1 ? state.wins1 : state.wins2) : null;
     const outcome = winner === null ? "open" : winner === n ? "won" : "lost";
     const feeder = feeders[n];
+
     if (team && feeder) {
       return {
         team: null,
@@ -83,11 +86,14 @@ export function matchView(
         outcome,
       };
     }
+
     return { team, name: team?.name ?? "TBD", short: team?.short ?? "TBD", score, outcome };
   };
+
   const side1 = side(1);
   const side2 = side(2);
   const statusText = statusTextOf(state, revealed);
+
   return {
     status: state.status,
     statusText,
@@ -107,33 +113,46 @@ export function matchTitle(view: MatchView): string {
 
 function statusTextOf(state: MatchState, revealed: boolean): StatusText {
   if (state.status === "live") return "Live";
+
   if (state.status === "upcoming") return null;
+
   if (!revealed) return "Final";
+
   if (state.finishedBy === "walkover") return "Walkover";
+
   if (state.finishedBy === "abandoned") return "No result";
+
   return "Final";
 }
 
 function summaryOf(match: Match, side1: SideView, side2: SideView, statusText: StatusText) {
   const pairing = `${side1.name} vs ${side2.name}`;
+
   if (statusText === "Walkover" || statusText === "No result")
     return `${pairing}, ${statusText.toLowerCase()}, ${match.round}`;
+
   if (side1.score === null || side2.score === null || statusText === null)
     return `${pairing}, ${match.round}`;
+
   return `${side1.name} ${side1.score}, ${side2.name} ${side2.score}, ${statusText.toLowerCase()}, ${match.round}`;
 }
 
 function mapSlots(match: Match, state: MatchState, revealed: boolean): MapSlotView[] {
   const current = state.status === "live" ? state.playedMaps.length + 1 : -1;
+
   return Array.from({ length: match.bestOf }, (_, i): MapSlotView => {
     const index = i + 1;
+
     if (!revealed) return { kind: "hidden", index };
     const result: MapResult | undefined = match.maps.find((m) => m.index === index);
     const map = result?.map || null;
+
     if (index === current) return { kind: "current", index, map };
+
     if (!result || result.winner === 0) return { kind: "open", index, map };
     const own = result.winner === 1 ? result.score1 : result.score2;
     const other = result.winner === 1 ? result.score2 : result.score1;
+
     return {
       kind: "played",
       index,
@@ -147,9 +166,11 @@ function mapSlots(match: Match, state: MatchState, revealed: boolean): MapSlotVi
 
 function vodLinks(match: Match, revealed: boolean): VodLink[] {
   const withVod = match.maps.flatMap((m) => (m.vod ? [{ index: m.index, url: m.vod }] : []));
+
   if (revealed) return withVod.map((v) => ({ ...v, label: `Map ${v.index}` }));
   const alwaysPlayed = Math.ceil(match.bestOf / 2);
   const first = withVod.find((v) => v.index <= alwaysPlayed);
+
   return first ? [{ ...first, label: `Watch from map ${first.index}` }] : [];
 }
 
@@ -159,12 +180,14 @@ function abbreviateRound(round: string): string {
 
 function roundNumber(match: Match): number {
   const r = /_R(\d+)M\d+$/.exec(match.id);
+
   return r ? Number(r[1]) : Number.NaN;
 }
 
 function playedBefore(earlier: Match, later: Match): boolean {
   if (earlier.startsAt && later.startsAt)
     return Date.parse(earlier.startsAt) < Date.parse(later.startsAt);
+
   return roundNumber(earlier) < roundNumber(later);
 }
 
@@ -176,6 +199,7 @@ function droppedDown(from: Match, to: Match): boolean {
 // into which lower-bracket slot.
 function slotFeeders(match: Match, { matches, now }: BracketContext): SlotFeeders {
   if (match.phase !== PLAYOFFS) return {};
+
   const earlier = matches
     .filter(
       (m) =>
@@ -186,22 +210,30 @@ function slotFeeders(match: Match, { matches, now }: BracketContext): SlotFeeder
     )
     .map((m) => ({ m, s: matchState(m, now) }))
     .filter(({ s }) => s.status === "finished");
+
   const feeders: SlotFeeders = {};
+
   for (const n of [1, 2] as const) {
     const team = n === 1 ? match.team1 : match.team2;
+
     if (!team) continue;
+
     const previous = earlier
       .filter(({ m }) => m.team1?.name === team.name || m.team2?.name === team.name)
       .reduce<(typeof earlier)[number] | undefined>(
         (latest, f) => (!latest || playedBefore(latest.m, f.m) ? f : latest),
         undefined,
       );
+
     if (!previous) continue;
     const side = previous.m.team1?.name === team.name ? 1 : 2;
+
     const advanced =
       previous.s.winner === 0 ? !droppedDown(previous.m, match) : previous.s.winner === side;
+
     feeders[n] = { result: advanced ? "Winner" : "Loser", round: previous.m.round };
   }
+
   return feeders;
 }
 
@@ -222,16 +254,21 @@ function involves(match: Match, team: Team): boolean {
 
 export function formView(team: Team, matches: Match[], now: number, hidden: boolean): FormView {
   if (hidden) return { kind: "hidden" };
+
   const results = matches
-    .filter((m) => involves(m, team) && m.startsAt)
-    .map((m) => ({ m, s: matchState(m, now) }))
-    .filter(({ s }) => s.status === "finished" && s.winner !== 0)
+    .flatMap((m) => {
+      if (!involves(m, team) || !m.startsAt) return [];
+      const s = matchState(m, now);
+
+      return s.status === "finished" && s.winner !== 0 ? [{ m, s }] : [];
+    })
     .toSorted((a, b) => (a.m.startsAt ?? "").localeCompare(b.m.startsAt ?? ""))
     .slice(-FORM_LENGTH)
     .map(({ m, s }) => {
       const own = m.team1?.name === team.name ? 1 : 2;
       const mine = own === 1 ? s.wins1 : s.wins2;
       const theirs = own === 1 ? s.wins2 : s.wins1;
+
       return {
         match: m,
         won: s.winner === own,
@@ -239,5 +276,6 @@ export function formView(team: Team, matches: Match[], now: number, hidden: bool
         score: `${mine}–${theirs}`,
       };
     });
+
   return { kind: "shown", results };
 }

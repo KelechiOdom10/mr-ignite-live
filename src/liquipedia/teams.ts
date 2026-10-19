@@ -23,21 +23,26 @@ export async function fetchTeamInfo(
   names: string[],
 ): Promise<Record<string, TeamInfo>> {
   const templates = new Map<string, ReturnType<typeof parseTeamShortExpansion>>();
+
   for (let i = 0; i < names.length; i += NAMES_PER_EXPANSION) {
     const batch = names.slice(i, i + NAMES_PER_EXPANSION);
+
     const expanded = await client.expandTemplates(
       batch.map((n) => `{{TeamShort|${n}}}`).join(TEAM_TEMPLATE_SEPARATOR),
     );
+
     const chunks = expanded.split(TEAM_TEMPLATE_SEPARATOR);
     batch.forEach((name, j) => templates.set(name, parseTeamShortExpansion(chunks[j] ?? "")));
   }
 
   const files = [...templates.values()].flatMap((t) => [t.logoDarkFile, t.logoLightFile]);
   const urls = await logoUrls(client, [...new Set(files.filter((f): f is string => f !== null))]);
+
   const resolve = (file: string | null) =>
     file ? (urls.get(file) ?? urls.get(file.replace(/_/g, " ")) ?? null) : null;
 
   const out: Record<string, TeamInfo> = {};
+
   for (const [name, t] of templates) {
     out[name] = {
       short: t.short ?? teamShortName(name),
@@ -45,5 +50,6 @@ export async function fetchTeamInfo(
       logoLight: resolve(t.logoLightFile),
     };
   }
+
   return out;
 }

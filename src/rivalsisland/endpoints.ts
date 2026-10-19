@@ -40,6 +40,7 @@ const SCHEMAS = {
 } satisfies Record<keyof EndpointParams, z.ZodType>;
 
 export type EndpointName = keyof EndpointParams;
+
 export type ResponseOf<E extends EndpointName> = z.output<(typeof SCHEMAS)[E]>;
 
 export interface Endpoint<E extends EndpointName> {
@@ -51,8 +52,10 @@ export interface Endpoint<E extends EndpointName> {
   path: (params: EndpointParams[E]) => string;
 }
 
+export type EndpointRegistry = { [E in EndpointName]: Endpoint<E> };
+
 // history and leaderboard prices depend on page size; these paths pin it to the priced size.
-export const ENDPOINTS: { [E in EndpointName]: Endpoint<E> } = {
+export const ENDPOINTS: EndpointRegistry = {
   search: {
     cost: 5,
     ttlSeconds: DAY,
@@ -102,5 +105,6 @@ export const ENDPOINTS: { [E in EndpointName]: Endpoint<E> } = {
 /** Stable cache and ledger key: the request path is unique per endpoint and params. */
 export function requestKey<E extends EndpointName>(name: E, params: EndpointParams[E]): string {
   const endpoint: Endpoint<E> = ENDPOINTS[name];
+
   return `${name}:${endpoint.path(params)}`;
 }

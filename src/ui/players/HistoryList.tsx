@@ -15,6 +15,7 @@ const RESULT: Record<Result, { label: string; bar: string; text: string }> = {
 
 function seasonHeading(season: string | null, currentSeason: string | null): string {
   if (season === null) return "Season unknown";
+
   return season === currentSeason ? `Season ${season} · this season` : `Season ${season}`;
 }
 
@@ -35,6 +36,7 @@ export function HistoryList({
       </p>
     );
   }
+
   return (
     <div className="space-y-4">
       {groupBySeason(rows).map((group, i) => (
@@ -54,10 +56,12 @@ export function HistoryList({
 
 function HistoryRows({ rows, now }: { rows: HistoryRow[]; now: number }) {
   const hydrated = useHydrated();
+
   return (
     <ol className="overflow-hidden rounded-lg border divide-y">
       {rows.map((m) => {
         const result = RESULT[m.result];
+
         return (
           <li key={m.matchUid}>
             <Link

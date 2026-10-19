@@ -120,13 +120,17 @@ export const MrvlMatchSummarySchema = z.object({
   isLive: z.boolean().nullish(),
   updatedAt: z.union([z.string(), z.number()]).nullish(),
 });
+
 export type MrvlMatchSummary = z.infer<typeof MrvlMatchSummarySchema>;
 
 export const MrvlMatchPageSchema = z.object({
   match: MrvlMatchSummarySchema.extend({ games: z.array(GameSchema) }),
 });
+
 export type MrvlMatchPage = z.infer<typeof MrvlMatchPageSchema>;
+
 export type MrvlGame = z.infer<typeof GameSchema>;
+
 export type MrvlScoreboardTeam = z.infer<typeof ScoreboardTeamSchema>;
 
 const EnvelopeSchema = z.object({
@@ -149,9 +153,10 @@ export function createMrvlClient(options: MrvlClientOptions = {}) {
   async function query<S extends z.ZodType>(
     schema: S,
     path: string,
-    args: Record<string, unknown>,
+    args: Record<string, string | number>,
   ): Promise<z.infer<S>> {
     let body: unknown;
+
     try {
       const res = await doFetch(MRVL_QUERY_URL, {
         method: "POST",
@@ -159,21 +164,29 @@ export function createMrvlClient(options: MrvlClientOptions = {}) {
         body: JSON.stringify({ path, args, format: "json" }),
         signal: AbortSignal.timeout(timeoutMs),
       });
+
       if (!res.ok) throw new MrvlHttpError(res.status, path);
       body = await res.json();
     } catch (error) {
       if (error instanceof MrvlHttpError) throw error;
+
       if (error instanceof SyntaxError) throw new MrvlResponseError(path, "not JSON");
       throw new MrvlUnreachableError(path, error);
     }
+
     const envelope = EnvelopeSchema.safeParse(body);
+
     if (!envelope.success) throw new MrvlResponseError(path, "not a Convex envelope");
+
     if (envelope.data.status !== "success") {
       throw new MrvlResponseError(path, envelope.data.errorMessage ?? envelope.data.status);
     }
+
     const parsed = schema.safeParse(envelope.data.value);
+
     if (!parsed.success)
       throw new MrvlResponseError(path, parsed.error.issues[0]?.message ?? "shape");
+
     return parsed.data;
   }
 

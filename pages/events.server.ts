@@ -8,6 +8,7 @@ export type Props = InferProps<typeof loader>;
 
 export const loader = defineHandler(async () => {
   const snapshot = await currentSnapshot();
+
   return { snapshot: scopeSnapshot(snapshot, { kind: "events" }, Date.now()) };
 });
 

@@ -10,6 +10,7 @@ declare module "void" {
 // `notFound` and the status is rewritten here once the page has rendered.
 export default defineMiddleware(async (c, next) => {
   await next();
+
   if (c.get("notFound")) {
     c.res = new Response(c.res.body, { status: 404, headers: c.res.headers });
   }

@@ -15,8 +15,11 @@ export type EventPhase = "ongoing" | "upcoming" | "completed";
 export function eventPhase(event: IgniteEvent, now: number): EventPhase {
   const start = event.startDate ? Date.parse(event.startDate) : Number.NaN;
   const end = event.endDate ? Date.parse(event.endDate) + 86_400_000 : Number.NaN;
+
   if (!Number.isNaN(start) && now < start) return "upcoming";
+
   if (!Number.isNaN(end) && now > end) return "completed";
+
   return "ongoing";
 }
 
@@ -29,6 +32,7 @@ export function EventIcon({ event, size = 28 }: { event: IgniteEvent; size?: num
         aria-hidden
       />
     );
+
   return (
     <img
       src={proxiedImage(event.iconUrl)}
@@ -50,6 +54,7 @@ export function EventRow({
 }) {
   const region = regionKey(event.region);
   const live = matches.some((m) => matchState(m, now).status === "live");
+
   return (
     <Link
       href={`/event/${eventSlug(event.id)}`}

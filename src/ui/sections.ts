@@ -19,9 +19,13 @@ export const GO_TO_ROUTES = {
 /** Which nav section a path belongs to; anything unrecognised reads as the esports home. */
 export function sectionOf(path: string): Section {
   if (/^\/(players?|leaderboard|game)(\/|$)/.test(path)) return "players";
+
   if (/^\/review(\/|$)/.test(path)) return "review";
+
   if (/^\/drafts(\/|$)/.test(path)) return "drafts";
+
   if (/^\/events?(\/|$)/.test(path)) return "events";
+
   return "matches";
 }
 

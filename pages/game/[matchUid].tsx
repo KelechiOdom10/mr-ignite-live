@@ -9,6 +9,7 @@ import type { Props } from "./[matchUid].server";
 export default function GamePage({ snapshot: initial, match }: Props) {
   const { snapshot, connection, now } = useLiveSnapshot(initial, { view: "events" });
   const hydrated = useHydrated();
+
   return (
     <AppShell snapshot={snapshot} connection={connection} now={now}>
       {match.ok ? (

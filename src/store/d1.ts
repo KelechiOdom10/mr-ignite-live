@@ -10,6 +10,7 @@ import type { CachedResponse, CreditLedger, PlayerCache } from "./playerData";
 export const d1FavouriteStore: FavouriteStore = {
   async list() {
     const rows = await db.select().from(favourite).orderBy(desc(favourite.addedAt));
+
     return z.array(FavouriteSchema).parse(rows);
   },
   async save(f) {
@@ -28,7 +29,8 @@ const CacheRowSchema = z.object({
   body: z
     .string()
     .nullable()
-    .transform((b): unknown => (b === null ? null : JSON.parse(b))),
+    .transform((b) => (b === null ? null : JSON.parse(b)))
+    .pipe(z.json().nullable()),
   fetchedAt: z.number().int(),
   expiresAt: z.number().int().nullable(),
 });
@@ -36,6 +38,7 @@ const CacheRowSchema = z.object({
 export const d1PlayerCache: PlayerCache = {
   async get(key) {
     const [row] = await db.select().from(playerCache).where(eq(playerCache.key, key)).limit(1);
+
     return row ? CacheRowSchema.parse(row) : null;
   },
   async put(key, endpoint, entry: CachedResponse) {
@@ -46,6 +49,7 @@ export const d1PlayerCache: PlayerCache = {
       fetchedAt: entry.fetchedAt,
       expiresAt: entry.expiresAt,
     };
+
     await db
       .insert(playerCache)
       .values({ key, ...values })
@@ -54,6 +58,7 @@ export const d1PlayerCache: PlayerCache = {
 };
 
 const IdRowsSchema = z.array(z.object({ id: z.number().int() }));
+
 const SummaryRowsSchema = z.array(
   z.object({ spent: z.number(), pending: z.number(), balance: z.number().nullable() }),
 );
@@ -69,7 +74,9 @@ export const d1CreditLedger: CreditLedger = {
         FROM credit_ledger
       ) + ${r.expected} <= ${r.budget}
       RETURNING id`);
+
     const [row] = IdRowsSchema.parse(rows);
+
     return row?.id ?? null;
   },
   async settle(id, s) {
@@ -85,7 +92,9 @@ export const d1CreditLedger: CreditLedger = {
         COALESCE(SUM(CASE WHEN settled_at IS NULL THEN expected ELSE 0 END), 0) AS pending,
         (SELECT balance FROM credit_ledger WHERE balance IS NOT NULL ORDER BY id DESC LIMIT 1) AS balance
       FROM credit_ledger`);
+
     const [row] = SummaryRowsSchema.parse(rows);
+
     return row ?? { spent: 0, pending: 0, balance: null };
   },
 };

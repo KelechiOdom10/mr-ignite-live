@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { z } from "zod";
 
-import { MatchStatsSchema as StoredStats } from "@/domain/stats";
 import { createLiquipediaClient } from "@/liquipedia/client";
 import { createMrvlClient } from "@/mrvl/client";
 
@@ -20,12 +18,21 @@ import {
   TLC_SWAMP_MRVL_ID,
 } from "../../test/fakeMrvl";
 import { memoryKvStore } from "../../test/memoryKv";
+import type { KvKey, KvStore } from "./kv";
 import { syncOnce } from "./run";
 import { readStored } from "./snapshot";
-
-const IndexSchema = z.record(z.string(), z.object({ sourceUpdatedAt: z.string() }));
+import { STATS_INDEX_KEY, statsKey } from "./stats";
 
 // Liquipedia ids from the recorded Americas bracket.
+/** A value the sync stored under `key`; fails the test when it's missing or off-schema. */
+async function read<T>(store: KvStore, key: KvKey<T>): Promise<T> {
+  const parsed = await store.get(key);
+
+  if (!parsed?.success) throw new Error(`No valid value at ${key.name}`);
+
+  return parsed.data;
+}
+
 const FLY_100T = "kOKqgtPHq4_R2M1";
 const TLC_SWAMP = "kOKqgtPHq4_R2M2";
 
@@ -36,11 +43,14 @@ const TLC_SWAMP = "kOKqgtPHq4_R2M2";
 function matchDay({ mrvl: mrvlOptions }: { mrvl?: MrvlFakeOptions } = {}) {
   const clock = fakeClock("2026-10-16T22:30:00Z");
   const store = memoryKvStore({ "titles:v1": RECORDED_TITLES });
+
   const liquipedia = fakeLiquipedia({
     clock,
     revids: { [AMERICAS]: 60100, [PACIFIC]: 60081, [AMERICAS_GROUPS]: 60050 },
   });
+
   const mrvl = fakeMrvl(mrvlOptions);
+
   const deps = {
     store,
     liquipedia: createLiquipediaClient({
@@ -51,6 +61,7 @@ function matchDay({ mrvl: mrvlOptions }: { mrvl?: MrvlFakeOptions } = {}) {
     mrvl: createMrvlClient({ fetch: mrvl.fetch, timeoutMs: 20 }),
     now: clock.now,
   };
+
   return {
     store,
     liquipedia,
@@ -59,6 +70,7 @@ function matchDay({ mrvl: mrvlOptions }: { mrvl?: MrvlFakeOptions } = {}) {
     /** One cron run, a minute after the last. */
     sync: async () => {
       clock.advance(60_000);
+
       return syncOnce(deps);
     },
   };
@@ -115,6 +127,7 @@ describe("syncOnce on match day", () => {
     day.liquipedia.settings.latencyMs = 16_000;
     const runOffsets: number[][] = [];
     const runPuts: Record<string, number>[] = [];
+
     for (let run = 0; run < 4; run++) {
       const startsAt = day.clock.now() + 60_000;
       const before = day.liquipedia.requests.length;
@@ -154,6 +167,7 @@ describe("syncOnce on match day", () => {
     const lookups = day.liquipedia.requests
       .slice(before)
       .filter((r) => r.params.get("prop") === "imageinfo");
+
     expect(lookups).toEqual([]);
     const americas = (await readStored(day.store))?.pages[AMERICAS];
     expect([americas?.revid, americas?.event?.iconUrl]).toEqual([60101, iconUrl]);
@@ -182,6 +196,7 @@ describe("syncOnce on match day", () => {
     const refetched = day.mrvl.requests
       .slice(earlierRequests)
       .filter((r) => r.path === "matches:getPageData");
+
     expect(refetched.map((r) => r.args.id)).toEqual([FLY_100T_MRVL_ID]);
     expect(day.store.putCounts()).toEqual({ "stats-index:v2": 1 });
     expect(outcome.changed).toBe(false);
@@ -190,36 +205,40 @@ describe("syncOnce on match day", () => {
   it("refetches a recent series indexed before draft order was kept, once", async () => {
     const day = matchDay();
     await day.sync();
-    const key = `stats:v2:${FLY_100T}`;
-    const stored = StoredStats.parse(await day.store.get(key));
-    await day.store.put(key, { ...stored, maps: stored.maps.map(({ draft: _, ...m }) => m) });
-    const index = IndexSchema.parse(await day.store.get("stats-index:v2"));
-    await day.store.put("stats-index:v2", {
+    const key = statsKey(FLY_100T);
+    const stored = await read(day.store, key);
+    // Entries saved without a draft read back as `draft: null`.
+    await day.store.put(key, { ...stored, maps: stored.maps.map((m) => ({ ...m, draft: null })) });
+    const index = await read(day.store, STATS_INDEX_KEY);
+    const entry = index[FLY_100T];
+
+    if (!entry) throw new Error("FLY–100T should be indexed after the first sync");
+    await day.store.put(STATS_INDEX_KEY, {
       ...index,
-      [FLY_100T]: {
-        sourceMatchId: FLY_100T_MRVL_ID,
-        sourceUpdatedAt: index[FLY_100T]?.sourceUpdatedAt,
-      },
+      [FLY_100T]: { sourceMatchId: FLY_100T_MRVL_ID, sourceUpdatedAt: entry.sourceUpdatedAt },
     });
+
     const pageRequests = () =>
       day.mrvl.requests.filter(
         (r) => r.path === "matches:getPageData" && r.args.id === FLY_100T_MRVL_ID,
       ).length;
+
     const before = pageRequests();
 
     await day.sync();
     await day.sync();
 
     expect(pageRequests() - before).toBe(1);
-    const backfilled = StoredStats.parse(await day.store.get(key));
+    const backfilled = await read(day.store, key);
     expect(backfilled.maps.every((m) => m.draft?.length === 14)).toBe(true);
   });
 
   it("refetches a recent series indexed before per-hero lines were kept, once", async () => {
     const day = matchDay();
     await day.sync();
-    const key = `stats:v2:${FLY_100T}`;
-    const stored = StoredStats.parse(await day.store.get(key));
+    const key = statsKey(FLY_100T);
+    const stored = await read(day.store, key);
+
     const withoutLines = {
       ...stored,
       maps: stored.maps.map((m) => ({
@@ -233,32 +252,49 @@ describe("syncOnce on match day", () => {
         })),
       })),
     };
+
     await day.store.put(key, withoutLines);
-    const index = IndexSchema.parse(await day.store.get("stats-index:v2"));
-    await day.store.put("stats-index:v2", {
+    const index = await read(day.store, STATS_INDEX_KEY);
+    const entry = index[FLY_100T];
+
+    if (!entry) throw new Error("FLY–100T should be indexed after the first sync");
+    await day.store.put(STATS_INDEX_KEY, {
       ...index,
       [FLY_100T]: {
         sourceMatchId: FLY_100T_MRVL_ID,
-        sourceUpdatedAt: index[FLY_100T]?.sourceUpdatedAt,
+        sourceUpdatedAt: entry.sourceUpdatedAt,
         draftOrder: true,
       },
     });
+
     const pageRequests = () =>
       day.mrvl.requests.filter(
         (r) => r.path === "matches:getPageData" && r.args.id === FLY_100T_MRVL_ID,
       ).length;
+
     const before = pageRequests();
 
     await day.sync();
     await day.sync();
 
     expect(pageRequests() - before).toBe(1);
-    const backfilled = StoredStats.parse(await day.store.get(key));
+    const backfilled = await read(day.store, key);
+
     const heroes = backfilled.maps.flatMap((m) =>
       m.teams.flatMap((t) => t.players.flatMap((p) => p.heroes)),
     );
+
     expect(heroes.length).toBeGreaterThan(0);
     expect(heroes.every((h) => h.line)).toBe(true);
+  });
+
+  it("still saves Liquipedia's changes when an mrvl series' stats fail our schema", async () => {
+    const day = matchDay({ mrvl: { misnumbered: [FLY_100T_MRVL_ID] } });
+
+    const outcome = await day.sync();
+
+    expect(day.store.putCounts()).toEqual({ snapshot: 1, "stats-index:v2": 1 });
+    expect(outcome.updatedStats).toBe(0);
   });
 
   it("doesn't let one failing mrvl series page hold back the others, and retries it next run", async () => {
@@ -274,9 +310,11 @@ describe("syncOnce on match day", () => {
     day.mrvl.settings.failingPages = [];
     const earlierRequests = day.mrvl.requests.length;
     await day.sync();
+
     const fetched = day.mrvl.requests
       .slice(earlierRequests)
       .filter((r) => r.path === "matches:getPageData");
+
     expect(fetched.map((r) => r.args.id)).toEqual([TLC_SWAMP_MRVL_ID]);
   });
 

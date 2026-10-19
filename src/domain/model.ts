@@ -4,9 +4,11 @@ export const TeamSchema = z.object({
   name: z.string().min(1),
   short: z.string().min(1),
 });
+
 export type Team = z.infer<typeof TeamSchema>;
 
 export const MapWinnerSchema = z.union([z.literal(0), z.literal(1), z.literal(2)]);
+
 export type MapWinner = z.infer<typeof MapWinnerSchema>;
 
 export const MapResultSchema = z.object({
@@ -17,6 +19,7 @@ export const MapResultSchema = z.object({
   winner: MapWinnerSchema,
   vod: z.string().nullable(),
 });
+
 export type MapResult = z.infer<typeof MapResultSchema>;
 
 export const MatchSchema = z.object({
@@ -33,6 +36,7 @@ export const MatchSchema = z.object({
   twitch: z.string().nullable(),
   youtube: z.string().nullable(),
 });
+
 export type Match = z.infer<typeof MatchSchema>;
 
 export const IgniteEventSchema = z.object({
@@ -49,6 +53,7 @@ export const IgniteEventSchema = z.object({
   iconFile: z.string().nullable(),
   iconUrl: z.url().nullable(),
 });
+
 export type IgniteEvent = z.infer<typeof IgniteEventSchema>;
 
 export const TeamInfoSchema = z.object({
@@ -56,6 +61,7 @@ export const TeamInfoSchema = z.object({
   logoDark: z.url().nullable(),
   logoLight: z.url().nullable(),
 });
+
 export type TeamInfo = z.infer<typeof TeamInfoSchema>;
 
 export const PageDataSchema = z.object({
@@ -64,9 +70,11 @@ export const PageDataSchema = z.object({
   event: IgniteEventSchema.nullable(),
   matches: z.array(MatchSchema),
 });
+
 export type PageData = z.infer<typeof PageDataSchema>;
 
 export const MapOverrideSchema = MapResultSchema.omit({ vod: true });
+
 export type MapOverride = z.infer<typeof MapOverrideSchema>;
 
 export const STORED_SNAPSHOT_VERSION = 5;
@@ -79,6 +87,7 @@ export const StoredSnapshotSchema = z.object({
   mapOverrides: z.record(z.string(), z.array(MapOverrideSchema)),
   builtAt: z.iso.datetime(),
 });
+
 export type StoredSnapshot = z.infer<typeof StoredSnapshotSchema>;
 
 export const SnapshotSchema = z.object({
@@ -89,4 +98,5 @@ export const SnapshotSchema = z.object({
   matches: z.array(MatchSchema),
   teams: z.record(z.string(), TeamInfoSchema),
 });
+
 export type Snapshot = z.infer<typeof SnapshotSchema>;

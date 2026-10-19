@@ -49,6 +49,7 @@ const matches = [
   finished("a2", "amer", "2026-10-17T10:00:00.000Z"),
   finished("e1", "emea", "2026-10-17T12:00:00.000Z"),
 ];
+
 const all = [stats("a1", ["Krakoa", "Midtown"]), stats("e1", ["Krakoa"])];
 const events = [event("amer"), event("emea"), event("china")];
 
@@ -74,6 +75,7 @@ describe("draftScope", () => {
       query: { map: "Midtown", mode: "Domination" },
       now,
     });
+
     expect(scope.filter).toEqual({ eventId: null, map: "Midtown", mode: "Convoy" });
   });
 });

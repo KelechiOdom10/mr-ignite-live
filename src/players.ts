@@ -40,12 +40,15 @@ async function dependencies(): Promise<PlayerDataDeps> {
       const client = notConfigured(
         "Fixtures mode only runs in development; set RIVALSISLAND_MODE=live",
       );
+
       return { client, cache: d1PlayerCache, ledger: d1CreditLedger };
     }
+
     const [{ fakeRivalsIsland }, { memoryPlayerCache, memoryCreditLedger }] = await Promise.all([
       import("../test/fakeRivalsIsland"),
       import("../test/memoryPlayerDb"),
     ]);
+
     // Replayed calls never touch the real cache or credit ledger.
     return {
       client: createRivalsIslandClient({ apiKey: "fixtures", fetch: fakeRivalsIsland().fetch }),
@@ -53,10 +56,13 @@ async function dependencies(): Promise<PlayerDataDeps> {
       ledger: memoryCreditLedger(),
     };
   }
+
   const apiKey = env.RIVALSISLAND_API_KEY;
+
   const client = apiKey
     ? createRivalsIslandClient({ apiKey })
     : notConfigured("RIVALSISLAND_API_KEY is not set");
+
   return { client, cache: d1PlayerCache, ledger: d1CreditLedger };
 }
 
@@ -67,6 +73,7 @@ export function players() {
   playerData ??= dependencies().then((deps) =>
     createPlayerData({ ...deps, budget: env.RIVALSISLAND_CREDIT_BUDGET, now: Date.now }),
   );
+
   return playerData;
 }
 
@@ -81,6 +88,7 @@ export async function shellSnapshot(): Promise<Snapshot> {
   } catch (error) {
     console.error("Esports snapshot unavailable on a players page", error);
     const now = new Date().toISOString();
+
     return {
       builtAt: now,
       servedAt: now,
@@ -100,7 +108,9 @@ export async function loadPlayers<T>(read: (data: PlayerData) => Promise<T>): Pr
     return { ok: true, value: await read(await players()) };
   } catch (error) {
     const problem = problemOf(error);
+
     if (!problem) throw error;
+
     return { ok: false, problem };
   }
 }
@@ -113,6 +123,7 @@ export async function heroCatalogueOrEmpty(data: PlayerData): Promise<HeroCatalo
     if (error instanceof RivalsIslandError || error instanceof CreditBudgetExceededError) {
       return new Map();
     }
+
     throw error;
   }
 }

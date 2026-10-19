@@ -12,17 +12,21 @@ const VendorUidSchema = z.string();
 const PlayTimeSchema = z.object({ seconds: z.number(), formatted: z.string() });
 const AssetRefSchema = z.object({ id: z.string(), image: z.string().nullable() });
 const DisplayHeroSchema = z.object({ id: z.number().int(), name: z.string().nullable() });
+
 const HeroRefSchema = z.object({
   id: z.number().int(),
   name: z.string().nullable(),
   icon: z.string().nullable(),
 });
+
 const CatalogRefSchema = z.object({ id: z.number().int(), name: z.string().nullable() });
+
 const SeasonRefSchema = z.object({
   id: z.number().int(),
   number: z.string().nullable(),
   name: z.string().nullable(),
 });
+
 const ResultSchema = z.enum(["win", "loss", "draw", "abandoned"]);
 
 export const PlayerRankSchema = z.object({
@@ -120,6 +124,7 @@ const RankPointSchema = z.object({
   rank_score: z.number(),
   rs: z.number().nullable(),
 });
+
 const RankTransitionSchema = z.object({
   before: RankPointSchema,
   change: z.number(),

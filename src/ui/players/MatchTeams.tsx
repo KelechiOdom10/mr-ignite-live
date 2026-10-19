@@ -14,6 +14,7 @@ function compact(n: number): string {
 
 function PlayerRow({ p }: { p: MatchPlayer }) {
   const [main, ...others] = p.heroes;
+
   return (
     <tr className="align-middle">
       <td className="w-full max-w-0 py-2 pr-2 pl-3">
@@ -113,6 +114,7 @@ export function MatchTeams({ match }: { match: MatchDetail }) {
 
 export function DraftStrip({ match }: { match: MatchDetail }) {
   if (match.draft.length === 0) return null;
+
   return (
     <ol className="flex flex-wrap gap-2" aria-label="Draft">
       {match.draft.map((d) =>

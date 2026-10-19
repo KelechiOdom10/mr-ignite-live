@@ -13,6 +13,7 @@ import {
   type PracticeFocus,
   type ReviewLibrary,
   type ReviewSession,
+  type ReviewExport,
 } from "@/domain/review";
 import { cn } from "@/lib/utils";
 
@@ -27,13 +28,15 @@ type Loaded =
 
 function titleFromFile(name: string): string {
   const base = name.replace(/\.[^.]+$/, "").trim();
+
   return (base || "Untitled review").slice(0, 120);
 }
 
-function downloadJson(fileName: string, value: unknown) {
+function downloadExport(fileName: string, value: ReviewExport) {
   const url = URL.createObjectURL(
     new Blob([JSON.stringify(value, null, 2)], { type: "application/json" }),
   );
+
   const a = document.createElement("a");
   a.href = url;
   a.download = fileName;
@@ -45,6 +48,7 @@ function downloadJson(fileName: string, value: unknown) {
 async function openLibrary() {
   if (typeof indexedDB === "undefined") throw new Error("IndexedDB is not available");
   const opened = indexedDbArea();
+
   return { opened, result: await loadLibrary(opened, Date.now()) };
 }
 
@@ -76,6 +80,7 @@ export function ReviewWorkspace() {
         latest.current = result.library;
         setLoaded({ kind: "ready", library: result.library });
         setSelectedId(result.library.sessions[0]?.id ?? null);
+
         if (result.keptAs) {
           setNotice({
             tone: "error",
@@ -83,11 +88,13 @@ export function ReviewWorkspace() {
           });
         }
       },
-      (error: unknown) => {
-        console.error("Review storage unavailable", error);
+      (cause: unknown) => {
+        console.error("Review storage unavailable", cause);
+
         if (!cancelled) setLoaded({ kind: "unavailable" });
       },
     );
+
     return () => {
       cancelled = true;
     };
@@ -95,6 +102,7 @@ export function ReviewWorkspace() {
 
   useEffect(() => {
     const urls = openUrls.current;
+
     return () => {
       for (const url of urls) URL.revokeObjectURL(url);
       urls.clear();
@@ -109,6 +117,7 @@ export function ReviewWorkspace() {
       </div>
     );
   }
+
   if (loaded.kind === "unavailable") {
     return (
       <p role="alert" className="flex items-start gap-3 rounded-lg border bg-card p-4 text-sm">
@@ -125,6 +134,7 @@ export function ReviewWorkspace() {
   function commit(update: (current: ReviewLibrary) => ReviewLibrary) {
     if (!latest.current) return;
     const next = update(latest.current);
+
     if (!ReviewLibrarySchema.safeParse(next).success) {
       setNotice({
         tone: "error",
@@ -132,13 +142,16 @@ export function ReviewWorkspace() {
           ? `A review holds at most ${MAX_BOOKMARKS} marks, so that one wasn't added.`
           : "That change wasn't saved because it would make your reviews unreadable.",
       });
+
       return;
     }
+
     latest.current = next;
     setLoaded({ kind: "ready", library: next });
+
     if (!area.current) return;
-    saveLibrary(area.current, next).catch((error: unknown) => {
-      console.error("Saving the review library failed", error);
+    saveLibrary(area.current, next).catch((cause: unknown) => {
+      console.error("Saving the review library failed", cause);
       setNotice({
         tone: "error",
         text: "Your last change couldn't be saved in this browser. Export a copy to keep it.",
@@ -155,6 +168,7 @@ export function ReviewWorkspace() {
 
   function releaseSource(sessionId: string) {
     const source = sources.get(sessionId);
+
     if (!source) return;
     URL.revokeObjectURL(source.url);
     openUrls.current.delete(source.url);
@@ -165,6 +179,7 @@ export function ReviewWorkspace() {
     setSources((current) => {
       const next = new Map(current);
       next.delete(id);
+
       return next;
     });
     commit((current) => ({ ...current, sessions: current.sessions.filter((s) => s.id !== id) }));
@@ -190,9 +205,11 @@ export function ReviewWorkspace() {
   function startFromFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
+
     if (!file) return;
     const now = Date.now();
     const focus = latest.current ? activeFocus(latest.current) : null;
+
     const session: ReviewSession = {
       id: crypto.randomUUID(),
       title: titleFromFile(file.name),
@@ -208,6 +225,7 @@ export function ReviewWorkspace() {
       focusId: focus?.id ?? null,
       bookmarks: [],
     };
+
     commit((current) => ({ ...current, sessions: [session, ...current.sessions] }));
     attachFile(session.id, file);
     setSelectedId(session.id);
@@ -216,12 +234,16 @@ export function ReviewWorkspace() {
   async function importFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
+
     if (!file) return;
     const parsed = parseExport(await file.text());
+
     if (!parsed.ok) {
       setNotice({ tone: "error", text: IMPORT_ERRORS[parsed.error] });
+
       return;
     }
+
     if (!latest.current) return;
     const { library: merged, summary } = mergeLibrary(latest.current, parsed.value);
     commit(() => merged);
@@ -234,7 +256,7 @@ export function ReviewWorkspace() {
   function exportAll() {
     if (!latest.current) return;
     const now = Date.now();
-    downloadJson(
+    downloadExport(
       `rivals-hub-review-${new Date(now).toISOString().slice(0, 10)}.json`,
       exportLibrary(latest.current, now),
     );

@@ -17,8 +17,10 @@ export function DraftSource({
   now: number;
 }) {
   const hydrated = useHydrated();
+
   const newest =
     hydrated && coverage.newestFetchedAt ? formatRelative(coverage.newestFetchedAt, now) : null;
+
   return (
     <section aria-labelledby="draft-source" className="rounded-lg border bg-card p-4 text-sm">
       <h2 id="draft-source" className="font-medium">

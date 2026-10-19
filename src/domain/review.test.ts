@@ -66,6 +66,7 @@ describe("upsertBookmark", () => {
     const s = session(ids.a, {
       bookmarks: [death(ids.d1, 10, "cooldown"), death(ids.d2, 50, "cooldown")],
     });
+
     const moved = upsertBookmark(s, death(ids.d1, 90, "positioning"), 2_000);
     expect(moved.bookmarks.map((b) => [b.id, b.at])).toEqual([
       [ids.d2, 50],
@@ -81,6 +82,7 @@ describe("export and import", () => {
       sessions: [session(ids.a, { bookmarks: [death(ids.d1, 12.5, "positioning")] })],
       focuses: [focus],
     };
+
     const parsed = parseExport(JSON.stringify(exportLibrary(library, 9_000)));
     expect(parsed).toEqual({
       ok: true,
@@ -110,6 +112,7 @@ describe("export and import", () => {
       },
       1,
     );
+
     expect(parseExport(JSON.stringify(bad))).toEqual({ ok: false, error: "not_a_review_export" });
     expect(parseExport("{not json")).toEqual({ ok: false, error: "not_json" });
   });
@@ -122,6 +125,7 @@ describe("export and import", () => {
       ],
       focuses: [],
     };
+
     const incoming = exportLibrary(
       {
         sessions: [
@@ -133,6 +137,7 @@ describe("export and import", () => {
       },
       5_000,
     );
+
     const { library, summary } = mergeLibrary(local, incoming);
     expect(library.sessions.map((s) => s.title)).toEqual([
       "Local newer",
@@ -166,6 +171,7 @@ describe("focusProgress", () => {
       ],
       focuses: [focus],
     };
+
     expect(focusProgress(library, focus)).toEqual({
       before: { deaths: 2, matching: 1, sessions: 1 },
       during: { deaths: 1, matching: 0, sessions: 1 },
@@ -181,6 +187,7 @@ describe("startFocus", () => {
       title: "Track enemy ults",
       startedAt: 9_000,
     };
+
     const library = startFocus({ sessions: [], focuses: [focus] }, next, 9_000);
     expect(library.focuses.map((f) => [f.title, f.endedAt])).toEqual([
       ["Stay behind the tank", 9_000],

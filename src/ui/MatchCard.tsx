@@ -58,6 +58,7 @@ export function MatchCard({
   className?: string;
 }) {
   const view = useMatchView(match, now, snapshot.matches);
+
   return (
     <Card
       interactive

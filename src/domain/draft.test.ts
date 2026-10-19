@@ -87,12 +87,14 @@ describe("summariseDrafts", () => {
       kind: "protect",
       hero: hero("mantis"),
     };
+
     const drafts = toTeamDrafts([
       series([
         aMapStats({ map: "Krakoa", draft: [protect] }),
         aMapStats({ map: "Midtown", index: 2 }),
       ]),
     ]);
+
     const summary = summariseDrafts(drafts);
     expect(summary.sample.withProtects).toBe(2);
     expect(summary.rows.find((r) => r.hero.id === "mantis")?.protected).toBe(1);
@@ -102,6 +104,7 @@ describe("summariseDrafts", () => {
     const drafts: TeamDraft[] = toTeamDrafts([
       series([aMapStats({ map: "Krakoa" }), aMapStats({ map: "Midtown", index: 2 })]),
     ]);
+
     expect(filterDrafts(drafts, { mode: "Convoy" }).map((d) => d.map)).toEqual([
       "Midtown",
       "Midtown",
@@ -117,6 +120,7 @@ describe("formatDeviations", () => {
       { phase: 0, side: 2, camp: 1, kind: "ban", hero: hero("b") },
       { phase: 1, side: 2, camp: 1, kind: "protect", hero: hero("c") },
     ];
+
     const deviations = formatDeviations(wrong, IGNITE_2026);
     expect(deviations).toContain("step 1: camp 0 made no move, expected protect");
     expect(deviations).toContain("step 1: camp 1 made protect, expected no move");
@@ -132,19 +136,24 @@ describe("formatDeviations past the end", () => {
 
 describe("statsFollowingFormat", () => {
   const followsIgnite: DraftAction[] = IGNITE_2026.steps.flatMap((step, phase) =>
-    ([0, 1] as const)
-      .filter((camp) => step.actor === "both" || (step.actor === "first") === (camp === 0))
-      .map((camp) => ({
-        phase,
-        side: camp === 0 ? 1 : 2,
-        camp,
-        kind: step.kind,
-        hero: hero(`h${phase}-${camp}`),
-      })),
+    ([0, 1] as const).flatMap((camp) =>
+      step.actor === "both" || (step.actor === "first") === (camp === 0)
+        ? [
+            {
+              phase,
+              side: camp === 0 ? 1 : 2,
+              camp,
+              kind: step.kind,
+              hero: hero(`h${phase}-${camp}`),
+            },
+          ]
+        : [],
+    ),
   );
 
   it("keeps only maps whose recorded order follows the format, dropping unordered ones", () => {
     expect(formatDeviations(followsIgnite, IGNITE_2026)).toEqual([]);
+
     const kept = statsFollowingFormat(
       [
         series([
@@ -156,6 +165,7 @@ describe("statsFollowingFormat", () => {
       ],
       IGNITE_2026,
     );
+
     expect(kept.map((s) => s.maps.map((m) => m.map))).toEqual([["Midtown"]]);
   });
 });

@@ -18,6 +18,7 @@ const DEVICES = [
 
 export default function LeaderboardPage({ snapshot: initial, device, leaderboard }: Props) {
   const { snapshot, connection, now } = useLiveSnapshot(initial, { view: "events" });
+
   return (
     <AppShell snapshot={snapshot} connection={connection} now={now}>
       <h1 className="text-2xl font-semibold tracking-tight">Leaderboard</h1>

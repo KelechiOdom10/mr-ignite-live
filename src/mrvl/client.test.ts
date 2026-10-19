@@ -1,14 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { mrvlFixture } from "../../test/fixtures";
+import { type Json, mrvlFixture } from "../../test/fixtures";
 import { createMrvlClient, MrvlHttpError, MrvlResponseError, MrvlUnreachableError } from "./client";
 
-function respondWith(body: unknown, status = 200) {
+function respondWith(body: Json, status = 200) {
   const calls: RequestInit[] = [];
+
   const fetchImpl: typeof fetch = async (_input, init) => {
     calls.push(init ?? {});
+
     return new Response(JSON.stringify(body), { status });
   };
+
   return { fetchImpl, calls };
 }
 

@@ -25,6 +25,7 @@ export default function DraftsPage({
   formats,
 }: Props) {
   const { snapshot, connection, now } = useLiveSnapshot(initial, { view: "events" });
+
   return (
     <AppShell snapshot={snapshot} connection={connection} now={now}>
       <div className="flex flex-wrap items-end justify-between gap-3">

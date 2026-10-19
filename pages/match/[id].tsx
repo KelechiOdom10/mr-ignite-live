@@ -27,6 +27,7 @@ import type { Props } from "./[id].server";
 export default function MatchPage({ snapshot: initial, matchId, stats }: Props) {
   const { snapshot, connection, now } = useLiveSnapshot(initial, { match: matchId });
   const match = snapshot.matches.find((m) => m.id === matchId);
+
   if (!match) {
     return (
       <AppShell snapshot={snapshot} connection={connection} now={now}>
@@ -40,6 +41,7 @@ export default function MatchPage({ snapshot: initial, matchId, stats }: Props) 
       </AppShell>
     );
   }
+
   return (
     <MatchDetail
       match={match}
@@ -57,6 +59,7 @@ function involves(match: Match, team: Team | null): boolean {
 
 function ScoreCenter({ match, view, now }: { match: Match; view: MatchView; now: number }) {
   const hydrated = useHydrated();
+
   if (view.status === "upcoming") {
     return (
       <div className="text-center">
@@ -69,6 +72,7 @@ function ScoreCenter({ match, view, now }: { match: Match; view: MatchView; now:
       </div>
     );
   }
+
   return (
     <div className="text-center">
       {view.status === "live" && (
@@ -96,6 +100,7 @@ function TeamSide({
   align: "start" | "end";
 }) {
   const { team } = side;
+
   return (
     <div
       className={cn(
@@ -138,6 +143,7 @@ function MapCard({
   const info = slot.map ? mapInfo(slot.map) : null;
   const art = proxiedImage(info?.imageUrl);
   const vod = view.vods.find((v) => v.index === slot.index);
+
   return (
     <div
       className={cn(
@@ -245,6 +251,7 @@ function MatchDetail({
   const event: IgniteEvent | undefined = snapshot.events.find((e) => e.id === match.eventId);
   const team1 = view.side1.team;
   const team2 = view.side2.team;
+
   const h2h = snapshot.matches
     .filter((m) => m.id !== match.id && involves(m, team1) && involves(m, team2))
     .toReversed();
