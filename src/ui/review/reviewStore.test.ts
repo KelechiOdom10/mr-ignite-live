@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { EMPTY_MATCH_REF, MAX_BOOKMARKS, type ReviewLibrary } from "@/domain/review";
 
-import { type Json, JsonSchema } from "../../../test/fixtures";
+import { type Json, JsonSchema } from "../../../test/json";
 import {
   LIBRARY_KEY,
   loadLibrary,

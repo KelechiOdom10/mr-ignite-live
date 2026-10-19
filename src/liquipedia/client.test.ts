@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { type Json, liquipediaFixture } from "../../test/fixtures";
+import { liquipediaFixture } from "../../test/fixtures";
+import type { Json } from "../../test/json";
 import {
   createLiquipediaClient,
   LIQUIPEDIA_USER_AGENT,

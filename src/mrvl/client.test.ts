@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { type Json, mrvlFixture } from "../../test/fixtures";
+import { mrvlFixture } from "../../test/fixtures";
+import type { Json } from "../../test/json";
 import { createMrvlClient, MrvlHttpError, MrvlResponseError, MrvlUnreachableError } from "./client";
 
 function respondWith(body: Json, status = 200) {
