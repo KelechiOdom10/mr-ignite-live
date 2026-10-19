@@ -8,6 +8,7 @@ import {
   rememberPlayer,
   searchableName,
   searchPrefill,
+  rankTrend,
   recentHeroes,
   seasonRecord,
   UidSchema,
@@ -15,6 +16,7 @@ import {
   type MatchDetail,
   type MatchPlayer,
   type PlayerProfile,
+  type Result,
 } from "./player";
 
 const me = UidSchema.parse("670067075");
@@ -189,5 +191,56 @@ describe("searchPrefill", () => {
   it("focuses an empty field only when global search asked for it", () => {
     expect(searchPrefill(undefined, "name")).toEqual({ name: "", focus: true });
     expect(searchPrefill(undefined, "other")).toEqual({ name: "", focus: false });
+  });
+});
+
+describe("rankTrend", () => {
+  function ranked(result: Result, change: number, ladder: number, uid: string): HistoryRow {
+    return {
+      matchUid: uid,
+      playedAt: "2026-10-16T15:00:00Z",
+      season: "10.5",
+      mode: null,
+      map: null,
+      category: "Competitive",
+      result,
+      score: null,
+      kills: 0,
+      deaths: 0,
+      assists: 0,
+      kda: null,
+      mvp: false,
+      svp: false,
+      leftGame: false,
+      rankChange: change,
+      rankAfter: { name: "Gold III", score: 50, ladder },
+      device: "pc",
+      durationSeconds: 600,
+    };
+  }
+
+  it("charts oldest first and sums the change, skipping unranked matches", () => {
+    const rows = [
+      ranked("win", 20, 130, "c"),
+      ranked("win", 15, 110, "b"),
+      { ...ranked("loss", 0, 0, "quick"), rankChange: null, rankAfter: null },
+      ranked("loss", -15, 95, "a"),
+    ];
+
+    expect(rankTrend(rows)).toEqual({
+      points: [
+        { ladder: 95, result: "loss", matchUid: "a" },
+        { ladder: 110, result: "win", matchUid: "b" },
+        { ladder: 130, result: "win", matchUid: "c" },
+      ],
+      net: 20,
+      wins: 2,
+      losses: 1,
+      streak: { result: "win", count: 2 },
+    });
+  });
+
+  it("has no streak or points without ranked matches", () => {
+    expect(rankTrend([])).toEqual({ points: [], net: 0, wins: 0, losses: 0, streak: null });
   });
 });

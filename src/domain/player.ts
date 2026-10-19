@@ -408,3 +408,35 @@ export function searchPrefill(name: string | undefined, focus: string | undefine
 
   return { name: prefilled, focus: prefilled !== "" || focus === "name" };
 }
+
+export type RankTrend = {
+  /** Oldest first, so the line reads left to right. */
+  points: { ladder: number; result: Result; matchUid: string }[];
+  net: number;
+  wins: number;
+  losses: number;
+  streak: { result: "win" | "loss"; count: number } | null;
+};
+
+/** The climb across ranked matches on a history page. Matches without rank data are skipped. */
+export function rankTrend(rows: readonly HistoryRow[]): RankTrend {
+  const ranked = rows.flatMap((r) => (r.rankAfter ? [{ ...r, ladder: r.rankAfter.ladder }] : []));
+
+  const points = ranked
+    .toReversed()
+    .map((r) => ({ ladder: r.ladder, result: r.result, matchUid: r.matchUid }));
+
+  const net = ranked.reduce((sum, r) => sum + (r.rankChange ?? 0), 0);
+  const wins = ranked.filter((r) => r.result === "win").length;
+  const losses = ranked.filter((r) => r.result === "loss").length;
+  const first = ranked[0]?.result;
+  let streak: RankTrend["streak"] = null;
+
+  if (first === "win" || first === "loss") {
+    const count = ranked.findIndex((r) => r.result !== first);
+
+    streak = { result: first, count: count === -1 ? ranked.length : count };
+  }
+
+  return { points, net, wins, losses, streak };
+}
