@@ -11,6 +11,16 @@ import { TeamLogo } from "./TeamMark";
 
 const ROTATE_MS = 5_000;
 
+// The vendored island's shell springs from its pill size on every mount. Each
+// page renders its own shell, so client navigation remounts the island; holding
+// it at its natural size past the spring keeps an unchanged island still.
+const SETTLE_MS = 1_200;
+
+// Survives client navigation, not reloads, so a fresh page load still blooms.
+type ShownIsland = { key: string | null; index: number };
+
+const shown: ShownIsland = { key: null, index: 0 };
+
 function IslandMatch({
   match,
   snapshot,
@@ -53,7 +63,9 @@ function IslandMatch({
 
 export function LiveIsland({ snapshot, now }: { snapshot: Snapshot; now: number }) {
   const live = snapshot.matches.filter((m) => matchState(m, now).status === "live");
-  const [index, setIndex] = useState(0);
+  const key = live.map((m) => m.id).join(" ");
+  const [index, setIndex] = useState(() => (shown.key === key ? shown.index : 0));
+  const [holding, setHolding] = useState(() => shown.key === key);
   const [hovered, setHovered] = useState(false);
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const current = live.length > 0 ? live[index % live.length] : undefined;
@@ -65,6 +77,18 @@ export function LiveIsland({ snapshot, now }: { snapshot: Snapshot; now: number 
 
     return () => clearInterval(timer);
   }, [live.length, paused]);
+
+  useEffect(() => {
+    shown.key = key;
+    shown.index = index;
+  }, [key, index]);
+
+  useEffect(() => {
+    if (!holding) return;
+    const timer = setTimeout(() => setHolding(false), SETTLE_MS);
+
+    return () => clearTimeout(timer);
+  }, [holding]);
 
   const onBlur = (e: FocusEvent<HTMLDivElement>) => {
     if (!e.currentTarget.contains(e.relatedTarget)) setFocusedId(null);
@@ -78,6 +102,7 @@ export function LiveIsland({ snapshot, now }: { snapshot: Snapshot; now: number 
       onMouseLeave={() => setHovered(false)}
       onFocus={() => setFocusedId(current.id)}
       onBlur={onBlur}
+      className={holding ? "[&>[role=status]]:!h-auto [&>[role=status]]:!w-auto" : undefined}
     >
       <DynamicIsland
         view={current.id}
