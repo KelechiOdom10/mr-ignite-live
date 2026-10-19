@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/motion/tabs";
+import { homeViewSearch } from "@/domain/homeView";
 import { matchState } from "@/domain/matchState";
 import type { IgniteEvent, Match } from "@/domain/model";
 import { AppShell } from "@/ui/AppShell";
@@ -43,12 +44,16 @@ function isEventPhase(value: string): value is EventPhase {
   return value === "ongoing" || value === "upcoming" || value === "completed";
 }
 
-export default function HomePage({ snapshot: initial }: Props) {
+export default function HomePage({ snapshot: initial, view }: Props) {
   const { snapshot, connection, now } = useLiveSnapshot(initial);
   const hydrated = useHydrated();
-  const [region, setRegion] = useState<RegionFilter>("all");
-  const [chosenTab, setChosenTab] = useState<{ region: RegionFilter; tab: ListTab } | null>(null);
-  const [eventTab, setEventTab] = useState<EventPhase>("ongoing");
+  const [region, setRegion] = useState<RegionFilter>(view.region);
+
+  const [chosenTab, setChosenTab] = useState<{ region: RegionFilter; tab: ListTab } | null>(
+    view.tab === null ? null : { region: view.region, tab: view.tab },
+  );
+
+  const [eventTab, setEventTab] = useState<EventPhase>(view.events);
   const events = useMemo(() => new Map(snapshot.events.map((e) => [e.id, e])), [snapshot.events]);
 
   const { live, upcoming, results } = useMemo(() => {
@@ -70,7 +75,23 @@ export default function HomePage({ snapshot: initial }: Props) {
   }, [snapshot.matches, events, region, now]);
 
   const fallbackTab = hydrated ? smartDefaultTab(live, upcoming, results, now) : "upcoming";
-  const tab = chosenTab?.region === region ? chosenTab.tab : fallbackTab;
+  const pickedTab = chosenTab?.region === region ? chosenTab.tab : null;
+  const tab = pickedTab ?? fallbackTab;
+
+  // Replaces the entry rather than pushing one, so tabs don't fill the back stack. Keeping
+  // history.state keeps the router's scroll key, so back also restores the scroll position.
+  useEffect(() => {
+    const search = homeViewSearch({ region, tab: pickedTab, events: eventTab });
+
+    if (window.location.search !== search) {
+      window.history.replaceState(
+        window.history.state,
+        "",
+        window.location.pathname + search + window.location.hash,
+      );
+    }
+  }, [region, pickedTab, eventTab]);
+
   const nextUp = upcoming.find((m) => m.team1 && m.team2) ?? upcoming[0];
 
   const shown =
