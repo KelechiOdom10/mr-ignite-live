@@ -9,6 +9,7 @@ import {
   type HistoryPage,
   type Leaderboard,
   type MatchDetail,
+  type PlayerCard,
   type PlayerProfile,
   type Uid,
 } from "@/domain/player";
@@ -229,5 +230,26 @@ export function toHeroCareer(
     mvp: c.mvp,
     svp: c.svp,
     freshness,
+  };
+}
+
+/** A list card from whatever is cached: the career gives identity and rank, history the form. */
+export function toPlayerCard(
+  saved: { uid: Uid; name: string },
+  career: ResponseOf<"career"> | null,
+  history: ResponseOf<"history"> | null,
+): PlayerCard {
+  const player = career?.player;
+  const rank = player?.rank;
+  const recent = history?.matches.slice(0, 5) ?? [];
+
+  return {
+    uid: saved.uid,
+    name: player?.name ?? saved.name,
+    iconUrl: player?.head_icon?.image ?? null,
+    club: player?.club?.tag ?? null,
+    rank: rank ? { name: rank.rank, level: rank.rank_level, score: rank.rs } : null,
+    device: recent[0]?.player.device_type ?? null,
+    form: recent.map((m) => m.result),
   };
 }

@@ -333,7 +333,28 @@ export function groupBySeason(rows: readonly HistoryRow[]): SeasonGroup[] {
   return groups;
 }
 
-export const RecentPlayerSchema = z.object({ uid: UidSchema, name: z.string().min(1).max(64) });
+/** What a player list shows for one player. Fields are null when nothing is cached yet. */
+export const PlayerCardSchema = z.object({
+  uid: UidSchema,
+  name: z.string().min(1).max(64),
+  iconUrl: z.string().nullable(),
+  club: z.string().nullable(),
+  rank: RankSchema.nullable(),
+  device: DeviceSchema.nullable(),
+  /** Latest competitive results, newest first. */
+  form: z.array(ResultSchema).max(5),
+});
+
+export type PlayerCard = z.infer<typeof PlayerCardSchema>;
+
+// The extras are optional so lists saved before they existed still load.
+export const RecentPlayerSchema = z.object({
+  uid: UidSchema,
+  name: z.string().min(1).max(64),
+  iconUrl: z.string().max(512).nullable().optional(),
+  rank: RankSchema.nullable().optional(),
+  device: DeviceSchema.nullable().optional(),
+});
 
 export type RecentPlayer = z.infer<typeof RecentPlayerSchema>;
 

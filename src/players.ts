@@ -1,16 +1,22 @@
 import { env } from "void/env";
 
 import type { Snapshot } from "@/domain/model";
-import type { PlayerProblem } from "@/domain/player";
+import type { Favourite, LeaderboardRow, PlayerCard, PlayerProblem } from "@/domain/player";
 import { scopeSnapshot } from "@/domain/scope";
 import { createRivalsIslandClient, type RivalsIslandClient } from "@/rivalsisland/client";
+import { COMPETITIVE } from "@/rivalsisland/endpoints";
 import {
   CreditBudgetExceededError,
   NotConfiguredError,
   problemOf,
   RivalsIslandError,
 } from "@/rivalsisland/errors";
-import { toHeroCatalogue, type HeroCatalogue } from "@/rivalsisland/toDomain";
+import {
+  toHeroCatalogue,
+  toLeaderboard,
+  toPlayerCard,
+  type HeroCatalogue,
+} from "@/rivalsisland/toDomain";
 import { d1CreditLedger, d1FavouriteStore, d1PlayerCache } from "@/store/d1";
 import {
   createPlayerData,
@@ -126,4 +132,33 @@ export async function heroCatalogueOrEmpty(data: PlayerData): Promise<HeroCatalo
 
     throw error;
   }
+}
+
+/** Cards for saved players from the cache alone, so the list never spends credits. */
+export async function cachedPlayerCards(saved: readonly Favourite[]): Promise<PlayerCard[]> {
+  const loaded = await loadPlayers((data) =>
+    Promise.all(
+      saved.map(async (f) => {
+        const [career, history] = await Promise.all([
+          data.peek("career", { uid: f.uid }),
+          data.peek("history", { uid: f.uid, page: 0, category: COMPETITIVE }),
+        ]);
+
+        return toPlayerCard(f, career?.data ?? null, history?.data ?? null);
+      }),
+    ),
+  );
+
+  return loaded.ok ? loaded.value : saved.map((f) => toPlayerCard(f, null, null));
+}
+
+/** The top of the PC leaderboard if it's cached; nothing otherwise. */
+export async function cachedLeaderboardTop(count: number): Promise<LeaderboardRow[]> {
+  const loaded = await loadPlayers(async (data) => {
+    const board = await data.peek("leaderboard", { device: "pc" });
+
+    return board ? toLeaderboard(board.data, board).rows.slice(0, count) : [];
+  });
+
+  return loaded.ok ? loaded.value : [];
 }

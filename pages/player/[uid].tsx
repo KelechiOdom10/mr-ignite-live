@@ -28,7 +28,17 @@ export default function PlayerPage({
   isFavourite,
 }: Props) {
   const { snapshot, connection, now } = useLiveSnapshot(initial, { view: "events" });
-  useRememberPlayer(uid && player?.ok ? { uid, name: player.value.profile.name } : null);
+  useRememberPlayer(
+    uid && player?.ok
+      ? {
+          uid,
+          name: player.value.profile.name,
+          iconUrl: player.value.profile.iconUrl,
+          rank: player.value.profile.rank,
+          device: history?.ok ? (history.value.rows[0]?.device ?? null) : null,
+        }
+      : null,
+  );
 
   if (!uid || !player || !history || !heroes) {
     return (

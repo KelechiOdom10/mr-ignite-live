@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { groupBySeason, seasonRecord } from "@/domain/player";
+import { groupBySeason, seasonRecord, UidSchema } from "@/domain/player";
 
 import { rivalsIslandFixture, RECORDED_UIDS } from "../../test/fakeRivalsIsland";
 import { CareerResponseSchema, MatchDetailSchema, MatchHistoryResponseSchema } from "./schemas";
-import { toCareer, toHistoryPage, toMatchDetail, toProfile } from "./toDomain";
+import { toCareer, toHistoryPage, toMatchDetail, toPlayerCard, toProfile } from "./toDomain";
 
 describe("toMatchDetail", () => {
   it("splits the recorded match into its two teams with each player's most-played hero first", () => {
@@ -79,5 +79,36 @@ describe("rank and platform per match", () => {
     const career = toCareer(CareerResponseSchema.parse(rivalsIslandFixture("career-sypeh")));
 
     expect(career).toMatchObject({ headshotKills: 1019, soloKills: 3136, bestKillStreak: 28 });
+  });
+});
+
+describe("toPlayerCard", () => {
+  const saved = { uid: UidSchema.parse("670067075"), name: "Sypeh (saved)" };
+
+  it("builds a favourite's card from cached career and history", () => {
+    const card = toPlayerCard(
+      saved,
+      CareerResponseSchema.parse(rivalsIslandFixture("career-sypeh")),
+      MatchHistoryResponseSchema.parse(rivalsIslandFixture("history-sypeh")),
+    );
+
+    expect(card).toMatchObject({
+      name: "Sypeh",
+      club: "VP",
+      device: "pc",
+      rank: { name: "One Above All", score: 204 },
+      form: ["win", "win", "win", "loss", "win"],
+    });
+  });
+
+  it("falls back to the saved name when nothing is cached", () => {
+    expect(toPlayerCard(saved, null, null)).toEqual({
+      ...saved,
+      iconUrl: null,
+      club: null,
+      rank: null,
+      device: null,
+      form: [],
+    });
   });
 });
