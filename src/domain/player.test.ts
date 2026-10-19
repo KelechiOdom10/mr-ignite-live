@@ -229,15 +229,35 @@ describe("rankTrend", () => {
 
     expect(rankTrend(rows)).toEqual({
       points: [
-        { ladder: 95, result: "loss", matchUid: "a" },
-        { ladder: 110, result: "win", matchUid: "b" },
-        { ladder: 130, result: "win", matchUid: "c" },
+        { ladder: 95, result: "loss", matchUid: "a", continues: false },
+        { ladder: 110, result: "win", matchUid: "b", continues: true },
+        { ladder: 130, result: "win", matchUid: "c", continues: true },
       ],
       net: 20,
       wins: 2,
       losses: 1,
       streak: { result: "win", count: 2 },
     });
+  });
+
+  it("stops a streak at a draw and has none when the latest match was a draw", () => {
+    const draw = ranked("draw", 0, 100, "d");
+
+    expect(rankTrend([ranked("win", 10, 120, "w"), draw]).streak).toEqual({
+      result: "win",
+      count: 1,
+    });
+    expect(rankTrend([draw, ranked("win", 10, 90, "w")]).streak).toBeNull();
+  });
+
+  it("marks where the rank score didn't carry over, as at a season reset", () => {
+    const beforeReset = ranked("win", 10, 5000, "old");
+    const afterReset = ranked("win", 10, 120, "new");
+
+    expect(rankTrend([afterReset, beforeReset]).points.map((p) => p.continues)).toEqual([
+      false,
+      false,
+    ]);
   });
 
   it("has no streak or points without ranked matches", () => {

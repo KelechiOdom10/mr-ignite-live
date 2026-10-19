@@ -1,19 +1,13 @@
 import { Link } from "@void/react";
 
-import type { PlayerCard as Card, Result } from "@/domain/player";
+import type { PlayerCard as Card } from "@/domain/player";
 import { cn } from "@/lib/utils";
 
-import { PlatformIcon, PLATFORM_NAMES } from "./PlatformIcon";
+import { PlatformIcon } from "./PlatformIcon";
 import { PlayerAvatar } from "./PlayerAvatar";
 import { rankTierClass } from "./RankBadge";
 import { RankIcon } from "./RankIcon";
-
-const RESULT_DOT = new Map<Result, string>([
-  ["win", "bg-win"],
-  ["loss", "bg-live"],
-  ["draw", "bg-muted-foreground"],
-  ["abandoned", "bg-muted-foreground/50"],
-]);
+import { RESULT } from "./resultTone";
 
 /** One player in a list: who, their rank and platform, and how their last games went. */
 export function PlayerCard({ player }: { player: Card }) {
@@ -31,10 +25,7 @@ export function PlayerCard({ player }: { player: Card }) {
           {player.club && <span className="shrink-0 text-muted-foreground">[{player.club}]</span>}
           <span className="truncate">{player.name}</span>
           {device && (
-            <span
-              title={PLATFORM_NAMES.get(device)}
-              className="ml-auto shrink-0 text-muted-foreground"
-            >
+            <span className="ml-auto shrink-0 text-muted-foreground">
               <PlatformIcon device={device} label className="size-3.5" />
             </span>
           )}
@@ -63,7 +54,7 @@ export function PlayerCard({ player }: { player: Card }) {
               <span
                 key={i}
                 aria-hidden="true"
-                className={cn("h-1.5 w-4 rounded-full", RESULT_DOT.get(r))}
+                className={cn("h-1.5 w-4 rounded-full", RESULT[r].bar)}
               />
             ))}
           </p>

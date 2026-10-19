@@ -351,7 +351,7 @@ export type PlayerCard = z.infer<typeof PlayerCardSchema>;
 export const RecentPlayerSchema = z.object({
   uid: UidSchema,
   name: z.string().min(1).max(64),
-  iconUrl: z.string().max(512).nullable().optional(),
+  iconUrl: z.string().nullable().optional(),
   rank: RankSchema.nullable().optional(),
   device: DeviceSchema.nullable().optional(),
 });
@@ -411,7 +411,8 @@ export function searchPrefill(name: string | undefined, focus: string | undefine
 
 export type RankTrend = {
   /** Oldest first, so the line reads left to right. */
-  points: { ladder: number; result: Result; matchUid: string }[];
+  /** `continues` is false where the rank score didn't carry over from the match before, as at a reset. */
+  points: { ladder: number; result: Result; matchUid: string; continues: boolean }[];
   net: number;
   wins: number;
   losses: number;
@@ -422,9 +423,17 @@ export type RankTrend = {
 export function rankTrend(rows: readonly HistoryRow[]): RankTrend {
   const ranked = rows.flatMap((r) => (r.rankAfter ? [{ ...r, ladder: r.rankAfter.ladder }] : []));
 
-  const points = ranked
-    .toReversed()
-    .map((r) => ({ ladder: r.ladder, result: r.result, matchUid: r.matchUid }));
+  const points = ranked.toReversed().map((r, i, oldestFirst) => {
+    const previous = oldestFirst[i - 1];
+    const before = r.ladder - (r.rankChange ?? 0);
+
+    return {
+      ladder: r.ladder,
+      result: r.result,
+      matchUid: r.matchUid,
+      continues: previous !== undefined && Math.abs(before - previous.ladder) < 1,
+    };
+  });
 
   const net = ranked.reduce((sum, r) => sum + (r.rankChange ?? 0), 0);
   const wins = ranked.filter((r) => r.result === "win").length;

@@ -30,7 +30,8 @@ export default function PlayerPage({
   isFavourite,
 }: Props) {
   const { snapshot, connection, now } = useLiveSnapshot(initial, { view: "events" });
-  const device = history?.ok ? (history.value.rows[0]?.device ?? null) : null;
+  // The newest match's platform; older pages would report where the player used to play.
+  const device = history?.ok && query.page === 0 ? (history.value.rows[0]?.device ?? null) : null;
 
   useRememberPlayer(
     uid && player?.ok
@@ -158,7 +159,7 @@ export default function PlayerPage({
           )}
         </section>
         {player.ok && (
-          <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+          <aside className="space-y-4 lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:self-start lg:overflow-y-auto">
             <HeroesPanel
               uid={uid}
               signature={player.value.profile.signatureHero}

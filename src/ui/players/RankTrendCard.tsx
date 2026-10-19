@@ -1,24 +1,28 @@
-import { rankTrend, type HistoryRow, type Result } from "@/domain/player";
+import { rankTrend, type HistoryRow } from "@/domain/player";
 import { cn } from "@/lib/utils";
+
+import { RESULT } from "./resultTone";
 
 const WIDTH = 600;
 const HEIGHT = 120;
 
-const RESULT_CHIP = new Map<Result, string>([
-  ["win", "bg-win"],
-  ["loss", "bg-live"],
-  ["draw", "bg-muted-foreground"],
-  ["abandoned", "bg-muted-foreground/50"],
-]);
-
-function linePoints(values: readonly number[]): string {
+/** One polyline per unbroken run, so a reset shows as a gap rather than a cliff. */
+function runLines(points: readonly { ladder: number; continues: boolean }[]): string[] {
+  const values = points.map((p) => p.ladder);
   const lo = Math.min(...values);
   const span = Math.max(...values) - lo || 1;
-  const step = WIDTH / Math.max(values.length - 1, 1);
+  const step = WIDTH / Math.max(points.length - 1, 1);
+  const lines: string[][] = [];
 
-  return values
-    .map((v, i) => `${(i * step).toFixed(1)},${(HEIGHT - ((v - lo) / span) * HEIGHT).toFixed(1)}`)
-    .join(" ");
+  points.forEach((p, i) => {
+    const xy = `${(i * step).toFixed(1)},${(HEIGHT - ((p.ladder - lo) / span) * HEIGHT).toFixed(1)}`;
+    const current = lines.at(-1);
+
+    if (current && p.continues) current.push(xy);
+    else lines.push([xy]);
+  });
+
+  return lines.map((l) => l.join(" "));
 }
 
 /**
@@ -47,7 +51,7 @@ export function RankTrendCard({
     );
   }
 
-  const line = linePoints(points.map((p) => p.ladder));
+  const lines = runLines(points);
   const change = `${net >= 0 ? "up" : "down"} ${Math.abs(Math.round(net))}`;
 
   return (
@@ -85,28 +89,32 @@ export function RankTrendCard({
             <stop offset="1" stopColor="var(--color-primary)" stopOpacity="0" />
           </linearGradient>
         </defs>
-        <polygon
-          points={`0,${HEIGHT + 4} ${line} ${WIDTH},${HEIGHT + 4}`}
-          fill="url(#rank-trend-fill)"
-        />
-        <polyline
-          points={line}
-          fill="none"
-          stroke="var(--color-primary)"
-          strokeWidth="2"
-          strokeLinejoin="round"
-          vectorEffect="non-scaling-stroke"
-        />
+        {lines.map((line, i) => (
+          <g key={i}>
+            {lines.length === 1 && (
+              <polygon
+                points={`0,${HEIGHT + 4} ${line} ${WIDTH},${HEIGHT + 4}`}
+                fill="url(#rank-trend-fill)"
+              />
+            )}
+            <polyline
+              points={line}
+              fill="none"
+              stroke="var(--color-primary)"
+              strokeWidth="2"
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+            />
+          </g>
+        ))}
       </svg>
-      <ol aria-label="Results, oldest first" className="mt-3 flex gap-1">
+      <ol aria-hidden="true" className="mt-3 flex gap-1">
         {points.map((p) => (
           <li
             key={p.matchUid}
             title={p.result}
-            className={cn("h-2 flex-1 rounded-full", RESULT_CHIP.get(p.result))}
-          >
-            <span className="sr-only">{p.result}</span>
-          </li>
+            className={cn("h-2 flex-1 rounded-full", RESULT[p.result].bar)}
+          ></li>
         ))}
       </ol>
     </section>

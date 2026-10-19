@@ -57,7 +57,10 @@ export function RankCard({ profile }: { profile: PlayerProfile }) {
             className="drop-shadow-[0_8px_24px_rgb(0_0_0/0.5)]"
           />
         ) : (
-          <div className="grid size-28 place-items-center rounded-full border border-dashed text-sm text-muted-foreground">
+          <div
+            aria-hidden="true"
+            className="grid size-28 place-items-center rounded-full border border-dashed text-sm text-muted-foreground"
+          >
             Unranked
           </div>
         )}

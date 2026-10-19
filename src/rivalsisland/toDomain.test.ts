@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { groupBySeason, seasonRecord, UidSchema } from "@/domain/player";
+import { groupBySeason, rankTrend, seasonRecord, UidSchema } from "@/domain/player";
 
 import { rivalsIslandFixture, RECORDED_UIDS } from "../../test/fakeRivalsIsland";
 import { CareerResponseSchema, MatchDetailSchema, MatchHistoryResponseSchema } from "./schemas";
@@ -73,6 +73,19 @@ describe("rank and platform per match", () => {
       rankAfter: { name: "One Above All", score: 204 },
     });
     expect(latest?.rankAfter?.ladder).toBeCloseTo(5304.56, 1);
+  });
+
+  it("keeps Sypeh's line unbroken across 10.0 to 10.5, where the score carried over", () => {
+    const { rows } = toHistoryPage(
+      MatchHistoryResponseSchema.parse(rivalsIslandFixture("history-sypeh")),
+      { fetchedAt: 0, stale: false },
+    );
+
+    expect(
+      rankTrend(rows)
+        .points.slice(1)
+        .every((p) => p.continues),
+    ).toBe(true);
   });
 
   it("carries the career bests the player page leads with", () => {
