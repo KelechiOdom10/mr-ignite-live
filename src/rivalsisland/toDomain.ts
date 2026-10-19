@@ -124,6 +124,11 @@ export function toCareer(res: ResponseOf<"career">): Career {
     healing: c.healing,
     mvp: c.mvp,
     svp: c.svp,
+    kd: c.kd,
+    finalHits: c.final_hits,
+    headshotKills: c.headshot_kills,
+    soloKills: c.solo_kills,
+    bestKillStreak: c.best_kill_streak,
   };
 }
 
@@ -146,6 +151,14 @@ export function toHistoryPage(res: ResponseOf<"history">, freshness: Freshness):
       svp: m.player.svp,
       leftGame: m.player.left_game,
       rankChange: m.player.rank?.change ?? null,
+      rankAfter: m.player.rank
+        ? {
+            name: m.player.rank.after.rank,
+            score: m.player.rank.after.rs,
+            ladder: m.player.rank.after.rank_score,
+          }
+        : null,
+      device: m.player.device_type ?? null,
       durationSeconds: m.duration.seconds,
     })),
     page: res.pagination.page,

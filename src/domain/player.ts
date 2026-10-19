@@ -147,6 +147,11 @@ export const CareerSchema = z.object({
   healing: z.number(),
   mvp: z.number().int(),
   svp: z.number().int(),
+  kd: z.number().nullable(),
+  finalHits: z.number().int(),
+  headshotKills: z.number().int(),
+  soloKills: z.number().int(),
+  bestKillStreak: z.number().int(),
 });
 
 export type Career = z.infer<typeof CareerSchema>;
@@ -172,6 +177,11 @@ export const HistoryRowSchema = z.object({
   svp: z.boolean(),
   leftGame: z.boolean(),
   rankChange: z.number().nullable(),
+  /** Rank after the match. `ladder` is RivalsIsland's running rank score, which climbs across tiers. */
+  rankAfter: z
+    .object({ name: z.string().nullable(), score: z.number().nullable(), ladder: z.number() })
+    .nullable(),
+  device: DeviceSchema.nullable(),
   durationSeconds: z.number(),
 });
 

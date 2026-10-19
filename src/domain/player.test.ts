@@ -134,6 +134,8 @@ describe("groupBySeason", () => {
       svp: false,
       leftGame: false,
       rankChange: null,
+      rankAfter: null,
+      device: null,
       durationSeconds: 600,
     };
   }

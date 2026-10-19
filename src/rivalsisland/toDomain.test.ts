@@ -4,7 +4,7 @@ import { groupBySeason, seasonRecord } from "@/domain/player";
 
 import { rivalsIslandFixture, RECORDED_UIDS } from "../../test/fakeRivalsIsland";
 import { CareerResponseSchema, MatchDetailSchema, MatchHistoryResponseSchema } from "./schemas";
-import { toHistoryPage, toMatchDetail, toProfile } from "./toDomain";
+import { toCareer, toHistoryPage, toMatchDetail, toProfile } from "./toDomain";
 
 describe("toMatchDetail", () => {
   it("splits the recorded match into its two teams with each player's most-played hero first", () => {
@@ -58,5 +58,26 @@ describe("season scope", () => {
     );
 
     expect(seasonRecord(trqstMe)).toMatchObject({ kind: "enough", matches: 58, wins: 37 });
+  });
+});
+
+describe("rank and platform per match", () => {
+  it("keeps the rank after each of Sypeh's matches and the platform it was played on", () => {
+    const [latest] = toHistoryPage(
+      MatchHistoryResponseSchema.parse(rivalsIslandFixture("history-sypeh")),
+      { fetchedAt: 0, stale: false },
+    ).rows;
+
+    expect(latest).toMatchObject({
+      device: "pc",
+      rankAfter: { name: "One Above All", score: 204 },
+    });
+    expect(latest?.rankAfter?.ladder).toBeCloseTo(5304.56, 1);
+  });
+
+  it("carries the career bests the player page leads with", () => {
+    const career = toCareer(CareerResponseSchema.parse(rivalsIslandFixture("career-sypeh")));
+
+    expect(career).toMatchObject({ headshotKills: 1019, soloKills: 3136, bestKillStreak: 28 });
   });
 });

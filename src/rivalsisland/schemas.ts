@@ -153,6 +153,7 @@ export const MatchHistoryResponseSchema = z.object({
         mvp: z.boolean(),
         svp: z.boolean(),
         rank: RankTransitionSchema.nullable(),
+        device_type: z.enum(["pc", "ps", "xbox"]).nullish(),
       }),
     }),
   ),
