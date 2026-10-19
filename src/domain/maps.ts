@@ -52,7 +52,7 @@ function knownMap(name: string): MapInfo | null {
   const words = ` ${key(name)} `;
   let best: { length: number; info: MapInfo } | null = null;
 
-  for (const [k, info] of Object.entries(MAPS)) {
+  for (const [k, info] of MAPS) {
     if (words.includes(` ${k} `) && (!best || k.length > best.length)) {
       best = { length: k.length, info };
     }

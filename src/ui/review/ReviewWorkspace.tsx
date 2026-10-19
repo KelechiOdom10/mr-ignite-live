@@ -13,6 +13,7 @@ import {
   type PracticeFocus,
   type ReviewLibrary,
   type ReviewSession,
+  type ReviewExport,
 } from "@/domain/review";
 import { cn } from "@/lib/utils";
 
@@ -31,7 +32,7 @@ function titleFromFile(name: string): string {
   return (base || "Untitled review").slice(0, 120);
 }
 
-function downloadJson(fileName: string, value: unknown) {
+function downloadExport(fileName: string, value: ReviewExport) {
   const url = URL.createObjectURL(
     new Blob([JSON.stringify(value, null, 2)], { type: "application/json" }),
   );
@@ -87,8 +88,8 @@ export function ReviewWorkspace() {
           });
         }
       },
-      (error: unknown) => {
-        console.error("Review storage unavailable", error);
+      (cause: unknown) => {
+        console.error("Review storage unavailable", cause);
 
         if (!cancelled) setLoaded({ kind: "unavailable" });
       },
@@ -149,8 +150,8 @@ export function ReviewWorkspace() {
     setLoaded({ kind: "ready", library: next });
 
     if (!area.current) return;
-    saveLibrary(area.current, next).catch((error: unknown) => {
-      console.error("Saving the review library failed", error);
+    saveLibrary(area.current, next).catch((cause: unknown) => {
+      console.error("Saving the review library failed", cause);
       setNotice({
         tone: "error",
         text: "Your last change couldn't be saved in this browser. Export a copy to keep it.",
@@ -255,7 +256,7 @@ export function ReviewWorkspace() {
   function exportAll() {
     if (!latest.current) return;
     const now = Date.now();
-    downloadJson(
+    downloadExport(
       `rivals-hub-review-${new Date(now).toISOString().slice(0, 10)}.json`,
       exportLibrary(latest.current, now),
     );

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { EMPTY_MATCH_REF, MAX_BOOKMARKS, type ReviewLibrary } from "@/domain/review";
 
+import { type Json, JsonSchema } from "../../../test/fixtures";
 import {
   LIBRARY_KEY,
   loadLibrary,
@@ -11,12 +12,23 @@ import {
 } from "./reviewStore";
 
 // IndexedDB structured-clones what it stores; cloning here keeps a value it couldn't hold failing.
-function memoryArea(initial: Record<string, unknown> = {}) {
+// `initial` seeds raw values, which may not match any schema.
+function memoryArea(initial: Record<string, Json> = {}) {
   const values = new Map(Object.entries(initial).map(([k, v]) => [k, structuredClone(v)]));
 
   const area: KeyValueArea = {
-    get: async (key) => structuredClone(values.get(key)),
-    set: async (key, value) => void values.set(key, structuredClone(value)),
+    async get(key, schema) {
+      const raw = values.get(key);
+
+      return raw === undefined ? null : schema.safeParse(structuredClone(raw));
+    },
+    set: async (key, schema, value) =>
+      void values.set(key, JsonSchema.parse(structuredClone(schema.parse(value)))),
+    async copy(from, to) {
+      const raw = values.get(from);
+
+      if (raw !== undefined) values.set(to, structuredClone(raw));
+    },
   };
 
   return { area, values };
@@ -70,7 +82,8 @@ describe("review store", () => {
   });
 
   it("refuses to save a review the loader would reject, leaving the stored copy intact", async () => {
-    const { area, values } = memoryArea({ [LIBRARY_KEY]: library });
+    const { area, values } = memoryArea();
+    await saveLibrary(area, library);
     const [session] = library.sessions;
 
     if (!session) throw new Error("fixture has a session");

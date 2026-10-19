@@ -306,10 +306,16 @@ export function parseExport(text: string): ImportResult {
     : { ok: false, error: "not_a_review_export" };
 }
 
+interface MergedItems<T> {
+  merged: T[];
+  added: number;
+  updated: number;
+}
+
 function mergeById<T extends { id: string; updatedAt: number }>(
   mine: readonly T[],
   theirs: readonly T[],
-): { merged: T[]; added: number; updated: number } {
+): MergedItems<T> {
   const byId = new Map(mine.map((item) => [item.id, item]));
   let added = 0;
   let updated = 0;
@@ -337,10 +343,12 @@ export interface MergeSummary {
 }
 
 /** Imports never delete: an item only replaces the local copy when it was edited more recently. */
-export function mergeLibrary(
-  library: ReviewLibrary,
-  incoming: ReviewExport,
-): { library: ReviewLibrary; summary: MergeSummary } {
+export interface MergedLibrary {
+  library: ReviewLibrary;
+  summary: MergeSummary;
+}
+
+export function mergeLibrary(library: ReviewLibrary, incoming: ReviewExport): MergedLibrary {
   const sessions = mergeById(library.sessions, incoming.sessions);
   const focuses = mergeById(library.focuses, incoming.focuses);
 

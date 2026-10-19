@@ -88,7 +88,7 @@ export interface CampOutcome {
 
 export function outcome(moves: readonly SimMove[]): [CampOutcome, CampOutcome] {
   const of = (camp: Camp, kind: DraftStep["kind"]) =>
-    moves.filter((m) => m.camp === camp && m.kind === kind).map((m) => m.heroId);
+    moves.flatMap((m) => (m.camp === camp && m.kind === kind ? [m.heroId] : []));
 
   const side = (camp: Camp): CampOutcome => ({
     bans: of(camp, "ban"),
@@ -130,7 +130,7 @@ export function timeline(format: DraftFormat, moves: readonly SimMove[]): Timeli
     index,
     actor: s.actor,
     kind: s.kind,
-    picks: moves.filter((m) => m.step === index).map((m) => ({ camp: m.camp, heroId: m.heroId })),
+    picks: moves.flatMap((m) => (m.step === index ? [{ camp: m.camp, heroId: m.heroId }] : [])),
     state:
       current === null || index < current ? "done" : index === current ? "current" : "upcoming",
   }));

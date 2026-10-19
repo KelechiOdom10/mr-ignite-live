@@ -158,11 +158,12 @@ function HeroBreakdown({
         ["Damage", number.format(line.damage)],
         ["Taken", number.format(line.damageTaken)],
         ["Healing", number.format(line.healing)],
-        ...(combined || line.accuracy === null
-          ? []
-          : ([["Accuracy", `${Math.round(line.accuracy)}%`]] as [string, string][])),
       ]
     : [];
+
+  if (line && !combined && line.accuracy !== null) {
+    cells.push(["Accuracy", `${Math.round(line.accuracy)}%`]);
+  }
 
   return (
     <span ref={triggerRef} className="inline-flex">

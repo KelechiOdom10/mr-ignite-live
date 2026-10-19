@@ -136,15 +136,19 @@ describe("formatDeviations past the end", () => {
 
 describe("statsFollowingFormat", () => {
   const followsIgnite: DraftAction[] = IGNITE_2026.steps.flatMap((step, phase) =>
-    ([0, 1] as const)
-      .filter((camp) => step.actor === "both" || (step.actor === "first") === (camp === 0))
-      .map((camp) => ({
-        phase,
-        side: camp === 0 ? 1 : 2,
-        camp,
-        kind: step.kind,
-        hero: hero(`h${phase}-${camp}`),
-      })),
+    ([0, 1] as const).flatMap((camp) =>
+      step.actor === "both" || (step.actor === "first") === (camp === 0)
+        ? [
+            {
+              phase,
+              side: camp === 0 ? 1 : 2,
+              camp,
+              kind: step.kind,
+              hero: hero(`h${phase}-${camp}`),
+            },
+          ]
+        : [],
+    ),
   );
 
   it("keeps only maps whose recorded order follows the format, dropping unordered ones", () => {

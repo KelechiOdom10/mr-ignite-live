@@ -5,7 +5,13 @@ import { parseRecentPlayers, rememberPlayer, type RecentPlayer } from "@/domain/
 const STORAGE_KEY = "rivals-hub:recent-players";
 const NONE: RecentPlayer[] = [];
 const listeners = new Set<() => void>();
-let cached: { raw: string | null; players: RecentPlayer[] } = { raw: null, players: NONE };
+
+interface ParsedStorage {
+  raw: string | null;
+  players: RecentPlayer[];
+}
+
+let cached: ParsedStorage = { raw: null, players: NONE };
 
 function read(): RecentPlayer[] {
   const raw = window.localStorage.getItem(STORAGE_KEY);

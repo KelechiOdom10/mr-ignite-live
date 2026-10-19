@@ -30,7 +30,7 @@ export const loader = defineHandler(async () => {
     proDrafts: summary.sample.teamDrafts,
     heroes: HERO_ROSTER.map((h) => ({
       ...h,
-      portraitUrl: portraits.get(h.id) ?? ROSTER_ICONS[h.id] ?? null,
+      portraitUrl: portraits.get(h.id) ?? ROSTER_ICONS.get(h.id) ?? null,
     })),
   };
 });
