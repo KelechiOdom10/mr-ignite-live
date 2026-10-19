@@ -307,8 +307,13 @@ export function DraftSimulator({
             </h2>
             {proDrafts > 0 && (
               <p className="text-xs text-muted-foreground">
-                B and P: how often pros banned and protected each hero, from {proDrafts} team drafts
-                on cached maps that followed this draft step for step.
+                <span className="block">
+                  B and P: how often pros banned and protected each hero.
+                </span>
+                <span className="block">
+                  From {proDrafts} team drafts on cached maps that followed this draft step for
+                  step.
+                </span>
               </p>
             )}
           </div>
