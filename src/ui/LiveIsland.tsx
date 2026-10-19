@@ -81,7 +81,7 @@ export function LiveIsland({ snapshot, now }: { snapshot: Snapshot; now: number 
   const live = snapshot.matches.filter((m) => matchState(m, now).status === "live");
   const key = live.map((m) => m.id).join(" ");
   const [index, setIndex] = useState(() => (shown.key === key ? shown.index : 0));
-  const [holding, setHolding] = useState(() => shown.key === key);
+  const [holding, setHolding] = useState(() => key !== "" && shown.key === key);
   const [hovered, setHovered] = useState(false);
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const current = live.length > 0 ? live[index % live.length] : undefined;
@@ -118,7 +118,7 @@ export function LiveIsland({ snapshot, now }: { snapshot: Snapshot; now: number 
       onMouseLeave={() => setHovered(false)}
       onFocus={() => setFocusedId(current.id)}
       onBlur={onBlur}
-      className={holding ? "[&>[role=status]]:!h-auto [&>[role=status]]:!w-auto" : undefined}
+      className={holding ? "[&>[role=status]]:h-auto! [&>[role=status]]:w-auto!" : undefined}
     >
       <DynamicIsland
         view={current.id}
