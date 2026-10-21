@@ -1,4 +1,4 @@
-import { type Json, JsonSchema } from "./fixtures";
+import { type Json, JsonSchema } from "./json";
 
 // Used by tests and by the dev server's fixtures mode, so both replay exactly what was recorded.
 const bodies = import.meta.glob<string>("./fixtures/rivalsisland/*.json", {

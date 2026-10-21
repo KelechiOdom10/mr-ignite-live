@@ -19,8 +19,10 @@ Every page.
   - Player pages credit "Player data from RivalsIsland; live scores from Liquipedia…".
   - `/review` reads "Recordings and notes stay in this browser…".
 - The fixture strip's first chip lines up with the logo, and only edges with chips scrolled out of view fade. The Matches page's segmented controls have a hairline inset ring and concentric corners (12px outside, 8px pill, 4px padding).
+- Live island: moving between pages (Matches → Events → Players) keeps it still at the same width, with no spring from the small pill, as long as the same matches are live. Sample `header [role=status]`'s width on a timer across a client navigation; it stays constant. A fresh load still springs open. With Hide spoilers on, it shows the round ("● Grand Final") rather than bracket placeholders, and stays clear of the search box at 1440.
+- Matches page tabs: picking Results, a region or an event status writes `?tab=`, `?region=` or `?events=` to the URL without adding history entries. Open a match and go back, and the same tabs show. From `/?tab=results`, the logo goes to `/`; picking Upcoming then going back shows Results again.
 - At 390 the bottom nav shows the five sections with the current one highlighted. The Hide spoilers switch sits in the header. Nothing overflows horizontally.
 
 ## Owning code
 
-`src/ui/AppShell.tsx`, `src/ui/sections.ts` (`sectionOf`, `showsFixtureStrip`).
+`src/ui/AppShell.tsx`, `src/ui/sections.ts` (`sectionOf`, `showsFixtureStrip`), `src/ui/LiveIsland.tsx`, `pages/index.tsx` and `src/domain/homeView.ts` (home tabs in the URL).

@@ -17,6 +17,7 @@ import {
 import type { Hero } from "@/domain/stats";
 import { cn } from "@/lib/utils";
 
+import { RoleIcon } from "../RoleIcon";
 import { HeroPortrait } from "../StatsPanel";
 import { ACTOR_SHORT } from "./FormatCard";
 
@@ -306,8 +307,13 @@ export function DraftSimulator({
             </h2>
             {proDrafts > 0 && (
               <p className="text-xs text-muted-foreground">
-                B and P: how often pros banned and protected each hero, from {proDrafts} team drafts
-                on cached maps that followed this draft step for step.
+                <span className="block">
+                  B and P: how often pros banned and protected each hero.
+                </span>
+                <span className="block">
+                  From {proDrafts} team drafts on cached maps that followed this draft step for
+                  step.
+                </span>
               </p>
             )}
           </div>
@@ -323,10 +329,11 @@ export function DraftSimulator({
                 aria-pressed={role === r}
                 onClick={() => setRole(r)}
                 className={cn(
-                  "rounded-lg px-2.5 py-1 text-sm text-muted-foreground hover:text-foreground",
+                  "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-sm text-muted-foreground hover:text-foreground",
                   role === r && "bg-secondary text-foreground",
                 )}
               >
+                <RoleIcon role={r} />
                 {r}
               </button>
             ))}

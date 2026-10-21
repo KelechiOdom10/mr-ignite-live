@@ -1,19 +1,26 @@
 import { useMemo, useState } from "react";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/motion/tabs";
+import {
+  type EventPhase,
+  type HomeView,
+  homeViewSearch,
+  isEventPhase,
+  isHomeRegion,
+  isListTab,
+  type ListTab,
+} from "@/domain/homeView";
 import { matchState } from "@/domain/matchState";
 import type { IgniteEvent, Match } from "@/domain/model";
 import { AppShell } from "@/ui/AppShell";
 import { DayHeading } from "@/ui/DayHeading";
-import { EventRow, eventPhase, type EventPhase } from "@/ui/EventRow";
+import { EventRow, eventPhase } from "@/ui/EventRow";
 import { MatchCard } from "@/ui/MatchCard";
 import { REGION_FILTERS, regionKey, type RegionFilter } from "@/ui/region";
 import { dayKey, groupByDay, useHydrated } from "@/ui/time";
 import { useLiveSnapshot } from "@/ui/useLiveSnapshot";
 
 import type { Props } from "./index.server";
-
-type ListTab = "upcoming" | "results";
 
 const UPCOMING_LIMIT = 30;
 const RESULTS_LIMIT = 36;
@@ -31,24 +38,41 @@ function smartDefaultTab(live: Match[], upcoming: Match[], results: Match[], now
   return playedToday && !moreToday ? "results" : "upcoming";
 }
 
-function isListTab(value: string): value is ListTab {
-  return value === "upcoming" || value === "results";
+/**
+ * Records the tabs in the current entry's query, so back from a match returns to them. It runs
+ * only from tab clicks: an effect could fire before the router has pushed a new entry and
+ * rewrite the previous one. Replacing rather than pushing keeps tabs out of the back stack, and
+ * keeping history.state keeps the router's scroll key. The router's own record of the URL keeps
+ * the old query; nothing here reads it.
+ */
+function rememberView(view: HomeView) {
+  const url = window.location.pathname + homeViewSearch(view) + window.location.hash;
+
+  window.history.replaceState(window.history.state, "", url);
 }
 
-function isRegionFilter(value: string): value is RegionFilter {
-  return REGION_FILTERS.some((r) => r.value === value);
-}
-
-function isEventPhase(value: string): value is EventPhase {
-  return value === "ongoing" || value === "upcoming" || value === "completed";
-}
-
-export default function HomePage({ snapshot: initial }: Props) {
+export default function HomePage({ snapshot: initial, view }: Props) {
   const { snapshot, connection, now } = useLiveSnapshot(initial);
   const hydrated = useHydrated();
-  const [region, setRegion] = useState<RegionFilter>("all");
-  const [chosenTab, setChosenTab] = useState<{ region: RegionFilter; tab: ListTab } | null>(null);
-  const [eventTab, setEventTab] = useState<EventPhase>("ongoing");
+  const [region, setRegion] = useState<RegionFilter>(view.region);
+
+  const [chosenTab, setChosenTab] = useState<{ region: RegionFilter; tab: ListTab } | null>(
+    view.tab === null ? null : { region: view.region, tab: view.tab },
+  );
+
+  const [eventTab, setEventTab] = useState<EventPhase>(view.events);
+  const [loadedView, setLoadedView] = useState(view);
+
+  // Void keeps this component mounted between two home entries, so back, forward or the logo link
+  // bring a new view without a remount. Every navigation builds new props, so a new object means
+  // the URL changed, even when tab clicks had already rewritten it to the same query.
+  if (view !== loadedView) {
+    setLoadedView(view);
+    setRegion(view.region);
+    setChosenTab(view.tab === null ? null : { region: view.region, tab: view.tab });
+    setEventTab(view.events);
+  }
+
   const events = useMemo(() => new Map(snapshot.events.map((e) => [e.id, e])), [snapshot.events]);
 
   const { live, upcoming, results } = useMemo(() => {
@@ -70,7 +94,9 @@ export default function HomePage({ snapshot: initial }: Props) {
   }, [snapshot.matches, events, region, now]);
 
   const fallbackTab = hydrated ? smartDefaultTab(live, upcoming, results, now) : "upcoming";
-  const tab = chosenTab?.region === region ? chosenTab.tab : fallbackTab;
+  const pickedTab = chosenTab?.region === region ? chosenTab.tab : null;
+  const tab = pickedTab ?? fallbackTab;
+
   const nextUp = upcoming.find((m) => m.team1 && m.team2) ?? upcoming[0];
 
   const shown =
@@ -98,7 +124,11 @@ export default function HomePage({ snapshot: initial }: Props) {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Tabs
               value={tab}
-              onValueChange={(v) => isListTab(v) && setChosenTab({ region, tab: v })}
+              onValueChange={(v) => {
+                if (!isListTab(v)) return;
+                setChosenTab({ region, tab: v });
+                rememberView({ region, tab: v, events: eventTab });
+              }}
               variant="segment"
             >
               <TabsList aria-label="Show" className="rounded-xl p-1 ring-1 ring-border ring-inset">
@@ -109,7 +139,11 @@ export default function HomePage({ snapshot: initial }: Props) {
             <div className="-mx-4 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:px-0">
               <Tabs
                 value={region}
-                onValueChange={(v) => isRegionFilter(v) && setRegion(v)}
+                onValueChange={(v) => {
+                  if (!isHomeRegion(v)) return;
+                  setRegion(v);
+                  rememberView({ region: v, tab: null, events: eventTab });
+                }}
                 variant="underline"
               >
                 <TabsList aria-label="Region">
@@ -170,7 +204,11 @@ export default function HomePage({ snapshot: initial }: Props) {
           </h2>
           <Tabs
             value={eventTab}
-            onValueChange={(v) => isEventPhase(v) && setEventTab(v)}
+            onValueChange={(v) => {
+              if (!isEventPhase(v)) return;
+              setEventTab(v);
+              rememberView({ region, tab: pickedTab, events: v });
+            }}
             variant="segment"
           >
             <TabsList

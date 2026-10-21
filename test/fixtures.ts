@@ -3,9 +3,7 @@ import { fileURLToPath } from "node:url";
 
 import { z } from "zod";
 
-export const JsonSchema = z.json();
-
-export type Json = z.infer<typeof JsonSchema>;
+import { type Json, JsonSchema } from "./json";
 
 function fixture(dir: string, name: string): Json {
   const path = fileURLToPath(new URL(`./fixtures/${dir}/${name}`, import.meta.url));

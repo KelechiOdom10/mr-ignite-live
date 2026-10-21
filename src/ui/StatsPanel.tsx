@@ -102,7 +102,10 @@ function heroSummary(hero: HeroUsage, share: number | null): string {
 }
 
 const TRIGGER_CLASS =
-  "inline-flex items-center gap-2 rounded-md outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary";
+  "group inline-flex cursor-pointer items-center gap-2 rounded-md outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary";
+
+// Brightens the portrait on hover so it reads as something to open.
+const TRIGGER_PORTRAIT_CLASS = "transition-[filter] duration-150 group-hover:brightness-125";
 
 /**
  * One hero's share of a player's map or series, opened from its portrait. The popover mounts on
@@ -127,8 +130,12 @@ function HeroBreakdown({
 
   const face = (
     <>
-      <HeroPortrait hero={hero} size={26} />
-      {showName && <span className="whitespace-nowrap text-foreground">{hero.name}</span>}
+      <HeroPortrait hero={hero} size={26} className={TRIGGER_PORTRAIT_CLASS} />
+      {showName && (
+        <span className="whitespace-nowrap text-foreground decoration-muted-foreground underline-offset-4 group-hover:underline">
+          {hero.name}
+        </span>
+      )}
     </>
   );
 
@@ -258,7 +265,12 @@ function StatsTable({
             Bans
             <span className="sr-only">: {bans.map((h) => h.name).join(", ")}</span>
             {bans.map((h) => (
-              <HeroPortrait key={h.id} hero={h} size={22} className="opacity-60 grayscale" />
+              <HeroPortrait
+                key={h.id}
+                hero={h}
+                size={22}
+                className="opacity-60 grayscale transition-[opacity,filter] duration-150 hover:opacity-85 hover:grayscale-50"
+              />
             ))}
           </span>
         )}
