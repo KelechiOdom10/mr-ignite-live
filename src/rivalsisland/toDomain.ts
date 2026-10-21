@@ -9,6 +9,7 @@ import {
   type HistoryPage,
   type Leaderboard,
   type MatchDetail,
+  type PlayerCard,
   type PlayerProfile,
   type Uid,
 } from "@/domain/player";
@@ -124,6 +125,11 @@ export function toCareer(res: ResponseOf<"career">): Career {
     healing: c.healing,
     mvp: c.mvp,
     svp: c.svp,
+    kd: c.kd,
+    finalHits: c.final_hits,
+    headshotKills: c.headshot_kills,
+    soloKills: c.solo_kills,
+    bestKillStreak: c.best_kill_streak,
   };
 }
 
@@ -146,6 +152,14 @@ export function toHistoryPage(res: ResponseOf<"history">, freshness: Freshness):
       svp: m.player.svp,
       leftGame: m.player.left_game,
       rankChange: m.player.rank?.change ?? null,
+      rankAfter: m.player.rank
+        ? {
+            name: m.player.rank.after.rank,
+            score: m.player.rank.after.rs,
+            ladder: m.player.rank.after.rank_score,
+          }
+        : null,
+      device: m.player.device_type ?? null,
       durationSeconds: m.duration.seconds,
     })),
     page: res.pagination.page,
@@ -216,5 +230,26 @@ export function toHeroCareer(
     mvp: c.mvp,
     svp: c.svp,
     freshness,
+  };
+}
+
+/** A list card from whatever is cached: the career gives identity and rank, history the form. */
+export function toPlayerCard(
+  saved: { uid: Uid; name: string },
+  career: ResponseOf<"career"> | null,
+  history: ResponseOf<"history"> | null,
+): PlayerCard {
+  const player = career?.player;
+  const rank = player?.rank;
+  const recent = history?.matches.slice(0, 5) ?? [];
+
+  return {
+    uid: saved.uid,
+    name: player?.name ?? saved.name,
+    iconUrl: player?.head_icon?.image ?? null,
+    club: player?.club?.tag ?? null,
+    rank: rank ? { name: rank.rank, level: rank.rank_level, score: rank.rs } : null,
+    device: recent[0]?.player.device_type ?? null,
+    form: recent.map((m) => m.result),
   };
 }
