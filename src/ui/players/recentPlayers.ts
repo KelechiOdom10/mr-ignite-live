@@ -38,12 +38,21 @@ export function useRecentPlayers(): RecentPlayer[] {
 }
 
 export function useRememberPlayer(player: RecentPlayer | null) {
+  // Primitives, so the effect runs when what's shown changes, not on every render.
   const uid = player?.uid;
   const name = player?.name;
+  const iconUrl = player?.iconUrl ?? null;
+  const rankName = player?.rank?.name ?? null;
+  const rankLevel = player?.rank?.level ?? null;
+  const rankScore = player?.rank?.score ?? null;
+  const device = player?.device ?? null;
+
   useEffect(() => {
     if (!uid || !name) return;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(rememberPlayer(read(), { uid, name })));
+    const rank = rankName ? { name: rankName, level: rankLevel, score: rankScore } : null;
+    const next = rememberPlayer(read(), { uid, name, iconUrl, rank, device });
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
 
     for (const l of listeners) l();
-  }, [uid, name]);
+  }, [uid, name, iconUrl, rankName, rankLevel, rankScore, device]);
 }

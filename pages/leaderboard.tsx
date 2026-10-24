@@ -4,17 +4,14 @@ import { cn } from "@/lib/utils";
 import { AppShell } from "@/ui/AppShell";
 import { Freshness } from "@/ui/players/Freshness";
 import { LeaderboardTable } from "@/ui/players/LeaderboardTable";
+import { PLATFORM_NAMES, PlatformIcon } from "@/ui/players/PlatformIcon";
 import { PlayersTabs } from "@/ui/players/PlayersTabs";
 import { ProblemNotice } from "@/ui/players/ProblemNotice";
 import { useLiveSnapshot } from "@/ui/useLiveSnapshot";
 
 import type { Props } from "./leaderboard.server";
 
-const DEVICES = [
-  { value: "pc", label: "PC" },
-  { value: "ps", label: "PlayStation" },
-  { value: "xbox", label: "Xbox" },
-] as const;
+const DEVICES = ["pc", "ps", "xbox"] as const;
 
 export default function LeaderboardPage({ snapshot: initial, device, leaderboard }: Props) {
   const { snapshot, connection, now } = useLiveSnapshot(initial, { view: "events" });
@@ -31,18 +28,23 @@ export default function LeaderboardPage({ snapshot: initial, device, leaderboard
         <PlayersTabs current="/leaderboard" />
       </div>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-1" role="group" aria-label="Platform">
+        <div
+          className="flex rounded-xl bg-card p-1 ring-1 ring-border ring-inset"
+          role="group"
+          aria-label="Platform"
+        >
           {DEVICES.map((d) => (
             <Link
-              key={d.value}
-              href={d.value === "pc" ? "/leaderboard" : `/leaderboard?device=${d.value}`}
-              aria-current={d.value === device ? "page" : undefined}
+              key={d}
+              href={d === "pc" ? "/leaderboard" : `/leaderboard?device=${d}`}
+              aria-current={d === device ? "page" : undefined}
               className={cn(
-                "rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
-                d.value === device && "bg-secondary text-foreground",
+                "inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground",
+                d === device && "bg-secondary text-foreground",
               )}
             >
-              {d.label}
+              <PlatformIcon device={d} className="size-3.5" />
+              {PLATFORM_NAMES.get(d)}
             </Link>
           ))}
         </div>

@@ -147,6 +147,11 @@ export const CareerSchema = z.object({
   healing: z.number(),
   mvp: z.number().int(),
   svp: z.number().int(),
+  kd: z.number().nullable(),
+  finalHits: z.number().int(),
+  headshotKills: z.number().int(),
+  soloKills: z.number().int(),
+  bestKillStreak: z.number().int(),
 });
 
 export type Career = z.infer<typeof CareerSchema>;
@@ -172,6 +177,11 @@ export const HistoryRowSchema = z.object({
   svp: z.boolean(),
   leftGame: z.boolean(),
   rankChange: z.number().nullable(),
+  /** Rank after the match. `ladder` is RivalsIsland's running rank score, which climbs across tiers. */
+  rankAfter: z
+    .object({ name: z.string().nullable(), score: z.number().nullable(), ladder: z.number() })
+    .nullable(),
+  device: DeviceSchema.nullable(),
   durationSeconds: z.number(),
 });
 
@@ -323,7 +333,28 @@ export function groupBySeason(rows: readonly HistoryRow[]): SeasonGroup[] {
   return groups;
 }
 
-export const RecentPlayerSchema = z.object({ uid: UidSchema, name: z.string().min(1).max(64) });
+/** What a player list shows for one player. Fields are null when nothing is cached yet. */
+export const PlayerCardSchema = z.object({
+  uid: UidSchema,
+  name: z.string().min(1).max(64),
+  iconUrl: z.string().nullable(),
+  club: z.string().nullable(),
+  rank: RankSchema.nullable(),
+  device: DeviceSchema.nullable(),
+  /** Latest competitive results, newest first. */
+  form: z.array(ResultSchema).max(5),
+});
+
+export type PlayerCard = z.infer<typeof PlayerCardSchema>;
+
+// The extras are optional so lists saved before they existed still load.
+export const RecentPlayerSchema = z.object({
+  uid: UidSchema,
+  name: z.string().min(1).max(64),
+  iconUrl: z.string().nullable().optional(),
+  rank: RankSchema.nullable().optional(),
+  device: DeviceSchema.nullable().optional(),
+});
 
 export type RecentPlayer = z.infer<typeof RecentPlayerSchema>;
 
@@ -376,4 +407,45 @@ export function searchPrefill(name: string | undefined, focus: string | undefine
   const prefilled = parsed.success ? parsed.data : "";
 
   return { name: prefilled, focus: prefilled !== "" || focus === "name" };
+}
+
+export type RankTrend = {
+  /** Oldest first, so the line reads left to right. */
+  /** `continues` is false where the rank score didn't carry over from the match before, as at a reset. */
+  points: { ladder: number; result: Result; matchUid: string; continues: boolean }[];
+  net: number;
+  wins: number;
+  losses: number;
+  streak: { result: "win" | "loss"; count: number } | null;
+};
+
+/** The climb across ranked matches on a history page. Matches without rank data are skipped. */
+export function rankTrend(rows: readonly HistoryRow[]): RankTrend {
+  const ranked = rows.flatMap((r) => (r.rankAfter ? [{ ...r, ladder: r.rankAfter.ladder }] : []));
+
+  const points = ranked.toReversed().map((r, i, oldestFirst) => {
+    const previous = oldestFirst[i - 1];
+    const before = r.ladder - (r.rankChange ?? 0);
+
+    return {
+      ladder: r.ladder,
+      result: r.result,
+      matchUid: r.matchUid,
+      continues: previous !== undefined && Math.abs(before - previous.ladder) < 1,
+    };
+  });
+
+  const net = ranked.reduce((sum, r) => sum + (r.rankChange ?? 0), 0);
+  const wins = ranked.filter((r) => r.result === "win").length;
+  const losses = ranked.filter((r) => r.result === "loss").length;
+  const first = ranked[0]?.result;
+  let streak: RankTrend["streak"] = null;
+
+  if (first === "win" || first === "loss") {
+    const count = ranked.findIndex((r) => r.result !== first);
+
+    streak = { result: first, count: count === -1 ? ranked.length : count };
+  }
+
+  return { points, net, wins, losses, streak };
 }

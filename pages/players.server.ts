@@ -4,15 +4,26 @@ import { z } from "zod";
 import { PlayerNameQuerySchema, problemMessage, searchPrefill } from "@/domain/player";
 import { linkableUid } from "@/rivalsisland/toDomain";
 
-import { favourites, loadPlayers, shellSnapshot } from "../src/players";
+import {
+  cachedLeaderboardTop,
+  cachedPlayerCards,
+  favourites,
+  loadPlayers,
+  shellSnapshot,
+} from "../src/players";
 
 export type Props = InferProps<typeof loader>;
 
 export const loader = defineHandler(async (c) => {
-  const [snapshot, saved] = await Promise.all([shellSnapshot(), favourites.list()]);
+  const [snapshot, saved, top] = await Promise.all([
+    shellSnapshot(),
+    favourites.list(),
+    cachedLeaderboardTop(5),
+  ]);
+
   const prefill = searchPrefill(c.req.query("name"), c.req.query("focus"));
 
-  return { snapshot, favourites: saved, prefill };
+  return { snapshot, favourites: await cachedPlayerCards(saved), top, prefill };
 });
 
 const SearchBody = z.object({ name: PlayerNameQuerySchema });
