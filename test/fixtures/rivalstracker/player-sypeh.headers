@@ -1,0 +1,14 @@
+HTTP 200
+alt-svc: h3=":443"; ma=86400
+cache-control: private, no-store
+cdn-cache-control: no-store
+cf-cache-status: DYNAMIC
+cf-ray: a57fba24fe4d6bbf-LHR
+connection: keep-alive
+content-encoding: zstd
+content-type: application/json
+date: Mon, 09 Nov 2026 20:56:58 GMT
+nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=fNzx6QsBNQU0pVCuH8uvGy1KBjk6Rera0mR6DSKyrENCE6KmWMxXrM%2FYE672IBzB%2BhMMEJNBV%2FK5jYdTCEtMxJWji4BWZXshkOgNnukjfd1aSyHchXfFVhqoW6MUz6guz9fL4jcFKiE%3D"}]}
+server: cloudflare
+transfer-encoding: chunked
