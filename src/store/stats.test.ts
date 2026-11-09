@@ -98,3 +98,82 @@ describe("fetchStatsChanges with draft-order backfills waiting", () => {
     expect(requested[0]).toBe("s7");
   });
 });
+
+describe("fetchStatsChanges on a fresh store", () => {
+  const now = Date.parse("2026-11-09T20:00:00Z");
+  const daysAgo = (d: number) => new Date(now - d * 24 * 60 * 60 * 1000).toISOString();
+
+  const old = aMatch({
+    id: "old",
+    startsAt: daysAgo(3),
+    team1: { name: "Crimson", short: "CRM" },
+    team2: { name: "Azure", short: "AZR" },
+    markedFinished: true,
+  });
+
+  const oldIndexed = aMatch({
+    id: "old-indexed",
+    startsAt: daysAgo(4),
+    team1: { name: "Ember", short: "EMB" },
+    team2: { name: "Frost", short: "FRS" },
+    markedFinished: true,
+  });
+
+  const recent = aMatch({
+    id: "recent",
+    startsAt: new Date(now - 60 * 60 * 1000).toISOString(),
+    team1: { name: "Violet", short: "VLT" },
+    team2: { name: "Amber", short: "AMB" },
+    markedFinished: true,
+  });
+
+  const summaries: MrvlMatchSummary[] = [old, oldIndexed, recent].map((m) => ({
+    id: `s-${m.id}`,
+    teamOneName: m.team1?.name,
+    teamTwoName: m.team2?.name,
+    scheduledAt: m.startsAt,
+    updatedAt: "1",
+  }));
+
+  const recorded = z
+    .object({ value: MrvlMatchPageSchema })
+    .parse(mrvlFixture("page-fly-100t.json")).value;
+
+  it("fetches finished series older than the lookback that were never fetched, newest first", async () => {
+    const requested: string[] = [];
+
+    const mrvl: MrvlClient = {
+      ...createMrvlClient(),
+      listMatches: async (status) => (status === "recent" ? summaries : []),
+      matchPage: async (id) => {
+        requested.push(id);
+
+        return { match: { ...recorded.match, id, games: [] } };
+      },
+    };
+
+    const store = memoryKvStore({
+      "stats-index:v2": {
+        "old-indexed": {
+          sourceMatchId: "s-old-indexed",
+          sourceUpdatedAt: "1",
+          draftOrder: true,
+          heroLines: true,
+        },
+      },
+    });
+
+    const snapshot: Snapshot = {
+      builtAt: new Date(now).toISOString(),
+      servedAt: new Date(now).toISOString(),
+      liquipediaUpdatedAt: null,
+      events: [],
+      matches: [old, oldIndexed, recent],
+      teams: {},
+    };
+
+    await fetchStatsChanges({ store, mrvl, snapshot, now });
+
+    expect(requested).toEqual(["s-recent", "s-old"]);
+  });
+});

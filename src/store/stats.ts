@@ -61,7 +61,8 @@ function needsBackfill(entry: StatsIndex[string] | undefined): boolean {
   return entry !== undefined && (entry.draftOrder !== true || entry.heroLines !== true);
 }
 
-export function statsCandidates(snapshot: Snapshot, now: number): Match[] {
+/** Live and recent series, plus any finished series never fetched, so a fresh store or downtime fills in. */
+export function statsCandidates(snapshot: Snapshot, now: number, index: StatsIndex): Match[] {
   return snapshot.matches.filter((m) => {
     const status = matchState(m, now).status;
 
@@ -69,7 +70,7 @@ export function statsCandidates(snapshot: Snapshot, now: number): Match[] {
 
     if (status !== "finished" || !m.startsAt) return false;
 
-    return now - Date.parse(m.startsAt) < LOOKBACK_MS;
+    return index[m.id] === undefined || now - Date.parse(m.startsAt) < LOOKBACK_MS;
   });
 }
 
@@ -116,7 +117,8 @@ export async function fetchStatsChanges({
   snapshot: Snapshot;
   now: number;
 }): Promise<StatsChanges> {
-  const candidates = statsCandidates(snapshot, now);
+  const index = await readIndex(store);
+  const candidates = statsCandidates(snapshot, now, index);
 
   if (candidates.length === 0) return noStatsChanges();
 
@@ -127,13 +129,12 @@ export async function fetchStatsChanges({
     ...(await mrvl.listMatches("upcoming", LIVE_LIMIT)),
   ];
 
-  const index = await readIndex(store);
   const updated: MatchStats[] = [];
   const mapOverrides: Record<string, MapOverride[]> = {};
   let pagesRequested = 0;
   let indexChanged = false;
 
-  // Series mrvl changed go first, so a backfill never delays a live score.
+  // Series mrvl changed go first, newest first, so neither a backfill nor an old series delays a live score.
   const work = candidates
     .flatMap((match) => {
       const summary = findMrvlMatch(match, summaries);
@@ -146,7 +147,11 @@ export async function fetchStatsChanges({
 
       return [{ match, summary, sourceUpdatedAt, changed }];
     })
-    .sort((a, b) => Number(b.changed) - Number(a.changed));
+    .sort(
+      (a, b) =>
+        Number(b.changed) - Number(a.changed) ||
+        (b.match.startsAt ?? "").localeCompare(a.match.startsAt ?? ""),
+    );
 
   for (const { match, summary, sourceUpdatedAt } of work) {
     if (pagesRequested >= MAX_PAGES_PER_SYNC) break;
