@@ -59,6 +59,7 @@ Use Synara's in-app browser (`browser_*` tools): `browser_open`, then `browser_r
 | `/leaderboard`                                                                       | Recorded top 100 (PC)                                              |
 | `/game/5513337_1791844040_1311009_11001_12`                                          | The one recorded ranked match                                      |
 | `/`, `/events`, `/match/<id>`                                                        | Esports pages from the live Liquipedia snapshot                    |
+| `/drafts`                                                                            | Both draft tables, map and event filters                           |
 | ⌘K (`role=combobox`, placeholder "Search teams, matches, events, players and pages") | Global search                                                      |
 
 Searching any name other than `Sypeh`, `NAVI TrqstMe` or `zzqxnoplayer77` in fixtures mode answers "No player is named …", as the API does for an unknown name.
