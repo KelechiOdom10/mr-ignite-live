@@ -24,7 +24,7 @@ Cron triggers don't fire under `vite dev`, so in development `/api/snapshot` syn
 
 ## Players section
 
-Player data comes from the paid [RivalsIsland API](https://api.rivalsisland.com/docs). By default the dev server replays recorded responses at no cost. To use the live API, put `RIVALSISLAND_API_KEY` and `RIVALSISLAND_MODE=live` in `.env`; `RIVALSISLAND_CREDIT_BUDGET` (default 200) caps spending and `/api/credits` shows what's been spent. See [ADR 8](docs/adr/0008-rivalsisland-for-player-data.md).
+Player data comes from [RivalsTracker](https://rivalstracker.com), which relays the game's own profile, match and leaderboard data. By default the dev server replays recorded responses at no cost. Production must set `PLAYER_DATA_MODE=live`; `PLAYER_DATA_REQUESTS_PER_DAY` (default 300) caps upstream requests and `/api/credits` shows today's count. `PLAYER_DATA_MODE=off` turns the players section off. See [ADR 9](docs/adr/0009-rivalstracker-for-player-data.md).
 
 ## Deploy
 

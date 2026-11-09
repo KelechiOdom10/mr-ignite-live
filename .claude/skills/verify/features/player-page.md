@@ -1,6 +1,6 @@
 # Player pages
 
-**What it is.** A ranked player's rank, climb, career and recent matches (`/player/…`), the Players hub with search, favourites and recently viewed players (`/players`), and the leaderboard (`/leaderboard`), all from RivalsIsland.
+**What it is.** A ranked player's rank, climb, career and recent matches (`/player/…`), the Players hub with search, favourites and recently viewed players (`/players`), and the leaderboard (`/leaderboard`), all from RivalsTracker.
 
 ## How to reach it
 
@@ -15,22 +15,22 @@
 
 ## What proves it works
 
-- Sypeh's header reads "UID 670067075 · Level 84 · PC". The rank card shows the One Above All badge, "Season 10.5", "204 RS", "This season 1W of 1 match · win rate after 10" (no percentage) and "Peak One Above All 204 RS".
-- The rank score card reads "Rank score · last 20 ranked", "+137 RS · 15W 5L · won last 3", with a rising line and 20 result chips, oldest first.
-- Career groups: Combat (KDA 9.45, K/D 4.38), Impact (MVP 601 "24% of matches", Solo kills 3,136, Best streak 28), Volume (Matches 2,454, Win rate 75.3%).
-- History shows a "Season 10.5 · this season" group ("1 match on this page"), then "Season 10.0" ("19 matches on this page"). Heroes sit to the right at 1440 and below the matches at 390.
-- TrqstMe shows "37W of 58 matches (64%)". The rank score card says "Match history is private, so there's no rank trend". "Match history is private" shows once, under Recent matches, and the career still shows.
-- Refresh reads "Refresh · 20 credits" on Sypeh and "Refresh · 10 credits" on TrqstMe (private history costs nothing). Don't press it.
+- Sypeh's header reads "UID 670067075 · Level 84" (the source reports no per-match platform, so there is no platform chip). The rank card shows the One Above All badge, "Season 10.5", "5358 RS", "This season 18W of 28 matches (64%)" and "Peak One Above All 5358 RS".
+- The rank score card reads "Rank score · last 20 ranked", "+35 RS · 12W 8L · won last 2", with a rising line and 20 result chips, oldest first.
+- Career groups: Combat (KDA 10.94, K/D 4.48, Accuracy "–", Damage "–"), Impact (MVP "–", SVP "–", Solo kills "–", Best streak "–"), Volume (Matches 74, Win rate 77.0%, Play time 5h, Healing "–"). The dashes are the fields RivalsTracker does not report.
+- History shows one "Season 10.5 · this season" group ("20 matches on this page") with no paging link; the source returns the latest 20. Heroes sit to the right at 1440 and below the matches at 390.
+- TrqstMe shows "58W of 100 matches (58%)". The rank score card says "Match history is private, so there's no rank trend". "Match history is private" shows once, under Recent matches, and the career still shows.
+- Refresh reads "Refresh" (one request); don't press it while checking.
 - `/leaderboard`: the platform switch shows PC, PlayStation and Xbox icons in a segmented control, and every row shows its rank badge.
-- `/players`: favourites are cards with avatar, club, rank badge, platform icon and the last five competitive results. Recently viewed lists players opened in this browser with their rank. "Top of the leaderboard" shows five rows if the PC leaderboard is cached. All of it comes from the cache: `spent` on `/api/credits` doesn't move.
+- `/players`: favourites are cards with avatar, club, rank badge and the last five recent results. Recently viewed lists players opened in this browser with their rank. "Top of the leaderboard" shows five rows if the PC leaderboard is cached. All of it comes from the cache: `spent` on `/api/credits` doesn't move.
 - At 390 nothing scrolls sideways.
-- `/api/credits` still reports `mode: fixtures`. Its `spent` is simulated (see SKILL.md Doctor).
+- `/api/credits` still reports `mode: fixtures` with `spent`/`pending` request counts; both are simulated (see SKILL.md Doctor).
 
 ## Owning code
 
-`pages/player/[uid].tsx`, `pages/players.tsx`, `pages/leaderboard.tsx`, `src/ui/players/` (`RankCard`, `RankTrendCard`, `CareerGroups`, `PlayerCard`, `RankIcon`, `PlatformIcon`), `src/players.ts` (`cachedPlayerCards`, `cachedLeaderboardTop`), `src/domain/player.ts` (`seasonRecord`, `groupBySeason`, `rankTrend`), `src/rivalsisland/toDomain.ts`. Rank badges live in `public/ranks/`.
+`pages/player/[uid].tsx`, `pages/players.tsx`, `pages/leaderboard.tsx`, `src/ui/players/` (`RankCard`, `RankTrendCard`, `CareerGroups`, `PlayerCard`, `RankIcon`, `PlatformIcon`), `src/players.ts` (`cachedPlayerCards`, `cachedLeaderboardTop`), `src/domain/player.ts` (`seasonRecord`, `groupBySeason`, `rankTrend`), `src/rivalstracker/toDomain.ts`. Rank badges live in `public/ranks/`.
 
 ## Gotchas
 
-- Only recorded uids have data in fixtures mode; any other uid shows "Not found".
+- Only recorded uids have data in fixtures mode; any other uid shows "Not found". The match page shows no map, season or team score because RivalsTracker's match payload omits them.
 - The fixtures cache is in memory and resets when the dev server reloads `src/players.ts`, so "Top of the leaderboard" and favourite ranks only show after the leaderboard or player has been opened since.

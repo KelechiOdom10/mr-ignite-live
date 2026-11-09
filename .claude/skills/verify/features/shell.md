@@ -16,7 +16,7 @@ Every page.
 - Nav labels, the Search label and the full "Hide spoilers" label show from 1280 (`xl`). Below that, items are icons with screen-reader labels and a hover title, and the header stays on one line at 1024 even with the live island showing. The island shows from 1024 (`lg`); below that, live games are in the fixture strip on esports pages.
 - `/`, `/events`, `/drafts`: the fixture strip of live and upcoming chips shows under the header. The footer shows "Live updates on · Liquipedia updated …", and `/drafts` credits "Draft data from mrvl.net".
 - `/player/…`, `/players`, `/leaderboard`, `/game/…`, `/review`: no fixture strip, but the live island still shows when a match is live, and the footer keeps the live status.
-  - Player pages credit "Player data from RivalsIsland; live scores from Liquipedia…".
+  - Player pages credit "Player data from RivalsTracker; live scores from Liquipedia…".
   - `/review` reads "Recordings and notes stay in this browser…".
 - The fixture strip's first chip lines up with the logo, and only edges with chips scrolled out of view fade. The Matches page's segmented controls have a hairline inset ring and concentric corners (12px outside, 8px pill, 4px padding).
 - Live island: moving between pages (Matches → Events → Players) keeps it still at the same width, with no spring from the small pill, as long as the same matches are live. Sample `header [role=status]`'s width on a timer across a client navigation; it stays constant. A fresh load still springs open. With Hide spoilers on, it shows the round ("● Grand Final") rather than bracket placeholders, and stays clear of the search box at 1440.
