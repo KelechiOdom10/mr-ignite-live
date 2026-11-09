@@ -120,6 +120,11 @@ function alignTeams(game: MrvlGame, match: Match): [MrvlScoreboardTeam, MrvlScor
   return [b, a];
 }
 
+/** mrvl sends "hero-0", with no portrait, for a ban its feed didn't capture. */
+function isUnrecordedHero(hero: { id: string }): boolean {
+  return hero.id === "hero-0";
+}
+
 function toHero(hero: {
   id: string;
   name: string;
@@ -195,7 +200,9 @@ function toTeam(team: MrvlScoreboardTeam): TeamMapStats {
     name: team.linkedTeamName ?? team.name,
     won: team.isWinner ?? false,
     score: team.score ?? null,
-    bans: (team.bans ?? []).filter((b) => b.kind === "ban").map((b) => toHero(b.hero)),
+    bans: (team.bans ?? [])
+      .filter((b) => b.kind === "ban" && !isUnrecordedHero(b.hero))
+      .map((b) => toHero(b.hero)),
     players: team.players.map(toPlayer),
   };
 }
