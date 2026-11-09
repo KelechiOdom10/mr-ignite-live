@@ -16,6 +16,7 @@ const event = (id: string): IgniteEvent => ({
   startDate: null,
   endDate: null,
   prizePoolUsd: null,
+  prizes: [],
   liquipediaUrl: "https://liquipedia.net/marvelrivals/x",
   updatedAt: "2026-10-17T00:00:00.000Z",
   iconFile: null,

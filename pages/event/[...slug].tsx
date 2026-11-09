@@ -1,10 +1,12 @@
 import { NotFoundGlitch } from "@/components/motion/not-found";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/motion/tabs";
+import { participantsOf } from "@/domain/participants";
 import { matchesOfEvent } from "@/domain/scope";
 import { cn } from "@/lib/utils";
 import { AppShell } from "@/ui/AppShell";
 import { Bracket } from "@/ui/Bracket";
 import { DayHeading } from "@/ui/DayHeading";
+import { EventParticipants, PrizeDistribution } from "@/ui/EventPrizes";
 import { EventIcon } from "@/ui/EventRow";
 import { MatchCard } from "@/ui/MatchCard";
 import { REGION_SHORT, REGION_TEXT, regionKey } from "@/ui/region";
@@ -32,6 +34,7 @@ export default function EventPage({ snapshot: initial, eventId }: Props) {
   }
 
   const matches = matchesOfEvent(snapshot, event.id);
+  const participants = participantsOf(matches);
   const playoffs = matches.filter((m) => m.phase === "Playoffs");
   const groups = matches.filter((m) => m.phase !== "Playoffs");
   const upper = playoffs.filter((m) => /upper/i.test(m.round));
@@ -117,6 +120,11 @@ export default function EventPage({ snapshot: initial, eventId }: Props) {
           </div>
         </TabsContent>
       </Tabs>
+
+      <div className="mt-10 space-y-10">
+        <PrizeDistribution event={event} snapshot={snapshot} />
+        <EventParticipants teams={participants} snapshot={snapshot} />
+      </div>
     </AppShell>
   );
 }
