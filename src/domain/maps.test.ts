@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { mapInfo, mapNameConflicts } from "./maps";
+import { mapDisplayName, mapInfo, mapNameConflicts } from "./maps";
+
+describe("mapDisplayName", () => {
+  it("shows a catalogue key as a map name, keeping joining words lowercase", () => {
+    expect(mapDisplayName("yggdrasill path")).toBe("Yggdrasill Path");
+    expect(mapDisplayName("museum of contemplation")).toBe("Museum of Contemplation");
+  });
+});
 
 describe("mapInfo", () => {
   it("finds maps whose image names don't follow their titles", () => {

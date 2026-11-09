@@ -159,6 +159,8 @@ export interface ProRate {
   banned: number;
   /** Share of team drafts with protects known that protected it; null when none are known. */
   protected: number | null;
+  pick?: number | null;
+  win?: number | null;
 }
 
 /** Pro ban and protect shares per hero, to show beside the pool while practising. */
