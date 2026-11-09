@@ -204,11 +204,11 @@ export function AppShell({
             Player data from{" "}
             <a
               className="underline hover:text-foreground"
-              href="https://api.rivalsisland.com/docs"
+              href="https://rivalstracker.com"
               target="_blank"
               rel="noreferrer"
             >
-              RivalsIsland
+              RivalsTracker
             </a>
             ; live scores from Liquipedia (CC BY-SA). Not affiliated with NetEase or Marvel.
           </span>

@@ -22,7 +22,7 @@ export default function LeaderboardPage({ snapshot: initial, device, leaderboard
       <p className="mt-1 text-sm text-muted-foreground">
         Top 100 ranked players
         {leaderboard.ok && leaderboard.value.season ? ` in season ${leaderboard.value.season}` : ""}
-        , from RivalsIsland.
+        , from RivalsTracker.
       </p>
       <div className="mt-6">
         <PlayersTabs current="/leaderboard" />

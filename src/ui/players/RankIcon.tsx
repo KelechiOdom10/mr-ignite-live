@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 // In-game rank badges, from rivalskins.com's copies of the game assets, cut to 224px and served
-// from public/ranks. Keyed by the tier's first word, as RivalsIsland names them.
+// from public/ranks. Keyed by the tier's first word, as the game names them.
 const TIER_FILES = new Map<string, string>([
   ["bronze", "bronze"],
   ["silver", "silver"],

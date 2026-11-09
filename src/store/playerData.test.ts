@@ -1,22 +1,21 @@
 import { describe, expect, it } from "vitest";
 
 import { UidSchema } from "@/domain/player";
-import { createRivalsIslandClient } from "@/rivalsisland/client";
+import { createRivalsTrackerClient } from "@/rivalstracker/client";
 import {
-  CreditBudgetExceededError,
-  MatchHistoryPrivateError,
-  RivalsIslandContractError,
+  NotFoundError,
+  RequestBudgetExceededError,
+  RivalsTrackerContractError,
   UpstreamUnavailableError,
-} from "@/rivalsisland/errors";
+} from "@/rivalstracker/errors";
 
 import {
-  fakeRivalsIsland,
+  fakeRivalsTracker,
   RECORDED_MATCH,
   RECORDED_UIDS,
-  rivalsIslandFixture,
   type Scripted,
-} from "../../test/fakeRivalsIsland";
-import { memoryCreditLedger, memoryPlayerCache } from "../../test/memoryPlayerDb";
+} from "../../test/fakeRivalsTracker";
+import { memoryPlayerCache, memoryRequestLedger } from "../../test/memoryPlayerDb";
 import { createPlayerData, type PlayerCache } from "./playerData";
 
 const trqstMe = UidSchema.parse(RECORDED_UIDS.trqstMe);
@@ -28,12 +27,12 @@ function setup({
   scripted = {},
   cache = memoryPlayerCache(),
 }: { budget?: number; scripted?: Record<string, Scripted>; cache?: PlayerCache } = {}) {
-  const fake = fakeRivalsIsland(scripted);
-  const ledger = memoryCreditLedger();
-  let time = Date.parse("2026-10-17T12:00:00Z");
+  const fake = fakeRivalsTracker(scripted);
+  const ledger = memoryRequestLedger();
+  let time = Date.parse("2026-11-09T12:00:00Z");
 
   const data = createPlayerData({
-    client: createRivalsIslandClient({ apiKey: "k", fetch: fake.fetch }),
+    client: createRivalsTrackerClient({ fetch: fake.fetch }),
     cache,
     ledger,
     budget,
@@ -49,7 +48,7 @@ describe("player data", () => {
     await data.get("career", { uid: trqstMe });
     await data.get("career", { uid: trqstMe });
     expect(fake.calls).toHaveLength(1);
-    expect(await ledger.summary()).toMatchObject({ spent: 10, pending: 0 });
+    expect(await ledger.summary(0)).toMatchObject({ spent: 1, pending: 0 });
   });
 
   it("shares one request between concurrent loads of the same data", async () => {
@@ -58,44 +57,38 @@ describe("player data", () => {
     expect(fake.calls).toHaveLength(1);
   });
 
-  it("reserves credits before calling, so concurrent calls can't jointly pass the budget", async () => {
-    const { data, fake } = setup({ budget: 15 });
+  it("pays once for a player page, though career, history and hero cards read it", async () => {
+    const { data, fake } = setup();
+    await data.get("career", { uid: sypeh });
+    await data.get("history", { uid: sypeh });
+    await data.get("heroCareer", { uid: sypeh, heroId: 1016 });
+    expect(fake.calls).toEqual(["GET /player/670067075"]);
+  });
+
+  it("reserves before calling, so concurrent calls can't jointly pass the budget", async () => {
+    const { data, fake } = setup({ budget: 1 });
 
     const results = await Promise.allSettled([
       data.get("career", { uid: trqstMe }),
-      data.get("heroCareer", { uid: sypeh, heroId: 1011 }),
+      data.get("match", { matchUid: RECORDED_MATCH }),
     ]);
 
     expect(fake.calls).toHaveLength(1);
     expect(results.filter((r) => r.status === "rejected")).toMatchObject([
-      { reason: expect.any(CreditBudgetExceededError) },
+      { reason: expect.any(RequestBudgetExceededError) },
     ]);
   });
 
-  it("books the credits RivalsIsland charged, not the price we expected", async () => {
-    const path = `/players/${trqstMe}/career`;
-
-    const { data, ledger } = setup({
-      scripted: {
-        [path]: {
-          status: 200,
-          cost: 7,
-          body: rivalsIslandFixture("player-career"),
-        },
-      },
-    });
+  it("counts the day's requests, and starts again the next UTC day", async () => {
+    const { data, fake, advance } = setup({ budget: 1 });
 
     await data.get("career", { uid: trqstMe });
-    expect((await ledger.summary()).spent).toBe(7);
-  });
-
-  it("remembers a private history for a while at no cost, instead of asking again on every view", async () => {
-    const { data, fake, ledger } = setup();
-    const params = { uid: trqstMe, page: 0, category: 2 };
-    await expect(data.get("history", params)).rejects.toBeInstanceOf(MatchHistoryPrivateError);
-    await expect(data.get("history", params)).rejects.toBeInstanceOf(MatchHistoryPrivateError);
-    expect(fake.calls).toHaveLength(1);
-    expect(await ledger.summary()).toMatchObject({ spent: 0, pending: 0 });
+    await expect(data.get("match", { matchUid: RECORDED_MATCH })).rejects.toBeInstanceOf(
+      RequestBudgetExceededError,
+    );
+    advance(24 * HOUR);
+    await expect(data.get("match", { matchUid: RECORDED_MATCH })).resolves.toBeDefined();
+    expect(fake.calls).toHaveLength(2);
   });
 
   it("never refetches a finished match", async () => {
@@ -106,7 +99,7 @@ describe("player data", () => {
     expect(fake.calls).toHaveLength(1);
   });
 
-  it("shows an expired career as stale until asked to refresh, so page views don't spend credits", async () => {
+  it("shows an expired profile as stale until asked to refresh, so page views don't spend a request", async () => {
     const { data, fake, advance } = setup();
     await data.get("career", { uid: trqstMe });
     advance(2 * HOUR);
@@ -118,16 +111,16 @@ describe("player data", () => {
     expect(fake.calls).toHaveLength(2);
   });
 
-  it("refetches an expired leaderboard on visit, which costs one credit", async () => {
+  it("refetches an expired leaderboard on visit, which costs one request", async () => {
     const { data, fake, advance } = setup();
     await data.get("leaderboard", { device: "pc" });
-    advance(10 * 60 * 1000);
+    advance(20 * 60 * 1000);
     await data.get("leaderboard", { device: "pc" });
     expect(fake.calls).toHaveLength(2);
   });
 
   it("keeps showing cached data when the budget is spent", async () => {
-    const { data, fake, advance } = setup({ budget: 10 });
+    const { data, fake, advance } = setup({ budget: 1 });
     await data.get("career", { uid: trqstMe });
     advance(2 * HOUR);
     const kept = await data.get("career", { uid: trqstMe }, { refresh: true });
@@ -135,7 +128,7 @@ describe("player data", () => {
     expect(fake.calls).toHaveLength(1);
   });
 
-  it("still books a paid call when saving it to the cache fails", async () => {
+  it("still books a request when saving the response to the cache fails", async () => {
     const cache = memoryPlayerCache();
 
     const failing: PlayerCache = {
@@ -145,26 +138,33 @@ describe("player data", () => {
 
     const { data, ledger } = setup({ cache: failing });
     await expect(data.get("career", { uid: trqstMe })).rejects.toThrow("D1 unavailable");
-    expect(await ledger.summary()).toMatchObject({ spent: 10, pending: 0 });
+    expect(await ledger.summary(0)).toMatchObject({ spent: 1, pending: 0 });
   });
 
-  it("says when a paid refresh was refused, so the page doesn't claim fresh data", async () => {
-    const { data, fake } = setup({ budget: 10 });
+  it("says when a refresh was refused, so the page doesn't claim fresh data", async () => {
+    const { data, fake } = setup({ budget: 1 });
     await data.get("career", { uid: trqstMe });
     const result = await data.get("career", { uid: trqstMe }, { refresh: true });
     expect(result.refreshFailed).toBe(true);
     expect(fake.calls).toHaveLength(1);
   });
 
-  it("remembers a response that broke our schema instead of paying for it on every visit", async () => {
-    const path = `/players/${trqstMe}/career`;
+  it("remembers a missing player instead of asking on every view", async () => {
+    const { data, fake } = setup();
+    const missing = UidSchema.parse("999999999");
 
+    await expect(data.get("career", { uid: missing })).rejects.toBeInstanceOf(NotFoundError);
+    await expect(data.get("history", { uid: missing })).rejects.toBeInstanceOf(NotFoundError);
+    expect(fake.calls).toHaveLength(1);
+  });
+
+  it("remembers a response that broke our schema instead of retrying it on every visit", async () => {
     const { data, fake } = setup({
-      scripted: { [path]: { status: 200, cost: 10, body: { player: {} } } },
+      scripted: { [`GET /player/${trqstMe}`]: { status: 200, body: { player: {} } } },
     });
 
     await expect(data.get("career", { uid: trqstMe })).rejects.toBeInstanceOf(
-      RivalsIslandContractError,
+      RivalsTrackerContractError,
     );
     await expect(data.get("career", { uid: trqstMe })).rejects.toBeInstanceOf(
       UpstreamUnavailableError,
@@ -173,33 +173,41 @@ describe("player data", () => {
   });
 
   it("keeps the last good copy when a refresh gets a response that broke our schema", async () => {
-    const path = `/players/${trqstMe}/career`;
     const scripted: Record<string, Scripted> = {};
     const { data, fake } = setup({ scripted });
     const first = await data.get("career", { uid: trqstMe });
-    scripted[path] = { status: 200, cost: 10, body: { player: {} } };
+    scripted[`GET /player/${trqstMe}`] = { status: 200, body: { player: {} } };
     const refreshed = await data.get("career", { uid: trqstMe }, { refresh: true });
     expect(refreshed.refreshFailed).toBe(true);
-    expect(refreshed.data.player.name).toBe(first.data.player.name);
+    expect(refreshed.data.player.info.name).toBe(first.data.player.info.name);
     const later = await data.get("career", { uid: trqstMe });
-    expect(later.data.player.name).toBe(first.data.player.name);
+    expect(later.data.player.info.name).toBe(first.data.player.info.name);
     expect(fake.calls).toHaveLength(2);
   });
 
-  it("peeks at cached data without calling RivalsIsland or spending", async () => {
+  it("serves the static hero catalogue without a request or a reservation", async () => {
+    const { data, fake, ledger } = setup({ budget: 0 });
+
+    const heroes = await data.get("heroes", {});
+    expect(heroes.data.heroes).toHaveLength(56);
+    expect(fake.calls).toHaveLength(0);
+    expect(await ledger.summary(0)).toMatchObject({ spent: 0, pending: 0 });
+  });
+
+  it("peeks at cached data without calling RivalsTracker or spending", async () => {
     const { data, fake, ledger } = setup();
     expect(await data.peek("match", { matchUid: RECORDED_MATCH })).toBeNull();
     await data.get("match", { matchUid: RECORDED_MATCH });
     const peeked = await data.peek("match", { matchUid: RECORDED_MATCH });
     expect(peeked?.data.match_uid).toBe(RECORDED_MATCH);
     expect(fake.calls).toHaveLength(1);
-    expect((await ledger.summary()).spent).toBe(5);
+    expect((await ledger.summary(0)).spent).toBe(1);
   });
 
   it("treats a cached entry that no longer matches the schema as missing when peeking", async () => {
     const cache = memoryPlayerCache();
     const { data } = setup({ cache });
-    await cache.put(`match:/matches/${RECORDED_MATCH}`, "match", {
+    await cache.put(`GET /matches/${RECORDED_MATCH}`, "match", {
       status: "ok",
       body: { match_uid: RECORDED_MATCH },
       fetchedAt: 0,

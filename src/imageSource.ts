@@ -2,6 +2,7 @@ const ALLOWED = [
   { origin: "https://liquipedia.net", pathPrefix: "/commons/images/" },
   { origin: "https://www.mrvl.net", pathPrefix: "/images/" },
   { origin: "https://assets.rivalsisland.com", pathPrefix: "/v1/" },
+  { origin: "https://rivalstracker.com", pathPrefix: "/images/" },
 ];
 
 export function imageSource(raw: string): URL | null {

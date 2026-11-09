@@ -45,7 +45,7 @@ export function SearchForm({
         </p>
       ) : (
         <p id="player-name-hint" className="text-xs text-muted-foreground">
-          A new search costs 5 RivalsIsland credits; repeat searches within a day are free.
+          A search asks RivalsTracker once; repeat searches within a day are free.
         </p>
       )}
     </Form>

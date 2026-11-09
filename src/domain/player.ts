@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// RivalsIsland's own uid pattern. Names aren't identities: they repeat and can hold homoglyphs.
+// NetEase account ids are digits. Names aren't identities: they repeat and can hold homoglyphs.
 export const UidSchema = z
   .string()
   .regex(/^[1-9][0-9]{0,19}$/)
@@ -28,7 +28,6 @@ export const PlayerProblemSchema = z.enum([
   "career_private",
   "not_found",
   "budget_reached",
-  "out_of_credits",
   "not_configured",
   "unavailable",
 ]);
@@ -44,21 +43,18 @@ export const PROBLEM_MESSAGES: Record<PlayerProblem, { title: string; detail: st
     title: "Career is private",
     detail: "This player hides their career stats.",
   },
-  not_found: { title: "Not found", detail: "RivalsIsland has no record of this." },
+  not_found: { title: "Not found", detail: "RivalsTracker has no record of this." },
   budget_reached: {
-    title: "Credit budget reached",
-    detail: "Rivals Hub has used its RivalsIsland credit budget. Cached data still shows.",
-  },
-  out_of_credits: {
-    title: "Out of RivalsIsland credits",
-    detail: "The API key has no credits left.",
+    title: "Request budget reached",
+    detail:
+      "Rivals Hub has used its RivalsTracker request budget for today. Cached data still shows.",
   },
   not_configured: {
     title: "Player data isn't available",
-    detail: "This site has no RivalsIsland connection, so ranked profiles can't load.",
+    detail: "This site isn't connected to RivalsTracker, so ranked profiles can't load.",
   },
   unavailable: {
-    title: "RivalsIsland is unavailable",
+    title: "RivalsTracker is unavailable",
     detail: "It didn't answer as expected. Try again in a few minutes.",
   },
 };
@@ -142,16 +138,17 @@ export const CareerSchema = z.object({
   deaths: z.number().int(),
   assists: z.number().int(),
   kda: z.number().nullable(),
+  /** Null when the source doesn't report it: shown as unavailable, never zero-filled. */
   accuracy: z.number().nullable(),
-  damage: z.number(),
-  healing: z.number(),
-  mvp: z.number().int(),
-  svp: z.number().int(),
+  damage: z.number().nullable(),
+  healing: z.number().nullable(),
+  mvp: z.number().int().nullable(),
+  svp: z.number().int().nullable(),
   kd: z.number().nullable(),
-  finalHits: z.number().int(),
-  headshotKills: z.number().int(),
-  soloKills: z.number().int(),
-  bestKillStreak: z.number().int(),
+  finalHits: z.number().int().nullable(),
+  headshotKills: z.number().int().nullable(),
+  soloKills: z.number().int().nullable(),
+  bestKillStreak: z.number().int().nullable(),
 });
 
 export type Career = z.infer<typeof CareerSchema>;
@@ -177,7 +174,7 @@ export const HistoryRowSchema = z.object({
   svp: z.boolean(),
   leftGame: z.boolean(),
   rankChange: z.number().nullable(),
-  /** Rank after the match. `ladder` is RivalsIsland's running rank score, which climbs across tiers. */
+  /** Rank after the match. `ladder` is the running rank score, which climbs across tiers. */
   rankAfter: z
     .object({ name: z.string().nullable(), score: z.number().nullable(), ladder: z.number() })
     .nullable(),
@@ -257,16 +254,16 @@ export const HeroCareerSchema = z.object({
   kills: z.number().int(),
   deaths: z.number().int(),
   assists: z.number().int(),
-  mvp: z.number().int(),
-  svp: z.number().int(),
+  mvp: z.number().int().nullable(),
+  svp: z.number().int().nullable(),
   freshness: FreshnessSchema,
 });
 
 export type HeroCareer = z.infer<typeof HeroCareerSchema>;
 
 /**
- * Heroes a player used across matches we already hold, most played first. RivalsIsland has no
- * free per-player hero ranking, so this only covers cached matches and says how many.
+ * Heroes a player used across matches we already hold, most played first. This only covers cached
+ * matches and says how many, so it never implies a season-wide hero ranking.
  */
 export function recentHeroes(uid: Uid, matches: readonly MatchDetail[], limit = 3): HeroPlay[] {
   const byHero = new Map<number, HeroPlay>();
@@ -388,7 +385,7 @@ export function rememberPlayer(
   return [player, ...list.filter((p) => p.uid !== player.uid)].slice(0, RECENT_PLAYERS_LIMIT);
 }
 
-/** RivalsIsland's search takes an exact in-game name of up to 16 characters. */
+/** The game allows an in-game name of up to 16 characters; search is exact. */
 export const PlayerNameQuerySchema = z.string().trim().min(1).max(16);
 
 /** A name worth offering as a ranked lookup; esports names can be longer than an in-game name. */

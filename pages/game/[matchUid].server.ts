@@ -1,9 +1,9 @@
 import { defineHandler, defineHead, type InferProps } from "void";
 
 import { MatchUidSchema } from "@/domain/player";
-import { toMatchDetail } from "@/rivalsisland/toDomain";
+import { toMatchDetail } from "@/rivalstracker/toDomain";
 
-import { heroCatalogueOrEmpty, loadPlayers, shellSnapshot } from "../../src/players";
+import { loadPlayers, shellSnapshot } from "../../src/players";
 
 export type Props = InferProps<typeof loader>;
 
@@ -18,12 +18,9 @@ export const loader = defineHandler(async (c) => {
   }
 
   const match = await loadPlayers(async (data) => {
-    const [{ data: res }, catalogue] = await Promise.all([
-      data.get("match", { matchUid: matchUid.data }),
-      heroCatalogueOrEmpty(data),
-    ]);
+    const { data: res } = await data.get("match", { matchUid: matchUid.data });
 
-    return toMatchDetail(res, catalogue);
+    return toMatchDetail(res);
   });
 
   if (!match.ok && match.problem === "not_found") c.set("notFound", true);

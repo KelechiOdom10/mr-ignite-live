@@ -30,7 +30,7 @@ export default function GamePage({ snapshot: initial, match }: Props) {
             <DraftStrip match={match.value} />
             <MatchTeams match={match.value} />
           </div>
-          <p className="mt-6 text-xs text-muted-foreground">Match data from RivalsIsland.</p>
+          <p className="mt-6 text-xs text-muted-foreground">Match data from RivalsTracker.</p>
         </>
       ) : (
         <ProblemNotice problem={match.problem} />

@@ -32,7 +32,7 @@ export default function PlayersPage({ snapshot: initial, favourites, top, prefil
     <AppShell snapshot={snapshot} connection={connection} now={now}>
       <h1 className="text-2xl font-semibold tracking-tight">Players</h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Ranked profiles, careers and match history from RivalsIsland.
+        Ranked profiles, careers and match history from RivalsTracker.
       </p>
       <div className="mt-6">
         <PlayersTabs current="/players" />

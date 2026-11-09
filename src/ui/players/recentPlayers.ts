@@ -32,7 +32,7 @@ function subscribe(listener: () => void) {
   };
 }
 
-/** Players opened in this browser. Kept locally so finding them again costs no credits. */
+/** Players opened in this browser. Kept locally so finding them again costs no requests. */
 export function useRecentPlayers(): RecentPlayer[] {
   return useSyncExternalStore(subscribe, read, () => NONE);
 }

@@ -3,26 +3,25 @@ import { env } from "void/env";
 import type { Snapshot } from "@/domain/model";
 import type { Favourite, LeaderboardRow, PlayerCard, PlayerProblem } from "@/domain/player";
 import { scopeSnapshot } from "@/domain/scope";
-import { createRivalsIslandClient, type RivalsIslandClient } from "@/rivalsisland/client";
-import { COMPETITIVE } from "@/rivalsisland/endpoints";
+import { createRivalsTrackerClient, type RivalsTrackerClient } from "@/rivalstracker/client";
 import {
-  CreditBudgetExceededError,
   NotConfiguredError,
   problemOf,
-  RivalsIslandError,
-} from "@/rivalsisland/errors";
+  RequestBudgetExceededError,
+  RivalsTrackerError,
+} from "@/rivalstracker/errors";
 import {
   toHeroCatalogue,
   toLeaderboard,
   toPlayerCard,
   type HeroCatalogue,
-} from "@/rivalsisland/toDomain";
-import { d1CreditLedger, d1FavouriteStore, d1PlayerCache } from "@/store/d1";
+} from "@/rivalstracker/toDomain";
+import { d1FavouriteStore, d1PlayerCache, d1RequestLedger } from "@/store/d1";
 import {
   createPlayerData,
-  type CreditLedger,
   type PlayerCache,
   type PlayerData,
+  type RequestLedger,
 } from "@/store/playerData";
 
 import { currentSnapshot } from "./sync";
@@ -30,46 +29,47 @@ import { currentSnapshot } from "./sync";
 export const favourites = d1FavouriteStore;
 
 interface PlayerDataDeps {
-  client: RivalsIslandClient;
+  client: RivalsTrackerClient;
   cache: PlayerCache;
-  ledger: CreditLedger;
+  ledger: RequestLedger;
 }
 
-const notConfigured = (message: string): RivalsIslandClient => ({
+const notConfigured = (message: string): RivalsTrackerClient => ({
   call: () => Promise.reject(new NotConfiguredError(message, 0)),
 });
 
-async function dependencies(): Promise<PlayerDataDeps> {
-  if (env.RIVALSISLAND_MODE === "fixtures") {
-    // Production builds drop this branch and the fixture bundle with it.
-    if (!import.meta.env.DEV) {
-      const client = notConfigured(
-        "Fixtures mode only runs in development; set RIVALSISLAND_MODE=live",
-      );
+const off = (message: string): PlayerDataDeps => ({
+  client: notConfigured(message),
+  cache: d1PlayerCache,
+  ledger: d1RequestLedger,
+});
 
-      return { client, cache: d1PlayerCache, ledger: d1CreditLedger };
+async function dependencies(): Promise<PlayerDataDeps> {
+  const mode = env.PLAYER_DATA_MODE;
+
+  if (mode === "off") return off("PLAYER_DATA_MODE is off");
+
+  if (mode === "fixtures") {
+    // Production builds drop this branch and the fixture bundle with it. An unset mode in
+    // production therefore behaves like `off`, never fixtures.
+    if (!import.meta.env.DEV) {
+      return off("Fixtures mode only runs in development; set PLAYER_DATA_MODE=live");
     }
 
-    const [{ fakeRivalsIsland }, { memoryPlayerCache, memoryCreditLedger }] = await Promise.all([
-      import("../test/fakeRivalsIsland"),
+    const [{ fakeRivalsTracker }, { memoryPlayerCache, memoryRequestLedger }] = await Promise.all([
+      import("../test/fakeRivalsTracker"),
       import("../test/memoryPlayerDb"),
     ]);
 
-    // Replayed calls never touch the real cache or credit ledger.
+    // Replayed calls never touch the real cache or request ledger.
     return {
-      client: createRivalsIslandClient({ apiKey: "fixtures", fetch: fakeRivalsIsland().fetch }),
+      client: createRivalsTrackerClient({ fetch: fakeRivalsTracker().fetch }),
       cache: memoryPlayerCache(),
-      ledger: memoryCreditLedger(),
+      ledger: memoryRequestLedger(),
     };
   }
 
-  const apiKey = env.RIVALSISLAND_API_KEY;
-
-  const client = apiKey
-    ? createRivalsIslandClient({ apiKey })
-    : notConfigured("RIVALSISLAND_API_KEY is not set");
-
-  return { client, cache: d1PlayerCache, ledger: d1CreditLedger };
+  return { client: createRivalsTrackerClient(), cache: d1PlayerCache, ledger: d1RequestLedger };
 }
 
 let playerData: Promise<ReturnType<typeof createPlayerData>> | null = null;
@@ -77,14 +77,14 @@ let playerData: Promise<ReturnType<typeof createPlayerData>> | null = null;
 /** One instance per isolate, so concurrent loaders share its in-flight requests. */
 export function players() {
   playerData ??= dependencies().then((deps) =>
-    createPlayerData({ ...deps, budget: env.RIVALSISLAND_CREDIT_BUDGET, now: Date.now }),
+    createPlayerData({ ...deps, budget: env.PLAYER_DATA_REQUESTS_PER_DAY, now: Date.now }),
   );
 
   return playerData;
 }
 
-export function rivalsIslandMode(): "fixtures" | "live" {
-  return env.RIVALSISLAND_MODE;
+export function playerDataMode(): "fixtures" | "live" | "off" {
+  return env.PLAYER_DATA_MODE;
 }
 
 /** The esports snapshot for the shared header; player pages still render if the Liquipedia sync is down. */
@@ -108,7 +108,7 @@ export async function shellSnapshot(): Promise<Snapshot> {
 
 export type Loaded<T> = { ok: true; value: T } | { ok: false; problem: PlayerProblem };
 
-/** Runs a player-data read and maps a known RivalsIsland failure to a state the page can show. */
+/** Runs a player-data read and maps a known RivalsTracker failure to a state the page can show. */
 export async function loadPlayers<T>(read: (data: PlayerData) => Promise<T>): Promise<Loaded<T>> {
   try {
     return { ok: true, value: await read(await players()) };
@@ -126,7 +126,7 @@ export async function heroCatalogueOrEmpty(data: PlayerData): Promise<HeroCatalo
   try {
     return toHeroCatalogue((await data.get("heroes", {})).data);
   } catch (error) {
-    if (error instanceof RivalsIslandError || error instanceof CreditBudgetExceededError) {
+    if (error instanceof RivalsTrackerError || error instanceof RequestBudgetExceededError) {
       return new Map();
     }
 
@@ -134,22 +134,19 @@ export async function heroCatalogueOrEmpty(data: PlayerData): Promise<HeroCatalo
   }
 }
 
-/** Cards for saved players from the cache alone, so the list never spends credits. */
+/** Cards for saved players from the cache alone, so the list never spends a request. */
 export async function cachedPlayerCards(saved: readonly Favourite[]): Promise<PlayerCard[]> {
   const loaded = await loadPlayers((data) =>
     Promise.all(
       saved.map(async (f) => {
-        const [career, history] = await Promise.all([
-          data.peek("career", { uid: f.uid }),
-          data.peek("history", { uid: f.uid, page: 0, category: COMPETITIVE }),
-        ]);
+        const player = await data.peek("career", { uid: f.uid });
 
-        return toPlayerCard(f, career?.data ?? null, history?.data ?? null);
+        return toPlayerCard(f, player?.data ?? null);
       }),
     ),
   );
 
-  return loaded.ok ? loaded.value : saved.map((f) => toPlayerCard(f, null, null));
+  return loaded.ok ? loaded.value : saved.map((f) => toPlayerCard(f, null));
 }
 
 /** The top of the PC leaderboard if it's cached; nothing otherwise. */
@@ -157,7 +154,7 @@ export async function cachedLeaderboardTop(count: number): Promise<LeaderboardRo
   const loaded = await loadPlayers(async (data) => {
     const board = await data.peek("leaderboard", { device: "pc" });
 
-    return board ? toLeaderboard(board.data, board).rows.slice(0, count) : [];
+    return board ? toLeaderboard(board.data, "pc", board).rows.slice(0, count) : [];
   });
 
   return loaded.ok ? loaded.value : [];

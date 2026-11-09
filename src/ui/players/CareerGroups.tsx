@@ -1,9 +1,13 @@
 import type { Career } from "@/domain/player";
 
-function compact(n: number): string {
-  return new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(
-    n,
-  );
+function compact(n: number | null): string {
+  return n === null
+    ? "–"
+    : new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(n);
+}
+
+function count(n: number | null): string {
+  return n === null ? "–" : n.toLocaleString("en-US");
 }
 
 function percent(rate: number | null): string {
@@ -16,7 +20,10 @@ function fixed(n: number | null): string {
 
 /** Career totals, grouped by what they say about the player rather than listed flat. */
 export function CareerGroups({ career }: { career: Career }) {
-  const mvpRate = career.matches > 0 ? Math.round((career.mvp / career.matches) * 100) : null;
+  const mvpRate =
+    career.mvp !== null && career.matches > 0
+      ? Math.round((career.mvp / career.matches) * 100)
+      : null;
 
   const groups = [
     {
@@ -31,16 +38,16 @@ export function CareerGroups({ career }: { career: Career }) {
     {
       title: "Impact",
       stats: [
-        ["MVP", String(career.mvp), mvpRate === null ? null : `${mvpRate}% of matches`],
-        ["SVP", String(career.svp), null],
-        ["Solo kills", career.soloKills.toLocaleString("en-US"), null],
-        ["Best streak", String(career.bestKillStreak), null],
+        ["MVP", count(career.mvp), mvpRate === null ? null : `${mvpRate}% of matches`],
+        ["SVP", count(career.svp), null],
+        ["Solo kills", count(career.soloKills), null],
+        ["Best streak", count(career.bestKillStreak), null],
       ],
     },
     {
       title: "Volume",
       stats: [
-        ["Matches", career.matches.toLocaleString("en-US"), null],
+        ["Matches", count(career.matches), null],
         ["Win rate", percent(career.winRate), null],
         ["Play time", `${Math.round(career.playSeconds / 3600).toLocaleString("en-US")}h`, null],
         ["Healing", compact(career.healing), null],

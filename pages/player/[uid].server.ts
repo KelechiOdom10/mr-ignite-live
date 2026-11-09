@@ -3,93 +3,90 @@ import { z } from "zod";
 
 import { problemMessage } from "@/domain/player";
 import { recentHeroes, UidSchema, type HeroCareer, type HeroPlay, type Uid } from "@/domain/player";
-import { COMPETITIVE } from "@/rivalsisland/endpoints";
+import { CareerPrivateError, MatchHistoryPrivateError } from "@/rivalstracker/errors";
 import {
   toCareer,
   toHeroCareer,
   toHistoryPage,
   toMatchDetail,
   toProfile,
-} from "@/rivalsisland/toDomain";
+} from "@/rivalstracker/toDomain";
 
-import {
-  favourites,
-  heroCatalogueOrEmpty,
-  loadPlayers,
-  shellSnapshot,
-  type Loaded,
-} from "../../src/players";
+import { favourites, loadPlayers, shellSnapshot, type Loaded } from "../../src/players";
 
 export type Props = InferProps<typeof loader>;
 
-const QuerySchema = z.object({
-  category: z.enum(["competitive", "all"]).catch("competitive"),
-  page: z.coerce.number().int().min(0).max(50).catch(0),
-});
-
-function categoryId(category: "competitive" | "all"): number | null {
-  return category === "competitive" ? COMPETITIVE : null;
+/** A player can hide their overview or their history; each is an ordinary state, not a failure. */
+function assertCareerVisible(res: { visibility: { overview: boolean; career_stats: boolean } }) {
+  if (!res.visibility.overview || !res.visibility.career_stats) {
+    throw new CareerPrivateError("Career is private", 0);
+  }
 }
 
-function readPlayer(uid: Uid, query: z.infer<typeof QuerySchema>, refresh: boolean) {
-  return Promise.all([
-    loadPlayers(async (data) => {
-      const [{ data: res, fetchedAt, stale, refreshFailed }, catalogue] = await Promise.all([
-        data.get("career", { uid }, { refresh }),
-        heroCatalogueOrEmpty(data),
-      ]);
-
-      return {
-        profile: toProfile(res, catalogue),
-        career: toCareer(res),
-        freshness: { fetchedAt, stale },
-        refreshFailed,
-      };
-    }),
-    loadPlayers(async (data) => {
-      const params = { uid, page: query.page, category: categoryId(query.category) };
-
-      const {
-        data: res,
-        fetchedAt,
-        stale,
-        refreshFailed,
-      } = await data.get("history", params, {
-        refresh,
-      });
-
-      return { ...toHistoryPage(res, { fetchedAt, stale }), refreshFailed };
-    }),
-  ]);
+function assertHistoryVisible(res: { visibility: { match_history: boolean } }) {
+  if (!res.visibility.match_history) {
+    throw new MatchHistoryPrivateError("Match history is private", 0);
+  }
 }
 
-/** Heroes from matches already cached, and any hero cards already loaded. Costs nothing. */
+async function readPlayer(uid: Uid, refresh: boolean) {
+  // career, history and heroCareer share one upstream request; the first read fills the cache.
+  const player = await loadPlayers(async (data) => {
+    const {
+      data: res,
+      fetchedAt,
+      stale,
+      refreshFailed,
+    } = await data.get("career", { uid }, { refresh });
+
+    assertCareerVisible(res);
+
+    return {
+      profile: toProfile(res),
+      career: toCareer(res),
+      freshness: { fetchedAt, stale },
+      refreshFailed,
+    };
+  });
+
+  const history = await loadPlayers(async (data) => {
+    const { data: res, fetchedAt, stale, refreshFailed } = await data.get("history", { uid });
+
+    assertHistoryVisible(res);
+
+    return { ...toHistoryPage(res, { fetchedAt, stale }), refreshFailed };
+  });
+
+  return [player, history] as const;
+}
+
+/** Heroes from matches already cached, with the season's hero cards from the cached profile. */
 async function heroesFromCache(
   uid: Uid,
   matchUids: readonly string[],
-  signatureHeroId: number | null,
 ): Promise<{ recent: HeroPlay[]; coveredMatches: number; cards: HeroCareer[] }> {
   const loaded = await loadPlayers(async (data) => {
-    const catalogue = await heroCatalogueOrEmpty(data);
-    const peeked = await Promise.all(matchUids.map((matchUid) => data.peek("match", { matchUid })));
-    const matches = peeked.flatMap((m) => (m ? [toMatchDetail(m.data, catalogue)] : []));
+    const [player, ...peeked] = await Promise.all([
+      data.peek("career", { uid }),
+      ...matchUids.map((matchUid) => data.peek("match", { matchUid })),
+    ]);
+
+    const matches = peeked.flatMap((m) => (m ? [toMatchDetail(m.data)] : []));
     const recent = recentHeroes(uid, matches);
 
-    const ids = [...new Set([signatureHeroId, ...recent.map((h) => h.id)])].filter(
-      (id): id is number => id !== null,
-    );
+    const cards =
+      player === null
+        ? []
+        : recent.flatMap((hero) => {
+            const card = toHeroCareer(player.data, hero.id, {
+              fetchedAt: player.fetchedAt,
+              stale: player.stale,
+            });
 
-    const cards = await Promise.all(
-      ids.map(async (heroId) => {
-        const card = await data.peek("heroCareer", { uid, heroId });
+            return card ? [card] : [];
+          });
 
-        return card
-          ? [toHeroCareer(card.data, catalogue, { fetchedAt: card.fetchedAt, stale: card.stale })]
-          : [];
-      }),
-    );
-
-    return { recent, coveredMatches: matches.length, cards: cards.flat() };
+    return { recent, coveredMatches: matches.length, cards };
   });
 
   return loaded.ok ? loaded.value : { recent: [], coveredMatches: 0, cards: [] };
@@ -104,12 +101,6 @@ function refreshDidNotHappen(result: Loaded<{ refreshFailed: boolean }>): boolea
 
 export const loader = defineHandler(async (c) => {
   const uid = UidSchema.safeParse(c.req.param("uid"));
-
-  const query = QuerySchema.parse({
-    category: c.req.query("category"),
-    page: c.req.query("page"),
-  });
-
   const snapshot = await shellSnapshot();
 
   if (!uid.success) {
@@ -118,7 +109,6 @@ export const loader = defineHandler(async (c) => {
     return {
       snapshot,
       uid: null,
-      query,
       player: null,
       history: null,
       heroes: null,
@@ -127,7 +117,7 @@ export const loader = defineHandler(async (c) => {
   }
 
   const [[player, history], saved] = await Promise.all([
-    readPlayer(uid.data, query, false),
+    readPlayer(uid.data, false),
     favourites.list(),
   ]);
 
@@ -137,18 +127,13 @@ export const loader = defineHandler(async (c) => {
   const heroes = await heroesFromCache(
     uid.data,
     history.ok ? history.value.rows.map((r) => r.matchUid) : [],
-    player.ok ? (player.value.profile.signatureHero?.id ?? null) : null,
   );
 
-  return { snapshot, uid: uid.data, query, player, history, heroes, isFavourite };
+  return { snapshot, uid: uid.data, player, history, heroes, isFavourite };
 });
 
 const ActionBody = z.discriminatedUnion("intent", [
-  z.object({
-    intent: z.literal("refresh"),
-    category: z.enum(["competitive", "all"]),
-    page: z.number().int().min(0).max(50),
-  }),
+  z.object({ intent: z.literal("refresh") }),
   z.object({ intent: z.literal("favourite"), name: z.string().min(1).max(64) }),
   z.object({ intent: z.literal("unfavourite") }),
   z.object({ intent: z.literal("hero"), heroId: z.number().int().min(1).max(100_000) }),
@@ -178,21 +163,34 @@ export const action = defineHandler.withValidator({ body: ActionBody })(async (c
     const loaded = await loadPlayers(async (data) => {
       const cached = await data.peek("heroCareer", { uid, heroId });
 
-      return data.get("heroCareer", { uid, heroId }, { refresh: cached?.stale ?? false });
+      const fetched = await data.get(
+        "heroCareer",
+        { uid, heroId },
+        { refresh: cached?.stale ?? false },
+      );
+
+      return toHeroCareer(fetched.data, heroId, {
+        fetchedAt: fetched.fetchedAt,
+        stale: fetched.stale,
+      });
     });
 
     if (!loaded.ok) return c.json({ errors: { intent: problemMessage(loaded.problem) } }, 422);
 
+    if (!loaded.value) return c.json({ errors: { intent: "No ranked stats for that hero." } }, 422);
+
     return;
   }
 
-  const [player, history] = await readPlayer(uid, body, true);
+  const [player, history] = await readPlayer(uid, true);
   const refused = [player, history].some((r) => refreshDidNotHappen(r));
 
   if (refused) {
     return c.json(
       {
-        errors: { intent: "Couldn't refresh: the credit budget is spent or RivalsIsland is down." },
+        errors: {
+          intent: "Couldn't refresh: the request budget is spent or RivalsTracker is down.",
+        },
       },
       422,
     );

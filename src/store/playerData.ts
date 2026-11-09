@@ -1,4 +1,4 @@
-import type { RivalsIslandClient } from "@/rivalsisland/client";
+import type { RivalsTrackerClient } from "@/rivalstracker/client";
 import {
   ENDPOINTS,
   requestKey,
@@ -6,20 +6,19 @@ import {
   type EndpointName,
   type EndpointParams,
   type ResponseOf,
-} from "@/rivalsisland/endpoints";
+} from "@/rivalstracker/endpoints";
 import {
-  CareerPrivateError,
-  CreditBudgetExceededError,
-  MatchHistoryPrivateError,
   NotFoundError,
-  RivalsIslandContractError,
-  RivalsIslandError,
+  RequestBudgetExceededError,
+  RivalsTrackerContractError,
+  RivalsTrackerError,
   UpstreamUnavailableError,
-} from "@/rivalsisland/errors";
+} from "@/rivalstracker/errors";
 
 const NEGATIVE_TTL_MS = 30 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
-export type CachedStatus = "ok" | "history_private" | "career_private" | "not_found" | "broken";
+export type CachedStatus = "ok" | "not_found" | "broken";
 
 export interface CachedResponse {
   status: CachedStatus;
@@ -41,65 +40,61 @@ export interface Reservation {
   expected: number;
   budget: number;
   at: number;
+  /** Only reservations at or after this instant count against the budget. */
+  since: number;
 }
 
 export interface Settlement {
   cost: number;
-  balance: number | null;
   httpStatus: number;
 }
 
-export interface CreditLedger {
-  /** Atomically records `expected` as pending unless settled plus pending credits would pass `budget`. Returns null when refused. */
+export interface RequestLedger {
+  /** Atomically records `expected` unless today's settled plus pending requests would pass `budget`. Returns null when refused. */
   reserve(reservation: Reservation): Promise<number | null>;
   settle(id: number, settlement: Settlement): Promise<void>;
-  summary(): Promise<{ spent: number; pending: number; balance: number | null }>;
+  summary(since: number): Promise<{ spent: number; pending: number }>;
 }
 
 export interface Fetched<T> {
   data: T;
   fetchedAt: number;
-  /** Past its TTL; shown with its age and a priced refresh. */
+  /** Past its TTL; shown with its age and a refresh control. */
   stale: boolean;
   /** A refresh was asked for but refused or failed, so this is the older copy. */
   refreshFailed: boolean;
 }
 
 export interface PlayerDataOptions {
-  client: RivalsIslandClient;
+  client: RivalsTrackerClient;
   cache: PlayerCache;
-  ledger: CreditLedger;
+  ledger: RequestLedger;
   budget: number;
   now: () => number;
 }
 
 /** Endpoints a visit may refetch on its own once expired; the rest wait for an explicit refresh. */
-const REFETCH_ON_VISIT: ReadonlySet<EndpointName> = new Set(["search", "leaderboard", "heroes"]);
+const REFETCH_ON_VISIT: ReadonlySet<EndpointName> = new Set(["search", "leaderboard"]);
 
-function negativeError(status: CachedStatus): RivalsIslandError | null {
-  if (status === "history_private")
-    return new MatchHistoryPrivateError("Match history is private", 0);
+function dayStart(at: number): number {
+  return Math.floor(at / DAY_MS) * DAY_MS;
+}
 
-  if (status === "career_private") return new CareerPrivateError("Career is private", 0);
-
-  if (status === "not_found") return new NotFoundError("Not found on RivalsIsland", 0);
+function negativeError(status: CachedStatus): RivalsTrackerError | null {
+  if (status === "not_found") return new NotFoundError("Not found on RivalsTracker", 0);
 
   if (status === "broken") {
-    return new UpstreamUnavailableError("RivalsIsland's last answer didn't match our schema", 0);
+    return new UpstreamUnavailableError("RivalsTracker's last answer didn't match our schema", 0);
   }
 
   return null;
 }
 
 function negativeStatus(cause: unknown): CachedStatus | null {
-  if (cause instanceof MatchHistoryPrivateError) return "history_private";
-
-  if (cause instanceof CareerPrivateError) return "career_private";
-
   if (cause instanceof NotFoundError) return "not_found";
 
-  // A changed response would fail again; remembering it stops a paid retry on every view.
-  if (cause instanceof RivalsIslandContractError) return "broken";
+  // A changed response would fail again; remembering it stops a retry on every view.
+  if (cause instanceof RivalsTrackerContractError) return "broken";
 
   return null;
 }
@@ -123,6 +118,19 @@ export function createPlayerData(options: PlayerDataOptions) {
     return { data, fetchedAt: entry.fetchedAt, stale, refreshFailed };
   }
 
+  function local<E extends EndpointName>(name: E): Fetched<ResponseOf<E>> | null {
+    const endpoint: Endpoint<E> = ENDPOINTS[name];
+
+    if (endpoint.local === undefined) return null;
+
+    return {
+      data: endpoint.schema.parse(endpoint.local()),
+      fetchedAt: now(),
+      stale: false,
+      refreshFailed: false,
+    };
+  }
+
   async function fetchAndStore<E extends EndpointName>(
     name: E,
     params: EndpointParams[E],
@@ -131,27 +139,35 @@ export function createPlayerData(options: PlayerDataOptions) {
   ): Promise<Fetched<ResponseOf<E>>> {
     const endpoint: Endpoint<E> = ENDPOINTS[name];
     const at = now();
-    const id = await ledger.reserve({ endpoint: name, key, expected: endpoint.cost, budget, at });
+
+    const id = await ledger.reserve({
+      endpoint: name,
+      key,
+      expected: endpoint.cost,
+      budget,
+      at,
+      since: dayStart(at),
+    });
 
     if (id === null) {
       if (fallback?.status === "ok") return fromCache(name, fallback, true);
-      throw new CreditBudgetExceededError(endpoint.cost, budget);
+      throw new RequestBudgetExceededError(endpoint.cost, budget);
     }
 
-    let charged: Awaited<ReturnType<typeof client.call<E>>>;
+    let data: ResponseOf<E>;
 
     try {
-      charged = await client.call(name, params);
+      data = await client.call(name, params);
     } catch (error) {
       await ledger.settle(id, {
-        cost: error instanceof RivalsIslandError ? error.creditCost : 0,
-        balance: null,
+        // A failed request still reached RivalsTracker, unless it never left the process.
+        cost: error instanceof RivalsTrackerError ? error.requests : 1,
         httpStatus: 0,
       });
       const status = negativeStatus(error);
 
       if (status === "broken" && fallback?.status === "ok") {
-        // Keep the last good copy readable, and hold off paying for another broken answer.
+        // Keep the last good copy readable, and hold off retrying a broken answer.
         await cache.put(key, name, { ...fallback, expiresAt: at + NEGATIVE_TTL_MS });
 
         return fromCache(name, fallback, true);
@@ -166,7 +182,7 @@ export function createPlayerData(options: PlayerDataOptions) {
         });
       } else if (fallback?.status === "ok") {
         console.warn(
-          JSON.stringify({ event: "rivalsisland_failed_serving_stale", endpoint: name }),
+          JSON.stringify({ event: "rivalstracker_failed_serving_stale", endpoint: name }),
         );
 
         return fromCache(name, fallback, true);
@@ -175,13 +191,7 @@ export function createPlayerData(options: PlayerDataOptions) {
       throw error;
     }
 
-    const { data, cost, balance } = charged;
-
-    if (cost !== null && cost !== endpoint.cost) {
-      console.warn(JSON.stringify({ event: "credit_cost_mismatch", endpoint: name, cost }));
-    }
-
-    await ledger.settle(id, { cost: cost ?? endpoint.cost, balance, httpStatus: 200 });
+    await ledger.settle(id, { cost: endpoint.cost, httpStatus: 200 });
     const expiresAt = endpoint.ttlSeconds === null ? null : at + endpoint.ttlSeconds * 1000;
     await cache.put(key, name, { status: "ok", body: data, fetchedAt: at, expiresAt });
 
@@ -194,6 +204,9 @@ export function createPlayerData(options: PlayerDataOptions) {
       params: EndpointParams[E],
       { refresh = false }: { refresh?: boolean } = {},
     ): Promise<Fetched<ResponseOf<E>>> {
+      const localData = local(name);
+
+      if (localData) return localData;
       const key = requestKey(name, params);
       const cached = await cache.get(key);
 
@@ -207,7 +220,7 @@ export function createPlayerData(options: PlayerDataOptions) {
       const running = inFlight.get(key);
 
       if (running) {
-        // SAFETY: inFlight is keyed by requestKey(name, params), which includes the endpoint name, so a hit holds a promise for this same E.
+        // SAFETY: inFlight is keyed by requestKey(name, params), so a hit holds a promise for this same request.
         return running as Promise<Fetched<ResponseOf<E>>>;
       }
 
@@ -216,11 +229,14 @@ export function createPlayerData(options: PlayerDataOptions) {
 
       return request;
     },
-    /** What the cache already holds, without calling RivalsIsland or touching the budget. */
+    /** What the cache already holds, without calling RivalsTracker or touching the budget. */
     async peek<E extends EndpointName>(
       name: E,
       params: EndpointParams[E],
     ): Promise<Fetched<ResponseOf<E>> | null> {
+      const localData = local(name);
+
+      if (localData) return localData;
       const cached = await cache.get(requestKey(name, params));
 
       if (cached?.status !== "ok") return null;
@@ -233,7 +249,7 @@ export function createPlayerData(options: PlayerDataOptions) {
 
       return { data: parsed.data, fetchedAt: cached.fetchedAt, stale, refreshFailed: false };
     },
-    credits: () => ledger.summary(),
+    usage: () => ledger.summary(dayStart(now())),
   };
 }
 
