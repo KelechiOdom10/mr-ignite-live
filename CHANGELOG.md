@@ -4,6 +4,8 @@ Newest first. One line per change: the outcome first, then the PR.
 
 ## Unreleased
 
+- **Event pages:** prize distribution by place, and a participants grid. Placings hide with Hide spoilers (#40).
+
 ## 2026-11-09
 
 - **Deploys work again.** They publish first, then check readiness (#38).

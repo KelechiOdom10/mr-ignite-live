@@ -1,5 +1,6 @@
 import type { IgniteEvent, Snapshot, Team } from "@/domain/model";
 
+import { useSpoilersHidden } from "./spoilers";
 import { TeamLogo } from "./TeamMark";
 
 function usd(amount: number): string {
@@ -7,6 +8,8 @@ function usd(amount: number): string {
 }
 
 export function PrizeDistribution({ event, snapshot }: { event: IgniteEvent; snapshot: Snapshot }) {
+  const hidden = useSpoilersHidden();
+
   if (event.prizes.length === 0) return null;
 
   return (
@@ -14,6 +17,11 @@ export function PrizeDistribution({ event, snapshot }: { event: IgniteEvent; sna
       <h2 id="prize-distribution" className="text-lg font-semibold">
         Prize distribution
       </h2>
+      {hidden && (
+        <p className="text-sm text-muted-foreground">
+          Placings are hidden while Hide spoilers is on.
+        </p>
+      )}
       <div className="overflow-hidden rounded-xl border">
         <table className="w-full table-fixed text-sm">
           <thead className="bg-muted/50 text-xs text-muted-foreground">
@@ -34,16 +42,20 @@ export function PrizeDistribution({ event, snapshot }: { event: IgniteEvent; sna
               <tr key={prize.place} className="border-t">
                 <td className="px-3 py-2 tabular-nums">{prize.place}</td>
                 <td className="px-3 py-2">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <TeamLogo
-                      team={prize.team}
-                      info={prize.team ? snapshot.teams[prize.team.name] : undefined}
-                      size={20}
-                    />
-                    <span className="truncate" title={prize.team?.name}>
-                      {prize.team?.name ?? "TBD"}
-                    </span>
-                  </div>
+                  {hidden ? (
+                    <span className="text-muted-foreground">Hidden</span>
+                  ) : (
+                    <div className="flex min-w-0 items-center gap-2">
+                      <TeamLogo
+                        team={prize.team}
+                        info={prize.team ? snapshot.teams[prize.team.name] : undefined}
+                        size={20}
+                      />
+                      <span className="truncate" title={prize.team?.name}>
+                        {prize.team?.name ?? "TBD"}
+                      </span>
+                    </div>
+                  )}
                 </td>
                 <td className="px-3 py-2 text-right tabular-nums">{usd(prize.prizeUsd)}</td>
               </tr>
