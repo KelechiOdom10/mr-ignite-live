@@ -16,6 +16,7 @@ function anEvent(id: string, endDate: string | null): IgniteEvent {
     startDate: "2026-08-01",
     endDate,
     prizePoolUsd: null,
+    prizes: [],
     liquipediaUrl: "https://liquipedia.net/marvelrivals/x",
     updatedAt: "2026-10-16T00:00:00Z",
     iconFile: null,

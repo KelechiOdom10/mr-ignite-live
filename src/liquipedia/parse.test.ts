@@ -6,12 +6,14 @@ import {
   eventIdFor,
   parseEventInfo,
   parsePageMatches,
+  parsePrizePool,
   parseTeamShortExpansion,
   TEAM_TEMPLATE_SEPARATOR,
 } from "./parse";
 
 const AMERICAS = "MR Ignite/2026/Stage 2/Americas";
 const AMERICAS_GROUPS = "MR Ignite/2026/Stage 2/Americas/Group Stage";
+const PACIFIC_ASIA = "MR Ignite/2026/Stage 2/Pacific/Asia";
 
 describe("parsePageMatches on a recorded playoff bracket", () => {
   const matches = parsePageMatches(AMERICAS, recordedWikitext(AMERICAS));
@@ -92,6 +94,39 @@ describe("parseEventInfo", () => {
   it("returns no event for a group stage subpage", () => {
     expect(parseEventInfo(AMERICAS_GROUPS, "", "2026-10-04T00:00:00Z")).toBeNull();
     expect(eventIdFor(AMERICAS_GROUPS)).toBe(AMERICAS);
+  });
+
+  it("carries the prize distribution parsed from the same page", () => {
+    const event = parseEventInfo(AMERICAS, recordedWikitext(AMERICAS), "2026-10-16T22:22:40Z");
+    expect(event?.prizes).toHaveLength(12);
+  });
+});
+
+describe("parsePrizePool on a recorded team prize pool", () => {
+  const prizes = parsePrizePool(recordedWikitext(AMERICAS));
+
+  it("numbers every place, including the ones a shared slot covers", () => {
+    expect(prizes.map((prize) => prize.place)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+  });
+
+  it("repeats a shared slot's prize for each of its places", () => {
+    expect(prizes[4]).toEqual({ place: 5, prizeUsd: 12000, team: null });
+    expect(prizes[5]).toEqual({ place: 6, prizeUsd: 12000, team: null });
+  });
+
+  it("adds up to the prize pool in the infobox", () => {
+    const total = prizes.reduce((sum, prize) => sum + prize.prizeUsd, 0);
+    expect(total).toBe(200000);
+  });
+
+  it("shows a slot with no opponent as TBD", () => {
+    expect(prizes.every((prize) => prize.team === null)).toBe(true);
+  });
+
+  it("keeps counting places through qualification-only slots with no prize", () => {
+    const pacific = parsePrizePool(recordedWikitext(PACIFIC_ASIA));
+    expect(pacific.map((prize) => prize.place)).toEqual([7, 8]);
+    expect(pacific.every((prize) => prize.prizeUsd === 3750)).toBe(true);
   });
 });
 
