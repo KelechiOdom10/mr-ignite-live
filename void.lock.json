@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "source": {},
+  "resolved": {
+    "account_id": "ab6145b5f4d74c798229173319deaf21",
+    "compatibility_date": "2026-02-24",
+    "d1_databases": [
+      {
+        "binding": "DB",
+        "database_name": "rivals-hub-db",
+        "database_id": "2e42eb2a-81b8-4996-9521-7ccbd6da97da",
+        "migrations_dir": "./db/migrations"
+      }
+    ],
+    "kv_namespaces": [
+      {
+        "binding": "KV",
+        "id": "369860ee35c24c16b61cba2cd6ac86b6"
+      }
+    ],
+    "name": "rivals-hub"
+  },
+  "text": "{\n  \"account_id\": \"ab6145b5f4d74c798229173319deaf21\",\n  \"compatibility_date\": \"2026-02-24\",\n  \"d1_databases\": [\n    {\n      \"binding\": \"DB\",\n      \"database_name\": \"rivals-hub-db\",\n      \"database_id\": \"2e42eb2a-81b8-4996-9521-7ccbd6da97da\",\n      \"migrations_dir\": \"./db/migrations\"\n    }\n  ],\n  \"kv_namespaces\": [\n    {\n      \"binding\": \"KV\",\n      \"id\": \"369860ee35c24c16b61cba2cd6ac86b6\"\n    }\n  ],\n  \"name\": \"rivals-hub\"\n}\n"
+}

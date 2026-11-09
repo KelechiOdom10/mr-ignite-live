@@ -108,6 +108,33 @@ describe("toMatchStats on a recorded series", () => {
     expect(thieves?.bans.map((h) => h.id)).toContain("devil-dinosaur");
   });
 
+  it("drops a ban mrvl didn't capture instead of counting a hero called Hero 0", () => {
+    const unrecorded = {
+      kind: "ban",
+      hero: { id: "hero-0", name: "Hero 0", role: "Duelist", portraitUrl: "" },
+    };
+
+    const withGap: MrvlMatchPage = {
+      match: {
+        ...page.match,
+        games: page.match.games.map((game) => ({
+          ...game,
+          scoreboard: game.scoreboard && {
+            ...game.scoreboard,
+            teams: game.scoreboard.teams.map((team) => ({
+              ...team,
+              bans: [...(team.bans ?? []), unrecorded],
+            })),
+          },
+        })),
+      },
+    };
+
+    const map = toMatchStats(flyVs100t, withGap, "u1", new Date("2026-10-17T00:00:00Z")).maps[0];
+    expect(map?.teams[0].bans.map((h) => h.id)).not.toContain("hero-0");
+    expect(map?.teams[0].bans).toHaveLength(5);
+  });
+
   it("keeps map 1's bans and protects in draft order, on Liquipedia's sides", () => {
     // 100 Thieves (side 2) is lobby camp 0, so it protects first; both sides ban in steps 0, 5 and 10.
     const steps = stats.maps[0]?.draft?.map((a) => [a.phase, a.side, a.kind, a.hero.id]);

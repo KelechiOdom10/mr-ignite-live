@@ -9,6 +9,7 @@ import {
   fetchStatsChanges,
   noStatsChanges,
   type StatsChanges,
+  writeBackfillMisses,
   writeMatchStats,
   writeStatsIndex,
 } from "./stats";
@@ -83,6 +84,8 @@ export async function syncOnce(deps: SyncDeps): Promise<SyncOutcome> {
 
   // Last, so a run that fails before here refetches those series and re-emits their map results.
   if (stats.index) await writeStatsIndex(store, stats.index);
+
+  if (stats.misses) await writeBackfillMisses(store, stats.misses);
 
   return {
     snapshot: toSnapshot(next ?? prev, new Date(deps.now())),

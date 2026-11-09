@@ -73,13 +73,20 @@ function matchDay({ mrvl: mrvlOptions }: { mrvl?: MrvlFakeOptions } = {}) {
 
       return syncOnce(deps);
     },
+    /** The recorded list links four older series, and backfill takes two a run. */
+    settle: async () => {
+      for (let run = 0; run < 2; run++) {
+        clock.advance(60_000);
+        await syncOnce(deps);
+      }
+    },
   };
 }
 
 describe("syncOnce on match day", () => {
   it("writes nothing and publishes nothing when neither Liquipedia nor mrvl changed", async () => {
     const day = matchDay();
-    await day.sync();
+    await day.settle();
     day.store.resetPuts();
 
     const outcome = await day.sync();
@@ -97,6 +104,7 @@ describe("syncOnce on match day", () => {
       snapshot: 1,
       [`stats:v2:${FLY_100T}`]: 1,
       "stats-index:v2": 1,
+      "stats-backfill-misses:v1": 1,
     });
     expect(outcome.changed).toBe(true);
   });
@@ -114,6 +122,7 @@ describe("syncOnce on match day", () => {
       snapshot: 1,
       [`stats:v2:${FLY_100T}`]: 1,
       "stats-index:v2": 1,
+      "stats-backfill-misses:v1": 1,
     });
     expect(outcome.changedPages).toBe(1);
     const stored = await readStored(day.store);
@@ -186,7 +195,7 @@ describe("syncOnce on match day", () => {
   it("rewrites neither stats nor the snapshot when mrvl re-saves a series with identical stats", async () => {
     // mrvl bumps updatedAt on bulk edits, so the page is refetched; only the index records that.
     const day = matchDay();
-    await day.sync();
+    await day.settle();
     day.store.resetPuts();
     day.mrvl.settings.resaved = [FLY_100T_MRVL_ID];
     const earlierRequests = day.mrvl.requests.length;
@@ -293,7 +302,11 @@ describe("syncOnce on match day", () => {
 
     const outcome = await day.sync();
 
-    expect(day.store.putCounts()).toEqual({ snapshot: 1, "stats-index:v2": 1 });
+    expect(day.store.putCounts()).toEqual({
+      snapshot: 1,
+      "stats-index:v2": 1,
+      "stats-backfill-misses:v1": 1,
+    });
     expect(outcome.updatedStats).toBe(0);
   });
 
@@ -306,6 +319,7 @@ describe("syncOnce on match day", () => {
       snapshot: 1,
       [`stats:v2:${FLY_100T}`]: 1,
       "stats-index:v2": 1,
+      "stats-backfill-misses:v1": 1,
     });
     day.mrvl.settings.failingPages = [];
     const earlierRequests = day.mrvl.requests.length;
@@ -315,7 +329,8 @@ describe("syncOnce on match day", () => {
       .slice(earlierRequests)
       .filter((r) => r.path === "matches:getPageData");
 
-    expect(fetched.map((r) => r.args.id)).toEqual([TLC_SWAMP_MRVL_ID]);
+    // Ahead of the older series still waiting for backfill.
+    expect(fetched[0]?.args.id).toBe(TLC_SWAMP_MRVL_ID);
   });
 
   it("skips an mrvl series page that never answers instead of dropping every series' stats", async () => {
@@ -327,6 +342,7 @@ describe("syncOnce on match day", () => {
       snapshot: 1,
       [`stats:v2:${FLY_100T}`]: 1,
       "stats-index:v2": 1,
+      "stats-backfill-misses:v1": 1,
     });
   });
 });

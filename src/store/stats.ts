@@ -21,6 +21,16 @@ const LIVE_LIMIT = 20;
 const MAX_PAGES_PER_SYNC = 6;
 const LOOKBACK_MS = 12 * 60 * 60 * 1000;
 
+// Free KV allows 1,000 writes a day and each backfilled series costs a stats write plus an index
+// rewrite, so backfill gets a small share of each run, and only for series mrvl's recent list can
+// still hold.
+const MAX_BACKFILL_PER_SYNC = 2;
+const BACKFILL_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+
+// Without a limit, a series whose page keeps failing would keep every run calling mrvl forever.
+// One mrvl's recent list doesn't hold has dropped off it for good, so it gets no second try.
+const MAX_BACKFILL_ATTEMPTS = 3;
+
 const StatsIndexSchema = z.record(
   z.string(),
   z.object({
@@ -35,6 +45,13 @@ const StatsIndexSchema = z.record(
 export type StatsIndex = z.infer<typeof StatsIndexSchema>;
 
 export const STATS_INDEX_KEY = kvKey("stats-index:v2", StatsIndexSchema);
+
+/** Failed backfill attempts per never-fetched series. */
+const BackfillMissesSchema = z.record(z.string(), z.number().int().positive());
+
+export type BackfillMisses = z.infer<typeof BackfillMissesSchema>;
+
+export const BACKFILL_MISSES_KEY = kvKey("stats-backfill-misses:v1", BackfillMissesSchema);
 
 export async function readMatchStats(store: KvStore, matchId: string): Promise<MatchStats | null> {
   const parsed = await store.get(statsKey(matchId));
@@ -56,20 +73,48 @@ async function readIndex(store: KvStore): Promise<StatsIndex> {
   return parsed?.success ? parsed.data : {};
 }
 
+async function readMisses(store: KvStore): Promise<BackfillMisses> {
+  const parsed = await store.get(BACKFILL_MISSES_KEY);
+
+  return parsed?.success ? parsed.data : {};
+}
+
 /** Indexed before draft order or per-hero lines were kept: worth one refetch while in lookback. */
 function needsBackfill(entry: StatsIndex[string] | undefined): boolean {
   return entry !== undefined && (entry.draftOrder !== true || entry.heroLines !== true);
 }
 
-export function statsCandidates(snapshot: Snapshot, now: number): Match[] {
+function startedAgo(m: Match, now: number): number {
+  return m.startsAt ? now - Date.parse(m.startsAt) : Number.POSITIVE_INFINITY;
+}
+
+/** A finished series past the lookback that was never fetched and still has attempts left. */
+function isBackfill(m: Match, now: number, index: StatsIndex, misses: BackfillMisses): boolean {
+  const ago = startedAgo(m, now);
+
+  return (
+    matchState(m, now).status === "finished" &&
+    index[m.id] === undefined &&
+    ago >= LOOKBACK_MS &&
+    ago < BACKFILL_WINDOW_MS &&
+    (misses[m.id] ?? 0) < MAX_BACKFILL_ATTEMPTS
+  );
+}
+
+function statsCandidates(
+  snapshot: Snapshot,
+  now: number,
+  index: StatsIndex,
+  misses: BackfillMisses,
+): Match[] {
   return snapshot.matches.filter((m) => {
     const status = matchState(m, now).status;
 
     if (status === "live") return true;
 
-    if (status !== "finished" || !m.startsAt) return false;
+    if (status === "finished" && startedAgo(m, now) < LOOKBACK_MS) return true;
 
-    return now - Date.parse(m.startsAt) < LOOKBACK_MS;
+    return isBackfill(m, now, index, misses);
   });
 }
 
@@ -99,10 +144,29 @@ export interface StatsChanges {
   mapOverrides: Record<string, MapOverride[]>;
   /** Null when no series page was fetched. */
   index: StatsIndex | null;
+  /** Null when no backfill attempt failed. */
+  misses: BackfillMisses | null;
 }
 
 export function noStatsChanges(): StatsChanges {
-  return { updated: [], mapOverrides: {}, index: null };
+  return { updated: [], mapOverrides: {}, index: null, misses: null };
+}
+
+/** Drops counts for series that left the snapshot or the backfill window, so the record stays small. */
+function stillRelevant(
+  misses: BackfillMisses,
+  snapshot: Snapshot,
+  now: number,
+  index: StatsIndex,
+): BackfillMisses {
+  const kept = snapshot.matches.filter(
+    (m) =>
+      misses[m.id] !== undefined &&
+      index[m.id] === undefined &&
+      startedAgo(m, now) < BACKFILL_WINDOW_MS,
+  );
+
+  return Object.fromEntries(kept.map((m) => [m.id, misses[m.id] ?? 0]));
 }
 
 export async function fetchStatsChanges({
@@ -116,7 +180,9 @@ export async function fetchStatsChanges({
   snapshot: Snapshot;
   now: number;
 }): Promise<StatsChanges> {
-  const candidates = statsCandidates(snapshot, now);
+  const index = await readIndex(store);
+  const misses = await readMisses(store);
+  const candidates = statsCandidates(snapshot, now, index, misses);
 
   if (candidates.length === 0) return noStatsChanges();
 
@@ -127,33 +193,57 @@ export async function fetchStatsChanges({
     ...(await mrvl.listMatches("upcoming", LIVE_LIMIT)),
   ];
 
-  const index = await readIndex(store);
   const updated: MatchStats[] = [];
   const mapOverrides: Record<string, MapOverride[]> = {};
   let pagesRequested = 0;
+  let backfillsRequested = 0;
   let indexChanged = false;
+  let missesChanged = false;
+
+  const miss = (id: string, attempts = (misses[id] ?? 0) + 1) => {
+    misses[id] = attempts;
+    missesChanged = true;
+  };
 
   // Series mrvl changed go first, so a backfill never delays a live score.
   const work = candidates
     .flatMap((match) => {
+      const backfill = isBackfill(match, now, index, misses);
       const summary = findMrvlMatch(match, summaries);
 
-      if (!summary) return [];
+      if (!summary) {
+        if (backfill) miss(match.id, MAX_BACKFILL_ATTEMPTS);
+
+        return [];
+      }
+
       const sourceUpdatedAt = String(summary.updatedAt ?? "");
       const changed = index[match.id]?.sourceUpdatedAt !== sourceUpdatedAt;
 
       if (!changed && !needsBackfill(index[match.id])) return [];
 
-      return [{ match, summary, sourceUpdatedAt, changed }];
+      return [{ match, summary, sourceUpdatedAt, urgent: changed && !backfill, backfill }];
     })
-    .sort((a, b) => Number(b.changed) - Number(a.changed));
+    .sort(
+      (a, b) =>
+        Number(b.urgent) - Number(a.urgent) ||
+        (b.match.startsAt ?? "").localeCompare(a.match.startsAt ?? ""),
+    );
 
-  for (const { match, summary, sourceUpdatedAt } of work) {
+  for (const { match, summary, sourceUpdatedAt, backfill } of work) {
     if (pagesRequested >= MAX_PAGES_PER_SYNC) break;
+
+    if (backfill && backfillsRequested >= MAX_BACKFILL_PER_SYNC) continue;
     pagesRequested++;
+
+    if (backfill) backfillsRequested++;
     const page = await seriesPage(mrvl, summary.id);
 
-    if (!page) continue;
+    if (!page) {
+      if (backfill) miss(match.id);
+
+      continue;
+    }
 
     const parsed = MatchStatsSchema.safeParse(
       toMatchStats(match, page, sourceUpdatedAt, new Date(now)),
@@ -185,7 +275,12 @@ export async function fetchStatsChanges({
     if (statsChanged(await readMatchStats(store, match.id), stats)) updated.push(stats);
   }
 
-  return { updated, mapOverrides, index: indexChanged ? index : null };
+  return {
+    updated,
+    mapOverrides,
+    index: indexChanged ? index : null,
+    misses: missesChanged ? stillRelevant(misses, snapshot, now, index) : null,
+  };
 }
 
 export async function writeMatchStats(store: KvStore, stats: MatchStats[]): Promise<void> {
@@ -194,4 +289,8 @@ export async function writeMatchStats(store: KvStore, stats: MatchStats[]): Prom
 
 export async function writeStatsIndex(store: KvStore, index: StatsIndex): Promise<void> {
   await store.put(STATS_INDEX_KEY, index);
+}
+
+export async function writeBackfillMisses(store: KvStore, misses: BackfillMisses): Promise<void> {
+  await store.put(BACKFILL_MISSES_KEY, misses);
 }
