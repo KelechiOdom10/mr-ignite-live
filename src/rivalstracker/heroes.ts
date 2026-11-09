@@ -1,11 +1,7 @@
 import { heroDisplayName } from "@/domain/heroes";
 import { HeroRoleSchema, type Hero } from "@/domain/player";
 
-/**
- * The 56 heroes we know by numeric id, named and roled as the game names them (recorded from
- * RivalsIsland's catalogue before it went dark; ids are the game's own). RivalsTracker payloads
- * carry only ids, so this is the only place a name or role comes from.
- */
+/** RivalsTracker payloads carry only hero ids, so this is the only place a name or role comes from. */
 const CATALOGUE = new Map<number, { name: string; role: string }>([
   [1011, { name: "BRUCE BANNER", role: "Vanguard" }],
   [1014, { name: "THE PUNISHER", role: "Duelist" }],
@@ -70,7 +66,6 @@ export function heroIconUrl(id: number): string {
   return `https://rivalstracker.com/images/heroes/SelectHero/img_selecthero_${id}001.png`;
 }
 
-/** A hero id from a match or ban/pick entry, named from the catalogue or shown as its id. */
 export function catalogueHero(id: number): Hero {
   const known = CATALOGUE.get(id);
 
@@ -82,5 +77,4 @@ export function catalogueHero(id: number): Hero {
   };
 }
 
-/** The `heroes` endpoint's payload. It never reaches the network. */
 export const HERO_CATALOGUE: readonly Hero[] = [...CATALOGUE.keys()].map(catalogueHero);

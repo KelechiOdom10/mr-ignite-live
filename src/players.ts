@@ -51,7 +51,6 @@ async function dependencies(): Promise<PlayerDataDeps> {
       import("../test/memoryPlayerDb"),
     ]);
 
-    // Replayed calls never touch the real cache or request ledger.
     return {
       client: createRivalsTrackerClient({ fetch: fakeRivalsTracker().fetch }),
       cache: memoryPlayerCache(),
@@ -98,7 +97,6 @@ export async function shellSnapshot(): Promise<Snapshot> {
 
 export type Loaded<T> = { ok: true; value: T } | { ok: false; problem: PlayerProblem };
 
-/** Runs a player-data read and maps a known RivalsTracker failure to a state the page can show. */
 export async function loadPlayers<T>(read: (data: PlayerData) => Promise<T>): Promise<Loaded<T>> {
   try {
     return { ok: true, value: await read(await players()) };

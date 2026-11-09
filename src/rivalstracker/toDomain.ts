@@ -26,7 +26,6 @@ export function linkableUid(uid: string): Uid | null {
   return parsed.success ? parsed.data : null;
 }
 
-/** The game's own portrait host; the id is the only thing the API gives us. */
 export function headIconUrl(iconId: string | null | undefined): string | null {
   if (!iconId || iconId === "0") return null;
 
@@ -176,7 +175,6 @@ export function toMatchDetail(res: ResponseOf<"match">): MatchDetail {
     mode: gameModeLabel(res.game_mode_id),
     // The match payload has no map id; only history rows carry one. No season either.
     map: null,
-    // No separate category label exists; the mode is the only classification.
     category: null,
     season: null,
     durationSeconds: res.match_play_duration,
@@ -298,7 +296,6 @@ export interface SearchPlayer {
   iconUrl: string | null;
 }
 
-/** The first exact-name hit, or null when nobody is called that. */
 export function toSearchPlayer(res: ResponseOf<"search">): SearchPlayer | null {
   const first = res[0];
 
@@ -310,7 +307,6 @@ export function toSearchPlayer(res: ResponseOf<"search">): SearchPlayer | null {
   return { uid, name: first.name, iconUrl: headIconUrl(first.cur_head_icon_id) };
 }
 
-/** A list card from whatever is cached: the player response carries identity, rank and form. */
 export function toPlayerCard(
   saved: { uid: Uid; name: string },
   res: ResponseOf<"career"> | null,

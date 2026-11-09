@@ -46,7 +46,6 @@ export type StatsIndex = z.infer<typeof StatsIndexSchema>;
 
 export const STATS_INDEX_KEY = kvKey("stats-index:v2", StatsIndexSchema);
 
-/** Failed backfill attempts per never-fetched series. */
 const BackfillMissesSchema = z.record(z.string(), z.number().int().positive());
 
 export type BackfillMisses = z.infer<typeof BackfillMissesSchema>;
@@ -88,7 +87,6 @@ function startedAgo(m: Match, now: number): number {
   return m.startsAt ? now - Date.parse(m.startsAt) : Number.POSITIVE_INFINITY;
 }
 
-/** A finished series past the lookback that was never fetched and still has attempts left. */
 function isBackfill(m: Match, now: number, index: StatsIndex, misses: BackfillMisses): boolean {
   const ago = startedAgo(m, now);
 
@@ -144,7 +142,6 @@ export interface StatsChanges {
   mapOverrides: Record<string, MapOverride[]>;
   /** Null when no series page was fetched. */
   index: StatsIndex | null;
-  /** Null when no backfill attempt failed. */
   misses: BackfillMisses | null;
 }
 

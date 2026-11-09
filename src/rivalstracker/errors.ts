@@ -13,10 +13,8 @@ export class RivalsTrackerError extends Error {
 
 export class NotFoundError extends RivalsTrackerError {}
 
-/** The profile is visible but its match history is hidden. */
 export class MatchHistoryPrivateError extends RivalsTrackerError {}
 
-/** The profile hides overview/career stats. */
 export class CareerPrivateError extends RivalsTrackerError {}
 
 export class RateLimitedError extends RivalsTrackerError {}
@@ -55,7 +53,6 @@ export function errorFor(status: number, requests: number): RivalsTrackerError {
   return new UpstreamUnavailableError(`RivalsTracker returned HTTP ${status}`, requests);
 }
 
-/** The one place a failure becomes something a page can show; anything unexpected is rethrown. */
 export function problemOf(cause: unknown): PlayerProblem | null {
   if (cause instanceof MatchHistoryPrivateError) return "history_private";
 

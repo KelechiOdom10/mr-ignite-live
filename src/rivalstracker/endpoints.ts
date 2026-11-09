@@ -66,8 +66,6 @@ const player = ({ uid }: { uid: Uid }): UpstreamRequest => ({
   path: `/player/${uid}`,
 });
 
-// career, history and heroCareer all read one response; the cache key is the request, so a visit
-// pays for it once. The 30-minute TTL is the longest of the three old ones, so it refetches less.
 export const ENDPOINTS: EndpointRegistry = {
   search: {
     cost: 1,

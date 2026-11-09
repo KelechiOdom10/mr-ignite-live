@@ -16,7 +16,6 @@ import { favourites, loadPlayers, shellSnapshot, type Loaded } from "../../src/p
 
 export type Props = InferProps<typeof loader>;
 
-/** A player can hide their overview or their history; each is an ordinary state, not a failure. */
 function assertCareerVisible(res: { visibility: { overview: boolean; career_stats: boolean } }) {
   if (!res.visibility.overview || !res.visibility.career_stats) {
     throw new CareerPrivateError("Career is private", 0);
@@ -60,7 +59,6 @@ async function readPlayer(uid: Uid, refresh: boolean) {
   return [player, history] as const;
 }
 
-/** Heroes from matches already cached, with the season's hero cards from the cached profile. */
 async function heroesFromCache(
   uid: Uid,
   matchUids: readonly string[],

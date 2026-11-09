@@ -40,7 +40,6 @@ export interface Reservation {
   expected: number;
   budget: number;
   at: number;
-  /** Only reservations at or after this instant count against the budget. */
   since: number;
 }
 
@@ -59,7 +58,6 @@ export interface RequestLedger {
 export interface Fetched<T> {
   data: T;
   fetchedAt: number;
-  /** Past its TTL; shown with its age and a refresh control. */
   stale: boolean;
   /** A refresh was asked for but refused or failed, so this is the older copy. */
   refreshFailed: boolean;
