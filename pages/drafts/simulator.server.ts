@@ -5,13 +5,16 @@ import { parseSimFormatId, SIM_FORMATS } from "@/domain/draftFormat";
 import { proRates } from "@/domain/draftSim";
 import { HERO_ROSTER, ROSTER_ICONS } from "@/domain/heroRoster";
 import { scopeSnapshot } from "@/domain/scope";
+import { parseSimMap, simMapOptions } from "@/domain/simMap";
 
-import { currentSnapshot, readAllStats } from "../../src/sync";
+import { currentSnapshot, readAllStats, readProHeroStats } from "../../src/sync";
 
 export type Props = InferProps<typeof loader>;
 
 export const loader = defineHandler(async (c) => {
   const [full, stats] = await Promise.all([currentSnapshot(), readAllStats()]);
+  // After currentSnapshot: on a cold store that call runs the sync that writes the hero totals.
+  const heroMatrix = await readProHeroStats();
   const portraits = new Map<string, string>();
 
   for (const map of stats.flatMap((s) => s.maps)) {
@@ -23,6 +26,7 @@ export const loader = defineHandler(async (c) => {
   }
 
   const summary = summariseDrafts(toTeamDrafts(statsFollowingFormat(stats, IGNITE_2026)));
+  const maps = simMapOptions(heroMatrix);
 
   return {
     snapshot: scopeSnapshot(full, { kind: "events" }, Date.now()),
@@ -30,6 +34,9 @@ export const loader = defineHandler(async (c) => {
     formats: SIM_FORMATS,
     rates: proRates(summary),
     proDrafts: summary.sample.teamDrafts,
+    heroMatrix,
+    map: parseSimMap(c.req.query("map"), maps),
+    maps,
     heroes: HERO_ROSTER.map((h) => ({
       ...h,
       portraitUrl: portraits.get(h.id) ?? ROSTER_ICONS.get(h.id) ?? null,

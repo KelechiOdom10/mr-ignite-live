@@ -44,6 +44,17 @@ export function mapInfo(name: string): { mode: GameMode; imageUrl: string } | nu
   return info ? { mode: info.mode, imageUrl: MRVL_IMAGES + info.image } : null;
 }
 
+const LOWERCASE_WORDS = new Set(["of", "the", "and"]);
+
+export function mapDisplayName(map: string): string {
+  return map
+    .split(" ")
+    .map((word, i) =>
+      i > 0 && LOWERCASE_WORDS.has(word) ? word : word.charAt(0).toUpperCase() + word.slice(1),
+    )
+    .join(" ");
+}
+
 export interface KnownMap {
   /** The catalogue key, which joins names from different sources. */
   name: string;

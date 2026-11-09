@@ -22,6 +22,9 @@ import {
   slotPlan,
   timeline,
 } from "@/domain/draftSim";
+import { mapDisplayName } from "@/domain/maps";
+import type { ProHeroStats } from "@/domain/proHeroStats";
+import { simMapRates } from "@/domain/simMap";
 import type { Hero } from "@/domain/stats";
 import { cn } from "@/lib/utils";
 
@@ -40,6 +43,8 @@ import {
 
 const TEAM: Record<Camp, string> = { 0: "First team", 1: "Second team" };
 
+const ALL_MAPS = "all";
+
 const PROBLEM: Record<MoveProblem["kind"], string> = {
   finished: "The draft is over. Undo a move or start again.",
   "not-your-turn": "It's the other team's move.",
@@ -48,19 +53,28 @@ const PROBLEM: Record<MoveProblem["kind"], string> = {
   "protected-by-opponent": "The other team protected this hero, so it can't be banned.",
 };
 
-/** Keeps the chosen format in the URL, so a refresh or a shared link opens the same board. */
-function rememberFormat(formatId: SimFormatId) {
+/** Keeps the chosen format and map in the URL, so a refresh or a shared link opens the same board. */
+function rememberQuery(key: "format" | "map", value: string | null) {
   const params = new URLSearchParams(window.location.search);
-  params.set("format", formatId);
+
+  if (value === null) params.delete(key);
+  else params.set(key, value);
+
+  const query = params.toString();
+
   window.history.replaceState(
     window.history.state,
     "",
-    `${window.location.pathname}?${params}${window.location.hash}`,
+    `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`,
   );
 }
 
 function percent(share: number): string {
   return `${Math.round(share * 100)}%`;
+}
+
+function shareOrDash(value: number | null | undefined): string {
+  return value == null ? "—" : percent(value);
 }
 
 function Slot({ hero, kind }: { hero: Hero | undefined; kind: "ban" | "protect" }) {
@@ -192,12 +206,18 @@ export function DraftSimulator({
   heroes,
   rates,
   proDrafts,
+  heroMatrix,
+  map: initialMap,
+  maps,
 }: {
   formatId: SimFormatId;
   formats: Record<SimFormatId, DraftFormat>;
   heroes: Hero[];
   rates: Record<string, ProRate>;
   proDrafts: number;
+  heroMatrix: ProHeroStats | null;
+  map: string | null;
+  maps: string[];
 }) {
   const [session, setSession] = useState<SimSession>({
     formatId: initialFormatId,
@@ -205,23 +225,31 @@ export function DraftSimulator({
     camp: 0,
   });
 
+  const [map, setMap] = useState(initialMap);
   const [pendingFormat, setPendingFormat] = useState<SimFormatId | null>(null);
   const [role, setRole] = useState<RoleFilter>("All");
   const [query, setQuery] = useState("");
   const [problem, setProblem] = useState<string | null>(null);
-  const [loadedFormatId, setLoadedFormatId] = useState(initialFormatId);
+  const [loaded, setLoaded] = useState({ formatId: initialFormatId, map: initialMap });
 
-  // Void keeps this page mounted across navigations, so a new ?format= prop has to reset the board.
-  if (initialFormatId !== loadedFormatId) {
-    setLoadedFormatId(initialFormatId);
-    setSession({ formatId: initialFormatId, moves: [], camp: 0 });
-    setPendingFormat(null);
-    setProblem(null);
+  // Void keeps this page mounted across navigations, so new props have to reset the board.
+  if (initialFormatId !== loaded.formatId || initialMap !== loaded.map) {
+    setLoaded({ formatId: initialFormatId, map: initialMap });
+    setMap(initialMap);
+
+    if (initialFormatId !== loaded.formatId) {
+      setSession({ formatId: initialFormatId, moves: [], camp: 0 });
+      setPendingFormat(null);
+      setProblem(null);
+    }
   }
 
   const { formatId, moves, camp } = session;
   const format = formats[formatId];
-  const showRates = formatId === "ignite-2026";
+  const matrix = simMapRates(heroMatrix, map);
+  const showRates = matrix !== null || (formatId === "ignite-2026" && proDrafts > 0);
+  const shownRates = matrix?.rates ?? rates;
+  const mapLabel = map ? mapDisplayName(map) : "all maps";
 
   const byId = useMemo(() => new Map(heroes.map((h) => [h.id, h])), [heroes]);
   const turn = currentTurn(format, moves);
@@ -258,7 +286,12 @@ export function DraftSimulator({
     setSession(switched);
     setPendingFormat(null);
     setProblem(null);
-    rememberFormat(next);
+    rememberQuery("format", next);
+  }
+
+  function chooseMap(next: string | null) {
+    setMap(next);
+    rememberQuery("map", next);
   }
 
   function chooseFormat(next: SimFormatId) {
@@ -341,6 +374,29 @@ export function DraftSimulator({
                 </SelectContent>
               </Select>
             </div>
+            <div className="w-full min-w-0 sm:w-56">
+              <span aria-hidden="true" className="mb-1 block text-xs text-muted-foreground">
+                Map
+              </span>
+              <Select
+                value={map ?? ALL_MAPS}
+                onValueChange={(v) => chooseMap(v === ALL_MAPS ? null : v)}
+                disabled={!heroMatrix}
+              >
+                <SelectTrigger>
+                  <span className="sr-only">Map: </span>
+                  <SelectValue placeholder={map ? mapLabel : "All maps"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_MAPS}>All maps</SelectItem>
+                  {maps.map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {mapDisplayName(m)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="ml-auto flex gap-2">
               <button
                 type="button"
@@ -366,6 +422,12 @@ export function DraftSimulator({
               </button>
             </div>
           </div>
+
+          {!heroMatrix && (
+            <p className="text-xs text-muted-foreground">
+              Map rates need mrvl&apos;s hero totals, which aren&apos;t available yet.
+            </p>
+          )}
 
           {pendingFormat && (
             <div
@@ -463,15 +525,29 @@ export function DraftSimulator({
             <h2 id="hero-pool" className="font-medium">
               Heroes
             </h2>
-            {showRates && proDrafts > 0 && (
+            {showRates && (
               <p className="text-xs text-muted-foreground">
-                <span className="block">
-                  B and P: how often pros banned and protected each hero.
-                </span>
-                <span className="block">
-                  From {proDrafts} team drafts on cached maps that followed this draft step for
-                  step.
-                </span>
+                {matrix ? (
+                  <>
+                    <span className="block">
+                      mrvl · last 30 days · {matrix.group.games} games on {mapLabel}
+                    </span>
+                    <span className="block">
+                      Pk pick, B ban, Pr protect, W win. Rates are in %. Win shows from 10 games and
+                      is winning play time, not a chance of winning.
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="block">
+                      B and P: how often pros banned and protected each hero.
+                    </span>
+                    <span className="block">
+                      From {proDrafts} team drafts on cached maps that followed this draft step for
+                      step.
+                    </span>
+                  </>
+                )}
               </p>
             )}
           </div>
@@ -514,7 +590,7 @@ export function DraftSimulator({
           {shown.map((h) => {
             const outFor = ([0, 1] as const).filter((c) => sides[c].unavailable.includes(h.id));
             const protectedBy = ([0, 1] as const).filter((c) => sides[c].protects.includes(h.id));
-            const rate = showRates ? rates[h.id] : undefined;
+            const rate = showRates ? shownRates[h.id] : undefined;
             const outForActing = acting !== null && outFor.includes(acting);
 
             const state = [
@@ -526,11 +602,15 @@ export function DraftSimulator({
               protectedBy.length > 0 ? "Protected" : null,
             ].filter((part) => part !== null);
 
-            const proLine = showRates
+            const proLine = matrix
               ? rate
-                ? `Pro drafts: banned ${percent(rate.banned)}${rate.protected === null ? "" : `, protected ${percent(rate.protected)}`}`
-                : "Not seen in cached pro drafts"
-              : null;
+                ? `mrvl, last 30 days, ${matrix.group.games} games on ${mapLabel}: picked ${shareOrDash(rate.pick)}, banned ${shareOrDash(rate.banned)}, protected ${shareOrDash(rate.protected)}, win ${rate.win == null ? "not shown (under 10 games)" : percent(rate.win)}`
+                : `Not in mrvl's pro games on ${mapLabel}`
+              : showRates
+                ? rate
+                  ? `Pro drafts: banned ${percent(rate.banned)}${rate.protected === null ? "" : `, protected ${percent(rate.protected)}`}`
+                  : "Not seen in cached pro drafts"
+                : null;
 
             return (
               <li key={h.id}>
@@ -561,7 +641,18 @@ export function DraftSimulator({
                   <span aria-hidden="true" className="w-full truncate text-xs">
                     {h.name}
                   </span>
-                  {showRates && (
+                  {showRates && matrix && (
+                    <span
+                      aria-hidden="true"
+                      className="grid w-full grid-cols-2 gap-x-1 font-mono text-[0.6rem] leading-tight text-muted-foreground tabular-nums sm:text-[0.65rem]"
+                    >
+                      <span className="whitespace-nowrap">Pk {shareOrDash(rate?.pick)}</span>
+                      <span className="whitespace-nowrap">B {shareOrDash(rate?.banned)}</span>
+                      <span className="whitespace-nowrap">Pr {shareOrDash(rate?.protected)}</span>
+                      <span className="whitespace-nowrap">W {shareOrDash(rate?.win)}</span>
+                    </span>
+                  )}
+                  {showRates && !matrix && (
                     <span
                       aria-hidden="true"
                       className="font-mono text-[0.65rem] whitespace-nowrap text-muted-foreground tabular-nums"

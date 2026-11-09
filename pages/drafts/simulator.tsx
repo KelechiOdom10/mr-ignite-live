@@ -11,6 +11,9 @@ export default function DraftSimulatorPage({
   heroes,
   rates,
   proDrafts,
+  heroMatrix,
+  map,
+  maps,
 }: Props) {
   const { snapshot, connection, now } = useLiveSnapshot(initial, { view: "events" });
 
@@ -31,6 +34,9 @@ export default function DraftSimulatorPage({
           heroes={heroes}
           rates={rates}
           proDrafts={proDrafts}
+          heroMatrix={heroMatrix}
+          map={map}
+          maps={maps}
         />
       </div>
     </AppShell>
