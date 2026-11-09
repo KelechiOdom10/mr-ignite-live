@@ -42,6 +42,8 @@ export type Match = z.infer<typeof MatchSchema>;
 export const PrizePlacementSchema = z.object({
   place: z.number().int().positive(),
   prizeUsd: z.number().nonnegative(),
+  /** Teams sharing this place; a `{{Slot|count=2}}` covers two places at one prize. */
+  count: z.number().int().positive(),
   team: TeamSchema.nullable(),
 });
 
@@ -86,7 +88,7 @@ export const MapOverrideSchema = MapResultSchema.omit({ vod: true });
 
 export type MapOverride = z.infer<typeof MapOverrideSchema>;
 
-export const STORED_SNAPSHOT_VERSION = 6;
+export const STORED_SNAPSHOT_VERSION = 7;
 
 export const StoredSnapshotSchema = z.object({
   version: z.literal(STORED_SNAPSHOT_VERSION),
@@ -99,11 +101,17 @@ export const StoredSnapshotSchema = z.object({
 
 export type StoredSnapshot = z.infer<typeof StoredSnapshotSchema>;
 
+export const SnapshotEventSchema = IgniteEventSchema.extend({
+  prizesFromBracket: z.boolean(),
+});
+
+export type SnapshotEvent = z.infer<typeof SnapshotEventSchema>;
+
 export const SnapshotSchema = z.object({
   builtAt: z.iso.datetime(),
   servedAt: z.iso.datetime(),
   liquipediaUpdatedAt: z.iso.datetime().nullable(),
-  events: z.array(IgniteEventSchema),
+  events: z.array(SnapshotEventSchema),
   matches: z.array(MatchSchema),
   teams: z.record(z.string(), TeamInfoSchema),
 });

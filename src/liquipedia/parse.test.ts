@@ -110,8 +110,17 @@ describe("parsePrizePool on a recorded team prize pool", () => {
   });
 
   it("repeats a shared slot's prize for each of its places", () => {
-    expect(prizes[4]).toEqual({ place: 5, prizeUsd: 12000, team: null });
-    expect(prizes[5]).toEqual({ place: 6, prizeUsd: 12000, team: null });
+    expect(prizes[4]).toEqual({ place: 5, prizeUsd: 12000, count: 2, team: null });
+    expect(prizes[5]).toEqual({ place: 6, prizeUsd: 12000, count: 2, team: null });
+  });
+
+  it("keeps each slot's size instead of merging neighbouring slots that pay the same", () => {
+    expect(prizes.slice(8).map((prize) => [prize.place, prize.count])).toEqual([
+      [9, 2],
+      [10, 2],
+      [11, 2],
+      [12, 2],
+    ]);
   });
 
   it("adds up to the prize pool in the infobox", () => {

@@ -1,16 +1,17 @@
 import { z } from "zod";
 
 import {
-  type IgniteEvent,
   type MapOverride,
   type MapResult,
   type Match,
   type PageData,
   type Snapshot,
+  type SnapshotEvent,
   type StoredSnapshot,
   type TeamInfo,
 } from "@/domain/model";
 import { MapOverrideSchema, STORED_SNAPSHOT_VERSION } from "@/domain/model";
+import { bracketPlacings, fillPlacings } from "@/domain/prizePlacings";
 import { type MatchStats, MatchStatsSchema } from "@/domain/stats";
 import type { Revision } from "@/liquipedia/client";
 import { eventIdFor } from "@/liquipedia/parse";
@@ -165,7 +166,7 @@ export function statsChanged(previous: MatchStats | null, next: MatchStats): boo
 }
 
 export function toSnapshot(stored: StoredSnapshot, servedAt: Date): Snapshot {
-  const events: IgniteEvent[] = [];
+  const events: SnapshotEvent[] = [];
   const matches: Match[] = [];
   let liquipediaUpdatedAt: string | null = null;
 
@@ -173,7 +174,7 @@ export function toSnapshot(stored: StoredSnapshot, servedAt: Date): Snapshot {
     team ? { ...team, short: stored.teams[team.name]?.short ?? team.short } : null;
 
   for (const [title, page] of Object.entries(stored.pages)) {
-    if (page.event) events.push(page.event);
+    if (page.event) events.push({ ...page.event, prizesFromBracket: false });
 
     if (!liquipediaUpdatedAt || page.updatedAt > liquipediaUpdatedAt) {
       liquipediaUpdatedAt = page.updatedAt;
@@ -191,11 +192,23 @@ export function toSnapshot(stored: StoredSnapshot, servedAt: Date): Snapshot {
     }
   }
 
+  const withPrizes = events.map((event) => {
+    const groups = bracketPlacings(
+      matches.filter((m) => m.eventId === event.id),
+      servedAt.getTime(),
+    );
+
+    if (!groups) return event;
+    const { prizes, derived } = fillPlacings(event.prizes, groups);
+
+    return { ...event, prizes, prizesFromBracket: derived };
+  });
+
   return {
     builtAt: stored.builtAt,
     servedAt: servedAt.toISOString(),
     liquipediaUpdatedAt,
-    events: events.sort((a, b) => (b.startDate ?? "").localeCompare(a.startDate ?? "")),
+    events: withPrizes.sort((a, b) => (b.startDate ?? "").localeCompare(a.startDate ?? "")),
     matches: matches.sort((a, b) => (a.startsAt ?? "").localeCompare(b.startsAt ?? "")),
     teams: stored.teams,
   };

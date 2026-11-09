@@ -32,8 +32,8 @@ const ContentsSchema = z.object({
   }),
 });
 
-export function recordedWikitext(title: string): string {
-  const pages = ContentsSchema.parse(liquipediaFixture("contents-stage2.json")).query.pages;
+export function recordedWikitext(title: string, file = "contents-stage2.json"): string {
+  const pages = ContentsSchema.parse(liquipediaFixture(file)).query.pages;
   const content = pages.find((p) => p.title === title)?.revisions[0]?.slots.main.content;
 
   if (content === undefined) throw new Error(`No recorded wikitext for ${title}`);

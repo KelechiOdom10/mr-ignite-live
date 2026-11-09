@@ -109,7 +109,12 @@ export function parsePrizePool(text: string): PrizePlacement[] {
 
     if (prizeUsd !== null) {
       for (let offset = 0; offset < count; offset++) {
-        placements.push({ place: first + offset, prizeUsd, team: opponents[offset] ?? null });
+        placements.push({
+          place: first + offset,
+          prizeUsd,
+          count,
+          team: opponents[offset] ?? null,
+        });
       }
     }
 
