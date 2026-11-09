@@ -1,6 +1,11 @@
 import { defineConfig } from "void/config";
 
 export default defineConfig({
+  cloudflare: {
+    workers_dev: true,
+    preview_urls: true,
+    routes: [],
+  },
   worker: {
     compatibility_date: "2026-02-24",
   },
