@@ -11,12 +11,12 @@ Two tables, deliberately separate:
 
 ## Handles
 
-| Where | What |
-| --- | --- |
-| `/drafts` | Both tables, filters, format cards |
-| `/drafts?map=Yggdrasill%20Path` | Map filter; both tables narrow |
-| `/drafts?event=<id>` | Event filter; only **Series we synced** narrows |
-| `/drafts/simulator` | Practice draft board |
+| Where                           | What                                            |
+| ------------------------------- | ----------------------------------------------- |
+| `/drafts`                       | Both tables, filters, format cards              |
+| `/drafts?map=Yggdrasill%20Path` | Map filter; both tables narrow                  |
+| `/drafts?event=<id>`            | Event filter; only **Series we synced** narrows |
+| `/drafts/simulator`             | Practice draft board                            |
 
 ## Flows
 
