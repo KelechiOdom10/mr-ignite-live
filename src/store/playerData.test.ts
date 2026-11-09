@@ -91,6 +91,17 @@ describe("player data", () => {
     expect(fake.calls).toHaveLength(2);
   });
 
+  it("keys a search by its name, so two names never share one answer", async () => {
+    const { data, fake } = setup();
+
+    const sypehResult = await data.get("search", { name: "Sypeh" });
+    const miss = await data.get("search", { name: "zzqxnoplayer77" });
+
+    expect(sypehResult.data[0]?.name).toBe("Sypeh");
+    expect(miss.data).toEqual([]);
+    expect(fake.calls).toHaveLength(2);
+  });
+
   it("never refetches a finished match", async () => {
     const { data, fake, advance } = setup();
     await data.get("match", { matchUid: RECORDED_MATCH });

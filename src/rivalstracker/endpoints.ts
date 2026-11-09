@@ -129,5 +129,9 @@ export function requestKey<E extends EndpointName>(name: E, params: EndpointPara
   const endpoint: Endpoint<E> = ENDPOINTS[name];
   const request = endpoint.request(params);
 
-  return request === null ? "local" : `${request.method} ${request.path}`;
+  if (request === null) return "local";
+  // A POST's body is part of its identity: two names must not share one cached answer.
+  const body = request.body === undefined ? "" : `:${JSON.stringify(request.body)}`;
+
+  return `${request.method} ${request.path}${body}`;
 }
