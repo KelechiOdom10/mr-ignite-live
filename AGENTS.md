@@ -45,6 +45,7 @@ Rules:
 - After pulling a new `db/migrations/` file, run `bunx void db migrate`.
 - RivalsTracker is a courtesy source: it publishes no terms of reuse, but its operator is fine with this site using its data. Dev and tests replay `test/fixtures/rivalstracker/` (`PLAYER_DATA_MODE=fixtures`, the default). Only `src/store/playerData.ts` may call the client, so every call goes through the cache and the daily request budget (`PLAYER_DATA_REQUESTS_PER_DAY`, default 300). Requests happen only when a reader opens a page, never from the cron; at most 2 run at once, with a 10s timeout and `RivalsHub/1.0 (personal, non-commercial)` (no email). `PLAYER_DATA_MODE=off` is the kill switch. See [ADR 9](docs/adr/0009-rivalstracker-for-player-data.md).
 - Before opening a PR, run the no-comments pass (`kelechi:no-comments`) on its diff: a comment stays only if it states a why the code can't (a quota, a vendor quirk, an invariant, a `SAFETY:` note). Delegated agents follow this too.
+- Every PR that changes what a reader sees or how the site runs adds one line under **Unreleased** in `CHANGELOG.md`, bottom line up front: the outcome first, in bold, then a few words at most, then the PR number. Move Unreleased lines under the date when deploying.
 - Conventional Commits, no AI attribution.
 
 ## Docs
