@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/motion/popover";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/motion/tabs";
+import { Tabs, TabsContent, TabsList } from "@/components/motion/tabs";
 import type { MatchView } from "@/domain/matchView";
 import type { Match, Snapshot } from "@/domain/model";
 import { searchableName } from "@/domain/player";
@@ -23,7 +23,7 @@ import { AwardBadge } from "./AwardBadge";
 import { proxiedImage } from "./images";
 import { TeamLogo } from "./TeamMark";
 import { formatDuration } from "./time";
-import { UNDERLINE_TAB } from "./underlineTab";
+import { UnderlineTabsTrigger } from "./UnderlineTabsTrigger";
 
 const StatsResponseSchema = z.object({ stats: MatchStatsSchema.nullable() });
 
@@ -444,13 +444,11 @@ export function StatsPanel({
           <Tabs defaultValue="all" variant="underline">
             <div className="-mx-4 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:px-0">
               <TabsList aria-label="Map">
-                <TabsTrigger value="all" className={UNDERLINE_TAB}>
-                  All maps
-                </TabsTrigger>
+                <UnderlineTabsTrigger value="all">All maps</UnderlineTabsTrigger>
                 {stats.maps.map((m) => (
-                  <TabsTrigger key={m.index} value={String(m.index)} className={UNDERLINE_TAB}>
+                  <UnderlineTabsTrigger key={m.index} value={String(m.index)}>
                     Map {m.index} · {m.map}
-                  </TabsTrigger>
+                  </UnderlineTabsTrigger>
                 ))}
               </TabsList>
             </div>
