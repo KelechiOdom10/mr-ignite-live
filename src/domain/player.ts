@@ -54,8 +54,8 @@ export const PROBLEM_MESSAGES: Record<PlayerProblem, { title: string; detail: st
     detail: "The API key has no credits left.",
   },
   not_configured: {
-    title: "RivalsIsland isn't set up",
-    detail: "Add RIVALSISLAND_API_KEY and RIVALSISLAND_MODE=live to .env.",
+    title: "Player data isn't available",
+    detail: "This site has no RivalsIsland connection, so ranked profiles can't load.",
   },
   unavailable: {
     title: "RivalsIsland is unavailable",
