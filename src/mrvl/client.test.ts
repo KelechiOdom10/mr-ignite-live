@@ -52,4 +52,67 @@ describe("createMrvlClient", () => {
     const call = createMrvlClient({ fetch: hangingFetch, timeoutMs: 20 }).matchPage("x");
     await expect(call).rejects.toBeInstanceOf(MrvlUnreachableError);
   });
+
+  it("parses the recorded hero matrix and asks for the map dimension", async () => {
+    const { fetchImpl, calls } = respondWith(mrvlFixture("hero-matrix.json"));
+
+    const matrix = await createMrvlClient({ fetch: fetchImpl }).heroMatrix({
+      startDate: "2026-10-11",
+      endDate: "2026-11-09",
+    });
+
+    expect(matrix.rows[0]?.groupLabel).toBe("Overall");
+    expect(matrix.heroes).toHaveLength(57);
+    expect(JSON.parse(String(calls[0]?.body))).toEqual({
+      path: "analytics:getHeroMatrix",
+      args: {
+        startDate: "2026-10-11",
+        endDate: "2026-11-09",
+        dimension: "map",
+        metric: "pickRate",
+      },
+      format: "json",
+    });
+  });
+
+  it("rejects a hero-matrix cell that lost the weight of its win rate", async () => {
+    const body = {
+      status: "success",
+      value: {
+        dimension: "map",
+        metric: "pickRate",
+        heroes: [{ heroId: "gambit", heroName: "Gambit" }],
+        rows: [
+          {
+            groupId: "overall",
+            groupLabel: "Overall",
+            isOverall: true,
+            eligibleGames: 2,
+            gameCount: 1,
+            cellsByHeroId: {
+              gambit: {
+                heroId: "gambit",
+                heroName: "Gambit",
+                value: 1,
+                playTimeSeconds: 60,
+                totalAvailablePlayTimeSeconds: 60,
+                heroGames: 1,
+                banCount: 0,
+                protectCount: 0,
+                bannedAgainstCount: 0,
+                protectedAgainstCount: 0,
+              },
+            },
+          },
+        ],
+      },
+    };
+
+    await expect(
+      createMrvlClient({ fetch: respondWith(body).fetchImpl }).heroMatrix({
+        startDate: "2026-10-11",
+        endDate: "2026-11-09",
+      }),
+    ).rejects.toBeInstanceOf(MrvlResponseError);
+  });
 });

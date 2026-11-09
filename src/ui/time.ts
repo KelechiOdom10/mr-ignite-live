@@ -106,6 +106,22 @@ export function formatShortRange(start: string | null, end: string | null): stri
     : fmt.format(new Date(start));
 }
 
+/**
+ * A `YYYY-MM-DD` day as the reader's calendar day. Built locally, so a UTC midnight can't move it
+ * to the previous day west of Greenwich.
+ */
+export function formatCalendarRange(start: string, end: string): string {
+  const fmt = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
+
+  const at = (iso: string) => {
+    const [year = 1970, month = 1, day = 1] = iso.split("-").map(Number);
+
+    return new Date(year, month - 1, day);
+  };
+
+  return `${fmt.format(at(start))} – ${fmt.format(at(end))}`;
+}
+
 export function dayKey(iso: string): string {
   const d = new Date(iso);
 

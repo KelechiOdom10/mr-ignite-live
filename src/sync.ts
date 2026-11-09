@@ -2,6 +2,7 @@ import type { Snapshot } from "@/domain/model";
 import type { MatchStats } from "@/domain/stats";
 import { createLiquipediaClient } from "@/liquipedia/client";
 import { createMrvlClient } from "@/mrvl/client";
+import { readHeroMatrix } from "@/store/heroMatrix";
 import { toSnapshot } from "@/store/plan";
 import { syncOnce } from "@/store/run";
 import { readStored } from "@/store/snapshot";
@@ -91,4 +92,8 @@ export function readStats(matchId: string): Promise<MatchStats | null> {
 
 export function readAllStats(): Promise<MatchStats[]> {
   return readAllMatchStats(voidKvStore);
+}
+
+export function readProHeroStats() {
+  return readHeroMatrix(voidKvStore);
 }

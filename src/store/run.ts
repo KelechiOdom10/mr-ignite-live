@@ -2,6 +2,7 @@ import type { Snapshot, StoredSnapshot } from "@/domain/model";
 import type { LiquipediaClient } from "@/liquipedia/client";
 import type { MrvlClient } from "@/mrvl/client";
 
+import { refreshHeroMatrix } from "./heroMatrix";
 import type { KvStore } from "./kv";
 import { applyLiquipedia, emptyStored, nextStored, toSnapshot } from "./plan";
 import { fetchLiquipediaChanges, readStored, writeStored } from "./snapshot";
@@ -56,6 +57,14 @@ async function statsOrNothing(deps: SyncDeps, stored: StoredSnapshot): Promise<S
   }
 }
 
+async function heroMatrixOrNothing(deps: SyncDeps): Promise<void> {
+  try {
+    await refreshHeroMatrix({ store: deps.store, mrvl: deps.mrvl, now: deps.now() });
+  } catch (error) {
+    console.error("mrvl hero totals sync failed; the rest of the sync is unaffected", error);
+  }
+}
+
 export async function syncOnce(deps: SyncDeps): Promise<SyncOutcome> {
   const { store } = deps;
   const prev = (await readStored(store)) ?? emptyStored();
@@ -86,6 +95,8 @@ export async function syncOnce(deps: SyncDeps): Promise<SyncOutcome> {
   if (stats.index) await writeStatsIndex(store, stats.index);
 
   if (stats.misses) await writeBackfillMisses(store, stats.misses);
+
+  await heroMatrixOrNothing(deps);
 
   return {
     snapshot: toSnapshot(next ?? prev, new Date(deps.now())),

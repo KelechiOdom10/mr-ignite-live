@@ -99,6 +99,9 @@ export function fakeMrvl(options: MrvlFakeOptions = {}) {
       return new Response("Bad Gateway", { status: 502 });
     }
 
+    if (request.path === "analytics:getHeroMatrix")
+      return Response.json(mrvlFixture("hero-matrix.json"));
+
     return request.path === "matches:getPageData"
       ? pageFor(id, settings.misnumbered?.includes(id) ?? false)
       : list(request.args.status);

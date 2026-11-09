@@ -127,6 +127,45 @@ export const MrvlMatchPageSchema = z.object({
   match: MrvlMatchSummarySchema.extend({ games: z.array(GameSchema) }),
 });
 
+const HeroMatrixHeroSchema = z.object({
+  heroId: z.string(),
+  heroName: z.string(),
+  portraitUrl: z.string().nullish(),
+  role: z.string().nullish(),
+});
+
+const HeroMatrixCellSchema = z.object({
+  heroId: z.string(),
+  heroName: z.string(),
+  value: z.number(),
+  playTimeSeconds: z.number(),
+  totalAvailablePlayTimeSeconds: z.number(),
+  heroGames: z.number().int().nonnegative(),
+  banCount: z.number().int().nonnegative(),
+  protectCount: z.number().int().nonnegative(),
+  bannedAgainstCount: z.number().int().nonnegative(),
+  protectedAgainstCount: z.number().int().nonnegative(),
+  weightedWinRate: z.number(),
+});
+
+const HeroMatrixRowSchema = z.object({
+  groupId: z.string(),
+  groupLabel: z.string(),
+  isOverall: z.boolean().nullish(),
+  eligibleGames: z.number().int().nonnegative(),
+  gameCount: z.number().int().nonnegative(),
+  cellsByHeroId: z.record(z.string(), HeroMatrixCellSchema),
+});
+
+export const MrvlHeroMatrixSchema = z.object({
+  dimension: z.string(),
+  metric: z.string(),
+  heroes: z.array(HeroMatrixHeroSchema),
+  rows: z.array(HeroMatrixRowSchema),
+});
+
+export type MrvlHeroMatrix = z.infer<typeof MrvlHeroMatrixSchema>;
+
 export type MrvlMatchPage = z.infer<typeof MrvlMatchPageSchema>;
 
 export type MrvlGame = z.infer<typeof GameSchema>;
@@ -196,6 +235,15 @@ export function createMrvlClient(options: MrvlClientOptions = {}) {
     },
     matchPage(id: string) {
       return query(MrvlMatchPageSchema, "matches:getPageData", { id });
+    },
+    /** One free request covers every map group and hero for the whole window. */
+    heroMatrix({ startDate, endDate }: { startDate: string; endDate: string }) {
+      return query(MrvlHeroMatrixSchema, "analytics:getHeroMatrix", {
+        startDate,
+        endDate,
+        dimension: "map",
+        metric: "pickRate",
+      });
     },
   };
 }

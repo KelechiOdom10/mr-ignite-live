@@ -44,21 +44,30 @@ export function mapInfo(name: string): { mode: GameMode; imageUrl: string } | nu
   return info ? { mode: info.mode, imageUrl: MRVL_IMAGES + info.image } : null;
 }
 
+export interface KnownMap {
+  /** The catalogue key, which joins names from different sources. */
+  name: string;
+  mode: GameMode;
+  imageUrl: string;
+}
+
 /**
  * The known map a name refers to, matched on whole words so long forms ("Yggsgard: Yggdrasill
  * Path") resolve too. Null for placeholders like "tbd" or "Map 3".
  */
-function knownMap(name: string): MapInfo | null {
+export function knownMap(name: string): KnownMap | null {
   const words = ` ${key(name)} `;
-  let best: { length: number; info: MapInfo } | null = null;
+  let best: { length: number; name: string; info: MapInfo } | null = null;
 
   for (const [k, info] of MAPS) {
     if (words.includes(` ${k} `) && (!best || k.length > best.length)) {
-      best = { length: k.length, info };
+      best = { length: k.length, name: k, info };
     }
   }
 
-  return best?.info ?? null;
+  return best
+    ? { name: best.name, mode: best.info.mode, imageUrl: MRVL_IMAGES + best.info.image }
+    : null;
 }
 
 export interface MapNameConflict {
@@ -82,7 +91,7 @@ export function mapNameConflicts(
     if (!other) return [];
     const [ours, theirs] = [knownMap(slot.map), knownMap(other.map)];
 
-    if (!ours || !theirs || ours.image === theirs.image) return [];
+    if (!ours || !theirs || ours.imageUrl === theirs.imageUrl) return [];
 
     return [{ index: slot.index, liquipedia: slot.map, mrvl: other.map }];
   });
