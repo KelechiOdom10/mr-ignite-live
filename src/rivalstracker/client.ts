@@ -83,16 +83,45 @@ export function createRivalsTrackerClient(
 
       try {
         res = await withSlot(() => doFetch(RIVALSTRACKER_ORIGIN + request.path, init));
-      } catch {
+      } catch (error) {
+        console.warn(
+          JSON.stringify({
+            event: "rivalstracker_unreachable",
+            endpoint: name,
+            error: String(error),
+          }),
+        );
+
         throw new UpstreamUnavailableError("RivalsTracker didn't answer", 1);
       }
 
-      const body: unknown = await res.json().catch(() => null);
+      if (!res.ok) {
+        console.warn(
+          JSON.stringify({
+            event: "rivalstracker_http_error",
+            endpoint: name,
+            status: res.status,
+            server: res.headers.get("server"),
+            mitigated: res.headers.get("cf-mitigated"),
+            body: (await res.text().catch(() => "")).slice(0, 200),
+          }),
+        );
 
-      if (!res.ok) throw errorFor(res.status, 1);
+        throw errorFor(res.status, 1);
+      }
+
+      const body: unknown = await res.json().catch(() => null);
       const parsed = endpoint.schema.safeParse(body);
 
       if (!parsed.success) {
+        console.warn(
+          JSON.stringify({
+            event: "rivalstracker_contract_error",
+            endpoint: name,
+            issues: parsed.error.issues.slice(0, 5),
+          }),
+        );
+
         throw new RivalsTrackerContractError(name, z.prettifyError(parsed.error), 1);
       }
 
