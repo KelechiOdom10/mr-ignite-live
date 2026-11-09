@@ -5,6 +5,7 @@ import type { Snapshot } from "@/domain/model";
 import {
   createMrvlClient,
   type MrvlClient,
+  MrvlHttpError,
   MrvlMatchPageSchema,
   type MrvlMatchSummary,
 } from "@/mrvl/client";
@@ -12,7 +13,7 @@ import {
 import { aMatch } from "../../test/builders";
 import { mrvlFixture } from "../../test/fixtures";
 import { memoryKvStore } from "../../test/memoryKv";
-import { fetchStatsChanges, readAllMatchStats } from "./stats";
+import { fetchStatsChanges, readAllMatchStats, writeBackfillMisses } from "./stats";
 
 const stored = (matchId: string) => ({
   matchId,
@@ -175,5 +176,118 @@ describe("fetchStatsChanges on a fresh store", () => {
     await fetchStatsChanges({ store, mrvl, snapshot, now });
 
     expect(requested).toEqual(["s-recent", "s-old"]);
+  });
+});
+
+describe("fetchStatsChanges backfill limits", () => {
+  const now = Date.parse("2026-11-09T20:00:00Z");
+  const hoursAgo = (h: number) => new Date(now - h * 60 * 60 * 1000).toISOString();
+  const names = ["Crimson", "Azure", "Ember", "Frost", "Violet", "Amber", "Onyx", "Jade"];
+
+  const series = (id: string, startsAt: string, i: number) =>
+    aMatch({
+      id,
+      startsAt,
+      team1: { name: `${names[i]} Lions`, short: `L${i}` },
+      team2: { name: `${names[i]} Hawks`, short: `H${i}` },
+      markedFinished: true,
+    });
+
+  const summaryOf = (m: ReturnType<typeof aMatch>): MrvlMatchSummary => ({
+    id: `s-${m.id}`,
+    teamOneName: m.team1?.name,
+    teamTwoName: m.team2?.name,
+    scheduledAt: m.startsAt,
+    updatedAt: "1",
+  });
+
+  const snapshotOf = (matches: ReturnType<typeof aMatch>[]): Snapshot => ({
+    builtAt: new Date(now).toISOString(),
+    servedAt: new Date(now).toISOString(),
+    liquipediaUpdatedAt: null,
+    events: [],
+    matches,
+    teams: {},
+  });
+
+  function fakeMrvl(listed: MrvlMatchSummary[], failing: string[] = []) {
+    const requested: string[] = [];
+    let lists = 0;
+
+    const mrvl: MrvlClient = {
+      ...createMrvlClient(),
+      listMatches: async (status) => {
+        lists++;
+
+        return status === "recent" ? listed : [];
+      },
+      matchPage: async (id) => {
+        requested.push(id);
+
+        if (failing.includes(id)) throw new MrvlHttpError(404, "matches:getPageData");
+
+        return { match: { id, games: [] } };
+      },
+    };
+
+    return { mrvl, requested, lists: () => lists };
+  }
+
+  it("gives older series two of a run's six pages, after every recent series", async () => {
+    const recent = [0, 1, 2].map((i) => series(`recent-${i}`, hoursAgo(1 + i), i));
+    const old = [3, 4, 5, 6].map((i) => series(`old-${i}`, hoursAgo(24 * i), i));
+    const all = [...recent, ...old];
+    const { mrvl, requested } = fakeMrvl(all.map(summaryOf));
+
+    await fetchStatsChanges({ store: memoryKvStore(), mrvl, snapshot: snapshotOf(all), now });
+
+    expect(requested).toEqual(["s-recent-0", "s-recent-1", "s-recent-2", "s-old-3", "s-old-4"]);
+  });
+
+  it("stops asking mrvl about an older series its recent list no longer holds", async () => {
+    const store = memoryKvStore();
+    const snapshot = snapshotOf([series("gone", hoursAgo(48), 0)]);
+    const fake = fakeMrvl([]);
+
+    const first = await fetchStatsChanges({ store, mrvl: fake.mrvl, snapshot, now });
+
+    if (first.misses) await writeBackfillMisses(store, first.misses);
+    const listsAfterFirst = fake.lists();
+    await fetchStatsChanges({ store, mrvl: fake.mrvl, snapshot, now });
+
+    expect(listsAfterFirst).toBe(3);
+    expect(fake.lists()).toBe(3);
+  });
+
+  it("gives up on an older series whose page keeps failing after three runs", async () => {
+    const store = memoryKvStore();
+    const broken = series("broken", hoursAgo(48), 0);
+    const fake = fakeMrvl([summaryOf(broken)], ["s-broken"]);
+
+    for (let run = 0; run < 5; run++) {
+      const changes = await fetchStatsChanges({
+        store,
+        mrvl: fake.mrvl,
+        snapshot: snapshotOf([broken]),
+        now,
+      });
+
+      if (changes.misses) await writeBackfillMisses(store, changes.misses);
+    }
+
+    expect(fake.requested).toEqual(["s-broken", "s-broken", "s-broken"]);
+  });
+
+  it("leaves series older than two weeks alone", async () => {
+    const fake = fakeMrvl([summaryOf(series("ancient", hoursAgo(24 * 15), 0))]);
+
+    await fetchStatsChanges({
+      store: memoryKvStore(),
+      mrvl: fake.mrvl,
+      snapshot: snapshotOf([series("ancient", hoursAgo(24 * 15), 0)]),
+      now,
+    });
+
+    expect(fake.lists()).toBe(0);
   });
 });
