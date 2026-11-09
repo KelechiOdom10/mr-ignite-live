@@ -64,10 +64,7 @@ export const HERO_ROSTER: readonly Omit<Hero, "portraitUrl">[] = [
   { id: "wolverine", name: "Wolverine", role: "Duelist" },
 ];
 
-/**
- * Hero icons for heroes mrvl hasn't shown in a cached scoreboard yet, from rivalstracker.com by the
- * game's hero id; RivalsIsland's asset host went down with it. mrvl's own art is preferred.
- */
+/** Fallback icons for heroes mrvl hasn't shown yet; mrvl's own art wins when it has it. */
 export const ROSTER_ICONS: ReadonlyMap<string, string> = new Map([
   ["adam-warlock", "https://rivalstracker.com/images/heroes/SelectHero/img_selecthero_1046001.png"],
   ["angela", "https://rivalstracker.com/images/heroes/SelectHero/img_selecthero_1056001.png"],

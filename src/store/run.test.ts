@@ -73,7 +73,6 @@ function matchDay({ mrvl: mrvlOptions }: { mrvl?: MrvlFakeOptions } = {}) {
 
       return syncOnce(deps);
     },
-    /** The recorded list links four older series, and backfill takes two a run. */
     settle: async () => {
       for (let run = 0; run < 2; run++) {
         clock.advance(60_000);
@@ -329,7 +328,6 @@ describe("syncOnce on match day", () => {
       .slice(earlierRequests)
       .filter((r) => r.path === "matches:getPageData");
 
-    // Ahead of the older series still waiting for backfill.
     expect(fetched[0]?.args.id).toBe(TLC_SWAMP_MRVL_ID);
   });
 

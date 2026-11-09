@@ -16,7 +16,6 @@ const USER_AGENT = "RivalsHub/1.0 (personal, non-commercial)";
 
 const TIMEOUT_MS = 10_000;
 
-/** At most this many upstream requests may be open at once per isolate. */
 export const MAX_CONCURRENT_REQUESTS = 2;
 
 export interface RivalsTrackerClient {

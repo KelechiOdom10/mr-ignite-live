@@ -48,7 +48,6 @@ describe("recorded player to our domain", () => {
     expect(profile.peakRank.name).toBe("One Above All");
     expect(profile.seasonWins).toBe(18);
     expect(profile.seasonMatches).toBe(28);
-    // Neither a signature hero nor a last-online time is reported.
     expect(profile.signatureHero).toBeNull();
     expect(profile.lastOnline).toBeNull();
   });
