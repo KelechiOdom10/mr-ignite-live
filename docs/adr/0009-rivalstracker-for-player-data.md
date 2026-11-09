@@ -19,7 +19,7 @@ RivalsTracker's site API (`https://api.rivalstracker.com/api`) answers plain ser
 ## Consequences
 
 - A cold player page costs 1 request and a revisit 0 within 30 minutes.
-- The operator was emailed before launch. The kill switch is one env var: `PLAYER_DATA_MODE=off`.
+- Kelechi asked the operator, and RivalsTracker is fine with this site using its data (November 2026). The courtesy limits above still apply. The kill switch is one env var: `PLAYER_DATA_MODE=off`.
 - RivalsTracker publishes no terms of reuse and the routes are unversioned. A changed response is detected as a contract error and cached as broken for 30 minutes rather than guessed at.
 - The leaderboard is 500 rows upstream; we keep and render the top 100.
 - Gaps vs RivalsIsland: signature hero, last online, career accuracy/damage/healing/MVP/SVP/final hits/headshot kills/solo kills/best kill streak, history page/category filters and pagination, per-match device and left-game flag, match map/season/team score, match AI and left-game flags, leaderboard last-played time, and the old `rs` points field.
