@@ -1,8 +1,8 @@
 # Drafts
 
-verified-at: pending (feat/mrvl-hero-matrix)
+verified-at: pending (feat/draft-map-picker)
 
-`pages/drafts/`, `src/ui/drafts/`, `src/domain/draft.ts`, `src/domain/draftScope.ts`, `src/domain/proHeroStats.ts`, `src/store/heroMatrix.ts`.
+`pages/drafts/`, `src/ui/drafts/`, `src/domain/draft.ts`, `src/domain/draftScope.ts`, `src/domain/proHeroStats.ts`, `src/domain/simMap.ts`, `src/store/heroMatrix.ts`.
 
 Two tables, deliberately separate:
 
@@ -11,12 +11,13 @@ Two tables, deliberately separate:
 
 ## Handles
 
-| Where                           | What                                            |
-| ------------------------------- | ----------------------------------------------- |
-| `/drafts`                       | Both tables, filters, format cards              |
-| `/drafts?map=Yggdrasill%20Path` | Map filter; both tables narrow                  |
-| `/drafts?event=<id>`            | Event filter; only **Series we synced** narrows |
-| `/drafts/simulator`             | Practice draft board                            |
+| Where                                     | What                                                                |
+| ----------------------------------------- | ------------------------------------------------------------------- |
+| `/drafts`                                 | Both tables, filters, format cards                                  |
+| `/drafts?map=Yggdrasill%20Path`           | Map filter; both tables narrow                                      |
+| `/drafts?event=<id>`                      | Event filter; only **Series we synced** narrows                     |
+| `/drafts/simulator`                       | Practice draft board, all-map mrvl rates                            |
+| `/drafts/simulator?map=yggdrasill%20path` | Practice board with that hero-matrix map's pick, ban, protect rates |
 
 ## Flows
 
@@ -25,6 +26,10 @@ Two tables, deliberately separate:
 3. Pick an event. **Series we synced** narrows; **All pro games mrvl tracked** stays put, and its caption still says "every region".
 4. Resize to 390×844. Both tables may scroll inside their own `overflow-x-auto` box; the page itself must not scroll sideways.
 5. Win-rate cells show "—" below 10 games, and the note under the table says it is not a chance of winning.
+6. Open `/drafts/simulator`. The hero cards show Pk, B, Pr and W rates from mrvl's Overall group, with "mrvl · last 30 days · {games} games on all maps".
+7. Pick a map in the simulator's Map select. The cards switch to that map's group and the label names the map and its games; the format's steps and any moves stay put. Reload: `?map=` keeps the choice. Choose All maps: `?map=` is dropped.
+8. A win rate below 10 games shows "—", and the note says win is play time, not a chance of winning.
+9. Without hero totals (`hero-matrix:v1` missing), the Map select is disabled with its reason and the cards keep the synced-series B and P label.
 
 ## Evidence
 

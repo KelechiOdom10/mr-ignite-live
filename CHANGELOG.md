@@ -5,6 +5,7 @@ Newest first. One line per change: the outcome first, then the PR.
 ## Unreleased
 
 - **Event pages:** finished events show real prize placings, filled from the bracket (#42).
+- **Draft simulator:** pick a map to see each hero's pro rates on it, from mrvl's last 30 days (#41).
 - **Event pages:** prize distribution by place, and a participants grid. Placings hide with Hide spoilers (#40).
 
 ## 2026-11-09
