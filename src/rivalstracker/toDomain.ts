@@ -138,7 +138,8 @@ export function toHistoryPage(res: ResponseOf<"history">, freshness: Freshness):
         season: seasonLabel(m.match_season),
         mode: gameModeLabel(m.game_mode_id),
         map: mapName(m.match_map_id),
-        category: gameModeLabel(m.game_mode_id),
+        // No separate category label exists; the mode is the only classification.
+        category: null,
         result: resultOf(p.is_win),
         score: us !== undefined && them !== undefined ? { us, them } : null,
         kills: p.k,
@@ -175,7 +176,8 @@ export function toMatchDetail(res: ResponseOf<"match">): MatchDetail {
     mode: gameModeLabel(res.game_mode_id),
     // The match payload has no map id; only history rows carry one. No season either.
     map: null,
-    category: gameModeLabel(res.game_mode_id),
+    // No separate category label exists; the mode is the only classification.
+    category: null,
     season: null,
     durationSeconds: res.match_play_duration,
     teams: camps.map((camp) => {
