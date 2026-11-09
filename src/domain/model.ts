@@ -39,6 +39,14 @@ export const MatchSchema = z.object({
 
 export type Match = z.infer<typeof MatchSchema>;
 
+export const PrizePlacementSchema = z.object({
+  place: z.number().int().positive(),
+  prizeUsd: z.number().nonnegative(),
+  team: TeamSchema.nullable(),
+});
+
+export type PrizePlacement = z.infer<typeof PrizePlacementSchema>;
+
 export const IgniteEventSchema = z.object({
   id: z.string().min(1),
   name: z.string(),
@@ -48,6 +56,7 @@ export const IgniteEventSchema = z.object({
   startDate: z.string().nullable(),
   endDate: z.string().nullable(),
   prizePoolUsd: z.number().nullable(),
+  prizes: z.array(PrizePlacementSchema),
   liquipediaUrl: z.url(),
   updatedAt: z.iso.datetime(),
   iconFile: z.string().nullable(),
@@ -77,7 +86,7 @@ export const MapOverrideSchema = MapResultSchema.omit({ vod: true });
 
 export type MapOverride = z.infer<typeof MapOverrideSchema>;
 
-export const STORED_SNAPSHOT_VERSION = 5;
+export const STORED_SNAPSHOT_VERSION = 6;
 
 export const StoredSnapshotSchema = z.object({
   version: z.literal(STORED_SNAPSHOT_VERSION),

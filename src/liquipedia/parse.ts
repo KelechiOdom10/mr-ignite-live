@@ -1,4 +1,10 @@
-import { type IgniteEvent, type MapResult, type Match, type Team } from "@/domain/model";
+import {
+  type IgniteEvent,
+  type MapResult,
+  type Match,
+  type PrizePlacement,
+  type Team,
+} from "@/domain/model";
 import { teamShortName } from "@/domain/teams";
 
 import { parseLiquipediaDate } from "./dates";
@@ -8,6 +14,7 @@ const WIKI = "https://liquipedia.net/marvelrivals/";
 const GROUP_STAGE_SUFFIX = "/Group Stage";
 const REGIONS = ["Americas", "EMEA", "China", "Pacific", "Asia", "Oceania"];
 const MATCH_KEY = /^(R\d+M\d+|M\d+|RxM\w+)$/;
+const PRIZE_POOL_TEMPLATES = ["TeamPrizePool", "PrizePool"];
 
 type ContainerKind = "bracket" | "matchlist";
 
@@ -58,6 +65,58 @@ function parseMaps(params: Record<string, string>): MapResult[] {
   }
 
   return maps;
+}
+
+function parseOpponent(raw: string): Team | null {
+  const tpl = templateIn(raw, "");
+  const name = stripMarkup(tpl ? (tpl.params["1"] ?? tpl.params.team ?? "") : raw);
+
+  if (!name || /^tbd$/i.test(name)) return null;
+
+  return { name, short: teamShortName(name) };
+}
+
+function slotOpponents(slot: Template): (Team | null)[] {
+  const opponents: (Team | null)[] = [];
+
+  for (let index = 1; slot.params[String(index)] !== undefined; index++) {
+    opponents.push(parseOpponent(slot.params[String(index)] ?? ""));
+  }
+
+  return opponents;
+}
+
+// Liquipedia lists qualification-only slots with no USD prize; they still occupy places, so the
+// place count advances for every slot, not just the paid ones.
+export function parsePrizePool(text: string): PrizePlacement[] {
+  const header = PRIZE_POOL_TEMPLATES.map((name) => findTemplates(text, name)[0]).find(
+    (tpl): tpl is Template => tpl !== undefined,
+  );
+
+  if (!header) return [];
+
+  const placements: PrizePlacement[] = [];
+  let nextPlace = 1;
+
+  for (let index = 1; header.params[String(index)] !== undefined; index++) {
+    const slot = templateIn(header.params[String(index)] ?? "", "Slot");
+
+    if (!slot) continue;
+    const opponents = slotOpponents(slot);
+    const count = parseNumber(slot.params.count) ?? Math.max(opponents.length, 1);
+    const first = parseNumber(slot.params.place) ?? nextPlace;
+    const prizeUsd = parseNumber(slot.params.usdprize?.replace(/,/g, ""));
+
+    if (prizeUsd !== null) {
+      for (let offset = 0; offset < count; offset++) {
+        placements.push({ place: first + offset, prizeUsd, team: opponents[offset] ?? null });
+      }
+    }
+
+    nextPlace = first + count;
+  }
+
+  return placements;
 }
 
 function phaseFor(title: string, kind: ContainerKind): string {
@@ -138,6 +197,7 @@ export function parseEventInfo(title: string, text: string, updatedAt: string): 
     startDate: info.sdate || null,
     endDate: info.edate || null,
     prizePoolUsd: parseNumber(info.prizepoolusd?.replace(/,/g, "")),
+    prizes: parsePrizePool(text),
     liquipediaUrl: WIKI + title.replace(/ /g, "_"),
     updatedAt,
     iconFile: stripMarkup(info.icon ?? info.image ?? "") || null,
