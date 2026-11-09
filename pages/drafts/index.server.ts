@@ -11,13 +11,16 @@ import {
 import { draftScope } from "@/domain/draftScope";
 import { scopeSnapshot } from "@/domain/scope";
 
-import { currentSnapshot, readAllStats } from "../../src/sync";
+import { currentSnapshot, readAllStats, readProHeroStats } from "../../src/sync";
 
 export type Props = InferProps<typeof loader>;
 
 export const loader = defineHandler(async (c) => {
   const now = Date.now();
+
   const [full, allStats] = await Promise.all([currentSnapshot(), readAllStats()]);
+  // After currentSnapshot: on a cold store that call runs the sync that writes the hero totals.
+  const heroMatrix = await readProHeroStats();
 
   const scope = draftScope({
     stats: allStats,
@@ -37,6 +40,7 @@ export const loader = defineHandler(async (c) => {
       finishedSeriesWithoutStats: scope.finishedSeriesWithoutStats,
     },
     formats: { pro: IGNITE_2026, ranked: RANKED_SEASON_10_OBSERVED },
+    heroMatrix,
   };
 });
 

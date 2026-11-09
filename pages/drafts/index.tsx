@@ -3,6 +3,7 @@ import { DraftFilters } from "@/ui/drafts/DraftFilters";
 import { DraftSource } from "@/ui/drafts/DraftSource";
 import { DraftTable } from "@/ui/drafts/DraftTable";
 import { FormatCard } from "@/ui/drafts/FormatCard";
+import { ProHeroTable } from "@/ui/drafts/ProHeroTable";
 import { useLiveSnapshot } from "@/ui/useLiveSnapshot";
 
 import type { Props } from "./index.server";
@@ -23,6 +24,7 @@ export default function DraftsPage({
   summary,
   coverage,
   formats,
+  heroMatrix,
 }: Props) {
   const { snapshot, connection, now } = useLiveSnapshot(initial, { view: "events" });
 
@@ -61,7 +63,13 @@ export default function DraftsPage({
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="min-w-0">
-          {summary.sample.teamDrafts > 0 && <DraftTable summary={summary} />}
+          {summary.sample.teamDrafts > 0 && (
+            <>
+              <h2 className="mb-2 text-sm font-medium">Series we synced</h2>
+              <DraftTable summary={summary} />
+            </>
+          )}
+          <ProHeroTable stats={heroMatrix} map={filter.map} />
         </div>
         <aside className="grid content-start gap-4 self-start lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:overscroll-contain">
           <DraftSource coverage={coverage} now={now} />
