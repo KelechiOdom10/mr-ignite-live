@@ -4,18 +4,8 @@ import type { Snapshot } from "@/domain/model";
 import type { Favourite, LeaderboardRow, PlayerCard, PlayerProblem } from "@/domain/player";
 import { scopeSnapshot } from "@/domain/scope";
 import { createRivalsTrackerClient, type RivalsTrackerClient } from "@/rivalstracker/client";
-import {
-  NotConfiguredError,
-  problemOf,
-  RequestBudgetExceededError,
-  RivalsTrackerError,
-} from "@/rivalstracker/errors";
-import {
-  toHeroCatalogue,
-  toLeaderboard,
-  toPlayerCard,
-  type HeroCatalogue,
-} from "@/rivalstracker/toDomain";
+import { NotConfiguredError, problemOf } from "@/rivalstracker/errors";
+import { toLeaderboard, toPlayerCard } from "@/rivalstracker/toDomain";
 import { d1FavouriteStore, d1PlayerCache, d1RequestLedger } from "@/store/d1";
 import {
   createPlayerData,
@@ -118,19 +108,6 @@ export async function loadPlayers<T>(read: (data: PlayerData) => Promise<T>): Pr
     if (!problem) throw error;
 
     return { ok: false, problem };
-  }
-}
-
-/** Hero names, roles and icons are a nice-to-have: without them pages fall back to what each response carries. */
-export async function heroCatalogueOrEmpty(data: PlayerData): Promise<HeroCatalogue> {
-  try {
-    return toHeroCatalogue((await data.get("heroes", {})).data);
-  } catch (error) {
-    if (error instanceof RivalsTrackerError || error instanceof RequestBudgetExceededError) {
-      return new Map();
-    }
-
-    throw error;
   }
 }
 
