@@ -37,18 +37,8 @@ export function FavouriteButton({
   );
 }
 
-export function RefreshButton({
-  uid,
-  category,
-  page,
-  cost,
-}: {
-  uid: Uid;
-  category: "competitive" | "all";
-  page: number;
-  cost: number;
-}) {
-  const form = useForm("/player/:uid", { intent: "refresh", category, page }, { params: { uid } });
+export function RefreshButton({ uid }: { uid: Uid }) {
+  const form = useForm("/player/:uid", { intent: "refresh" }, { params: { uid } });
 
   return (
     <Form form={form} className="flex flex-col items-end gap-1">
@@ -58,7 +48,7 @@ export function RefreshButton({
         className="inline-flex h-9 items-center gap-2 rounded-md border px-3 text-sm transition-colors hover:bg-accent disabled:opacity-60"
       >
         <RefreshCw className={cn("size-4", form.pending && "animate-spin")} aria-hidden />
-        Refresh · {cost} credits
+        Refresh
       </button>
       {form.errors.intent && (
         <p role="alert" className="text-xs text-live">

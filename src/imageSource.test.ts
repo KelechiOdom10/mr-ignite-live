@@ -18,12 +18,20 @@ describe("imageSource", () => {
     expect(imageSource("not a url")).toBeNull();
   });
 
-  it("allows RivalsIsland assets but not the API host, so the proxy can't reach paid endpoints", () => {
+  it("allows RivalsIsland assets but not its API host, so the proxy can't reach old endpoints", () => {
     expect(
       imageSource("https://assets.rivalsisland.com/v1/abc/heroes/1011_regular.png")?.href,
     ).toBe("https://assets.rivalsisland.com/v1/abc/heroes/1011_regular.png");
     expect(imageSource("https://api.rivalsisland.com/v1/players/1/career")).toBeNull();
     expect(imageSource("https://assets.rivalsisland.com/docs/openapi.json")).toBeNull();
+  });
+
+  it("allows RivalsTracker portraits and hero art but not its API host", () => {
+    expect(
+      imageSource("https://rivalstracker.com/images/Playerhead/img_playerhead_31031213.png")?.href,
+    ).toBe("https://rivalstracker.com/images/Playerhead/img_playerhead_31031213.png");
+    expect(imageSource("https://api.rivalstracker.com/api/player/1")).toBeNull();
+    expect(imageSource("https://rivalstracker.com/api/player/1")).toBeNull();
   });
 
   it("allows Liquipedia commons and mrvl images, dropping any fragment", () => {

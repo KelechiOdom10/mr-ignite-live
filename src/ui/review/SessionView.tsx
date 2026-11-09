@@ -48,7 +48,7 @@ const MATCH_FIELDS = [
   },
   {
     key: "matchUid",
-    label: "RivalsIsland match ID",
+    label: "Match ID",
     hint: "Links to the match page",
     valid: (v: string) => MatchUidSchema.safeParse(v).success,
   },

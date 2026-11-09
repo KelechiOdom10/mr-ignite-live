@@ -1,5 +1,7 @@
 # 8. RivalsIsland for player data, behind a credit budget
 
+Superseded by [ADR 9](0009-rivalstracker-for-player-data.md): RivalsIsland went offline on 2026-11-04.
+
 ## Context
 
 Ranked player data (search, rank, career, match history, match details, leaderboard) is only available from RivalsIsland's paid API: a free tier of 10,000 credits, priced per endpoint (search 5, career 10, hero career 10, 20 history rows 10, match detail 5, leaderboard and catalogues 1). Failed requests cost nothing. Many players keep their match history private. There is no tier-list, meta or per-player top-heroes source; the hero ranking endpoint is premium-only.

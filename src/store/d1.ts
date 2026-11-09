@@ -5,7 +5,7 @@ import { z } from "zod";
 import { FavouriteSchema } from "@/domain/player";
 
 import type { FavouriteStore } from "./favourites";
-import type { CachedResponse, CreditLedger, PlayerCache } from "./playerData";
+import type { CachedResponse, PlayerCache, RequestLedger } from "./playerData";
 
 export const d1FavouriteStore: FavouriteStore = {
   async list() {
@@ -25,7 +25,7 @@ export const d1FavouriteStore: FavouriteStore = {
 };
 
 const CacheRowSchema = z.object({
-  status: z.enum(["ok", "history_private", "career_private", "not_found"]),
+  status: z.enum(["ok", "not_found", "broken"]),
   body: z
     .string()
     .nullable()
@@ -59,11 +59,10 @@ export const d1PlayerCache: PlayerCache = {
 
 const IdRowsSchema = z.array(z.object({ id: z.number().int() }));
 
-const SummaryRowsSchema = z.array(
-  z.object({ spent: z.number(), pending: z.number(), balance: z.number().nullable() }),
-);
+const SummaryRowsSchema = z.array(z.object({ spent: z.number(), pending: z.number() }));
 
-export const d1CreditLedger: CreditLedger = {
+/** The table keeps its `credit_ledger` name so no migration is needed; it now counts requests. */
+export const d1RequestLedger: RequestLedger = {
   // One statement, so the budget check and the pending row can't interleave with another request's.
   async reserve(r) {
     const rows = await db.all(sql`
@@ -72,6 +71,7 @@ export const d1CreditLedger: CreditLedger = {
       WHERE (
         SELECT COALESCE(SUM(CASE WHEN settled_at IS NULL THEN expected ELSE cost END), 0)
         FROM credit_ledger
+        WHERE at >= ${r.since}
       ) + ${r.expected} <= ${r.budget}
       RETURNING id`);
 
@@ -82,19 +82,19 @@ export const d1CreditLedger: CreditLedger = {
   async settle(id, s) {
     await db
       .update(creditLedger)
-      .set({ cost: s.cost, balance: s.balance, httpStatus: s.httpStatus, settledAt: Date.now() })
+      .set({ cost: s.cost, httpStatus: s.httpStatus, settledAt: Date.now() })
       .where(eq(creditLedger.id, id));
   },
-  async summary() {
+  async summary(since) {
     const rows = await db.all(sql`
       SELECT
         COALESCE(SUM(CASE WHEN settled_at IS NOT NULL THEN cost ELSE 0 END), 0) AS spent,
-        COALESCE(SUM(CASE WHEN settled_at IS NULL THEN expected ELSE 0 END), 0) AS pending,
-        (SELECT balance FROM credit_ledger WHERE balance IS NOT NULL ORDER BY id DESC LIMIT 1) AS balance
-      FROM credit_ledger`);
+        COALESCE(SUM(CASE WHEN settled_at IS NULL THEN expected ELSE 0 END), 0) AS pending
+      FROM credit_ledger
+      WHERE at >= ${since}`);
 
     const [row] = SummaryRowsSchema.parse(rows);
 
-    return row ?? { spent: 0, pending: 0, balance: null };
+    return row ?? { spent: 0, pending: 0 };
   },
 };

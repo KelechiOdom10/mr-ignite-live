@@ -174,7 +174,7 @@ describe("recent players", () => {
 });
 
 describe("searchableName", () => {
-  it("only offers names RivalsIsland's exact search accepts", () => {
+  it("only offers names the game's exact search accepts", () => {
     expect(searchableName(" Sypeh ")).toBe("Sypeh");
     expect(searchableName("")).toBeNull();
     expect(searchableName("a".repeat(17))).toBeNull();

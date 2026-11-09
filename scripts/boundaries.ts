@@ -19,7 +19,7 @@ export const RULES: readonly BoundaryRule[] = [
   { name: "domain", files: /^src\/domain\//, allow: ["zod"] },
   { name: "liquipedia", files: /^src\/liquipedia\//, allow: ["zod", "@/domain"] },
   { name: "mrvl", files: /^src\/mrvl\//, allow: ["zod", "@/domain"] },
-  { name: "rivalsisland", files: /^src\/rivalsisland\//, allow: ["zod", "@/domain"] },
+  { name: "rivalstracker", files: /^src\/rivalstracker\//, allow: ["zod", "@/domain"] },
   { name: "KV binding", files: /^src\/store\/voidKv\.ts$/, allow: ["void/kv"] },
   {
     name: "D1 binding",
@@ -29,7 +29,7 @@ export const RULES: readonly BoundaryRule[] = [
   {
     name: "store",
     files: /^src\/store\//,
-    allow: ["zod", "@/domain", "@/liquipedia", "@/mrvl", "@/rivalsisland"],
+    allow: ["zod", "@/domain", "@/liquipedia", "@/mrvl", "@/rivalstracker"],
   },
   {
     name: "ui",

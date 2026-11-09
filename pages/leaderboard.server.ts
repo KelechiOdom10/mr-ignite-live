@@ -1,7 +1,7 @@
 import { defineHandler, defineHead, type InferProps } from "void";
 
 import { DeviceSchema } from "@/domain/player";
-import { toLeaderboard } from "@/rivalsisland/toDomain";
+import { toLeaderboard } from "@/rivalstracker/toDomain";
 
 import { loadPlayers, shellSnapshot } from "../src/players";
 
@@ -15,7 +15,7 @@ export const loader = defineHandler(async (c) => {
     loadPlayers(async (data) => {
       const { data: res, fetchedAt, stale } = await data.get("leaderboard", { device });
 
-      return toLeaderboard(res, { fetchedAt, stale });
+      return toLeaderboard(res, device, { fetchedAt, stale });
     }),
   ]);
 

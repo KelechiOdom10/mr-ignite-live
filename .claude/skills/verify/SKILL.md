@@ -1,11 +1,11 @@
 ---
 name: verify
-description: Prove Rivals Hub works end to end - start it in isolation on recorded RivalsIsland fixtures (zero credits), drive its esports and player flows in a real browser, and capture evidence. Use before calling a change done, or to run, reproduce, or demo Rivals Hub.
+description: Prove Rivals Hub works end to end - start it in isolation on recorded RivalsTracker fixtures (no upstream requests), drive its esports and player flows in a real browser, and capture evidence. Use before calling a change done, or to run, reproduce, or demo Rivals Hub.
 ---
 
 # Verify Rivals Hub
 
-Everything here costs **zero RivalsIsland credits**: the dev server replays `test/fixtures/rivalsisland/` unless `.env` says `RIVALSISLAND_MODE=live`. Never set live mode to verify; recorded players are enough.
+Everything here makes **zero upstream requests**: the dev server replays `test/fixtures/rivalstracker/` unless `.env` says `PLAYER_DATA_MODE=live`. Never set live mode to verify; recorded players are enough.
 
 ## Launch
 
@@ -15,7 +15,7 @@ Run from the checkout you are verifying (a worktree is best: see Isolation).
 bun install --frozen-lockfile        # first run in a new checkout or worktree
 bunx void prepare                    # generates .void/ types; typecheck fails without them
 bunx void db migrate                 # local D1 tables for favourites
-RIVALSISLAND_MODE=fixtures bunx vite --port 5191 --strictPort > /tmp/rivals-hub-verify.log 2>&1 &
+PLAYER_DATA_MODE=fixtures bunx vite --port 5191 --strictPort > /tmp/rivals-hub-verify.log 2>&1 &
 ```
 
 Ready when `/tmp/rivals-hub-verify.log` prints `Local: http://localhost:5191/` and `curl -s localhost:5191/api/credits` answers `{"mode":"fixtures",...}`.
@@ -33,9 +33,9 @@ curl -s localhost:5191/api/credits                                    # mode mus
 curl -s -o /dev/null -w "%{http_code} %{time_total}\n" localhost:5191/player/670067075   # 200 in a few seconds
 ```
 
-`spent` there is simulated. Fixtures mode books each recorded response's `x-credit-cost` in an in-memory ledger, so the first load of a player raises it (about 21 for Sypeh, 10 for TrqstMe), and a restart resets it. Nothing real is spent while `mode` is `fixtures`.
+`spent` there is simulated. Fixtures mode books one request per recorded response in an in-memory ledger, so the first load of a player raises it (1 for Sypeh, 1 for TrqstMe, plus 1 if the leaderboard is opened), and a restart resets it. Nothing reaches RivalsTracker while `mode` is `fixtures`.
 
-If `mode` is `live`, stop: something set `RIVALSISLAND_MODE=live` and any player page may spend credits. If the player page hangs, the snapshot is still building (see Launch).
+If `mode` is `live`, stop: something set `PLAYER_DATA_MODE=live` and any player page may make a real request. If the player page hangs, the snapshot is still building (see Launch).
 
 ## Isolation
 
@@ -51,15 +51,15 @@ None. The site is local-only and has no accounts.
 
 Use Synara's in-app browser (`browser_*` tools): `browser_open`, then `browser_resize` to 1440×900 and later 390×844. Assert text with `browser_run` reading `innerText`. Server HTML from curl splits strings with React comment nodes (`season (<!-- -->10.5`), so plain text matching on it fails. Without a browser tool, strip comments and tags first (`sed -E 's/<!-- -->//g; s/<[^>]+>/ /g'`) and say the proof is server-render only.
 
-| Handle                                                                               | Where                                                                       |
-| ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
-| `/player/670067075`                                                                  | Sypeh: recorded career, 20 competitive matches across seasons 10.5 and 10.0 |
-| `/player/1364513129`                                                                 | NAVI TrqstMe: recorded career, **private** match history                    |
-| `/players`, `/players?name=Sypeh`                                                    | Search and favourites; the `name` query prefills without searching          |
-| `/leaderboard`                                                                       | Recorded top 100 (PC)                                                       |
-| `/game/5513337_1791844040_1311009_11001_12`                                          | The one recorded ranked match                                               |
-| `/`, `/events`, `/match/<id>`                                                        | Esports pages from the live Liquipedia snapshot                             |
-| ⌘K (`role=combobox`, placeholder "Search teams, matches, events, players and pages") | Global search                                                               |
+| Handle                                                                               | Where                                                              |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| `/player/670067075`                                                                  | Sypeh: recorded career, 20 competitive matches, all season 10.5    |
+| `/player/1364513129`                                                                 | NAVI TrqstMe: recorded career, **private** match history           |
+| `/players`, `/players?name=Sypeh`                                                    | Search and favourites; the `name` query prefills without searching |
+| `/leaderboard`                                                                       | Recorded top 100 (PC)                                              |
+| `/game/5513337_1791844040_1311009_11001_12`                                          | The one recorded ranked match                                      |
+| `/`, `/events`, `/match/<id>`                                                        | Esports pages from the live Liquipedia snapshot                    |
+| ⌘K (`role=combobox`, placeholder "Search teams, matches, events, players and pages") | Global search                                                      |
 
 Searching any name other than `Sypeh`, `NAVI TrqstMe` or `zzqxnoplayer77` in fixtures mode answers "No player is named …", as the API does for an unknown name.
 

@@ -81,10 +81,8 @@ function HeroRow({
             {[hero.role, label].filter(Boolean).join(" · ")}
           </p>
         </div>
-        {!card && <LoadHeroCard uid={uid} hero={hero} label="Hero stats · 10 credits" />}
-        {card?.freshness.stale && (
-          <LoadHeroCard uid={uid} hero={hero} label="Refresh · 10 credits" />
-        )}
+        {!card && <LoadHeroCard uid={uid} hero={hero} label="Hero stats" />}
+        {card?.freshness.stale && <LoadHeroCard uid={uid} hero={hero} label="Refresh" />}
       </div>
       {card && <HeroCard card={card} now={now} />}
     </li>
@@ -138,7 +136,7 @@ export function HeroesPanel({
       <p className="text-xs text-muted-foreground">
         {coveredMatches > 0
           ? `Recent heroes come from ${coveredMatches} opened ${coveredMatches === 1 ? "match" : "matches"}.`
-          : "Open a match to see which heroes this player used. RivalsIsland has no free hero ranking."}
+          : "Open a match to see which heroes this player used."}
       </p>
     </section>
   );

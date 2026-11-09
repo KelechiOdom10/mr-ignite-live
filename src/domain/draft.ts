@@ -56,7 +56,7 @@ export const RANKED_SEASON_10_OBSERVED: DraftFormat = {
   steps: [first("ban"), second("ban"), second("ban"), first("ban"), first("ban"), second("ban")],
   confirmed: false,
   basis:
-    "One recorded Season 10.5 Grandmaster+ match from RivalsIsland: six different heroes, banned in this order, none played. Not confirmed by official notes.",
+    "One recorded Season 10.5 Grandmaster+ match: six different heroes, banned in this order, none played. Not confirmed by official notes.",
 };
 
 function actsIn(step: DraftStep, camp: number): boolean {

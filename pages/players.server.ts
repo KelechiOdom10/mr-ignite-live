@@ -2,7 +2,7 @@ import { defineHandler, defineHead, type InferProps } from "void";
 import { z } from "zod";
 
 import { PlayerNameQuerySchema, problemMessage, searchPrefill } from "@/domain/player";
-import { linkableUid } from "@/rivalsisland/toDomain";
+import { toSearchPlayer } from "@/rivalstracker/toDomain";
 
 import {
   cachedLeaderboardTop,
@@ -34,11 +34,11 @@ export const action = defineHandler.withValidator({ body: SearchBody })(async (c
   );
 
   if (!found.ok) return c.json({ errors: { name: problemMessage(found.problem) } }, 422);
-  const uid = found.value.player ? linkableUid(found.value.player.uid) : null;
+  const player = toSearchPlayer(found.value);
 
-  if (!uid) return c.json({ errors: { name: `No player is named “${body.name}”.` } }, 422);
+  if (!player) return c.json({ errors: { name: `No player is named “${body.name}”.` } }, 422);
 
-  return c.redirect(`/player/${uid}`);
+  return c.redirect(`/player/${player.uid}`);
 });
 
 export const head = defineHead(() => ({ title: "Players" }));

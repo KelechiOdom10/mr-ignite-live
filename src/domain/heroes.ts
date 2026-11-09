@@ -1,6 +1,6 @@
 const LOWERCASE = new Set(["the", "of", "and"]);
 
-/** RivalsIsland sends hero names in capitals ("JEFF THE LAND SHARK"); show them as written in game. */
+/** The API sends hero names in capitals ("JEFF THE LAND SHARK"); show them as written in game. */
 export function heroDisplayName(name: string): string {
   return name
     .toLowerCase()
