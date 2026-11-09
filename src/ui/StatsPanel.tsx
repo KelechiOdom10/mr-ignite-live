@@ -23,6 +23,7 @@ import { AwardBadge } from "./AwardBadge";
 import { proxiedImage } from "./images";
 import { TeamLogo } from "./TeamMark";
 import { formatDuration } from "./time";
+import { UNDERLINE_TAB } from "./underlineTab";
 
 const StatsResponseSchema = z.object({ stats: MatchStatsSchema.nullable() });
 
@@ -443,11 +444,11 @@ export function StatsPanel({
           <Tabs defaultValue="all" variant="underline">
             <div className="-mx-4 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:px-0">
               <TabsList aria-label="Map">
-                <TabsTrigger value="all" className="whitespace-nowrap">
+                <TabsTrigger value="all" className={UNDERLINE_TAB}>
                   All maps
                 </TabsTrigger>
                 {stats.maps.map((m) => (
-                  <TabsTrigger key={m.index} value={String(m.index)} className="whitespace-nowrap">
+                  <TabsTrigger key={m.index} value={String(m.index)} className={UNDERLINE_TAB}>
                     Map {m.index} · {m.map}
                   </TabsTrigger>
                 ))}

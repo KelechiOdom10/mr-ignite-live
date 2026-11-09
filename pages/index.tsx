@@ -18,6 +18,7 @@ import { EventRow, eventPhase } from "@/ui/EventRow";
 import { MatchCard } from "@/ui/MatchCard";
 import { REGION_FILTERS, regionKey, type RegionFilter } from "@/ui/region";
 import { dayKey, groupByDay, useHydrated } from "@/ui/time";
+import { UNDERLINE_TAB } from "@/ui/underlineTab";
 import { useLiveSnapshot } from "@/ui/useLiveSnapshot";
 
 import type { Props } from "./index.server";
@@ -56,9 +57,7 @@ export default function HomePage({ snapshot: initial, view }: Props) {
   const hydrated = useHydrated();
   const [region, setRegion] = useState<RegionFilter>(view.region);
 
-  const [chosenTab, setChosenTab] = useState<{ region: RegionFilter; tab: ListTab } | null>(
-    view.tab === null ? null : { region: view.region, tab: view.tab },
-  );
+  const [chosenTab, setChosenTab] = useState<ListTab | null>(view.tab);
 
   const [eventTab, setEventTab] = useState<EventPhase>(view.events);
   const [loadedView, setLoadedView] = useState(view);
@@ -69,7 +68,7 @@ export default function HomePage({ snapshot: initial, view }: Props) {
   if (view !== loadedView) {
     setLoadedView(view);
     setRegion(view.region);
-    setChosenTab(view.tab === null ? null : { region: view.region, tab: view.tab });
+    setChosenTab(view.tab);
     setEventTab(view.events);
   }
 
@@ -94,8 +93,7 @@ export default function HomePage({ snapshot: initial, view }: Props) {
   }, [snapshot.matches, events, region, now]);
 
   const fallbackTab = hydrated ? smartDefaultTab(live, upcoming, results, now) : "upcoming";
-  const pickedTab = chosenTab?.region === region ? chosenTab.tab : null;
-  const tab = pickedTab ?? fallbackTab;
+  const tab = chosenTab ?? fallbackTab;
 
   const nextUp = upcoming.find((m) => m.team1 && m.team2) ?? upcoming[0];
 
@@ -126,7 +124,7 @@ export default function HomePage({ snapshot: initial, view }: Props) {
               value={tab}
               onValueChange={(v) => {
                 if (!isListTab(v)) return;
-                setChosenTab({ region, tab: v });
+                setChosenTab(v);
                 rememberView({ region, tab: v, events: eventTab });
               }}
               variant="segment"
@@ -142,13 +140,13 @@ export default function HomePage({ snapshot: initial, view }: Props) {
                 onValueChange={(v) => {
                   if (!isHomeRegion(v)) return;
                   setRegion(v);
-                  rememberView({ region: v, tab: null, events: eventTab });
+                  rememberView({ region: v, tab: chosenTab, events: eventTab });
                 }}
                 variant="underline"
               >
                 <TabsList aria-label="Region">
                   {REGION_FILTERS.map((r) => (
-                    <TabsTrigger key={r.value} value={r.value} className="whitespace-nowrap">
+                    <TabsTrigger key={r.value} value={r.value} className={UNDERLINE_TAB}>
                       {r.label}
                     </TabsTrigger>
                   ))}
@@ -207,7 +205,7 @@ export default function HomePage({ snapshot: initial, view }: Props) {
             onValueChange={(v) => {
               if (!isEventPhase(v)) return;
               setEventTab(v);
-              rememberView({ region, tab: pickedTab, events: v });
+              rememberView({ region, tab: chosenTab, events: v });
             }}
             variant="segment"
           >
