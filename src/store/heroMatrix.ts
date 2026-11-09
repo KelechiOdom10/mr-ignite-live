@@ -11,6 +11,9 @@ import { kvKey, type KvStore } from "./kv";
 export const HERO_MATRIX_KEY = kvKey("hero-matrix:v1", ProHeroStatsSchema);
 
 const REFRESH_MS = 60 * 60 * 1000;
+
+// A failed fetch writes nothing, so without this an mrvl outage would be retried every minute.
+const ATTEMPT_EVERY_MINUTES = 10;
 const WINDOW_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -34,6 +37,10 @@ function isFresh(stored: ProHeroStats | null, now: number): boolean {
   return stored !== null && now - Date.parse(stored.fetchedAt) < REFRESH_MS;
 }
 
+function isAttemptMinute(now: number): boolean {
+  return Math.floor(now / 60_000) % ATTEMPT_EVERY_MINUTES === 0;
+}
+
 /**
  * One request an hour at most. mrvl is a courtesy source: a failure keeps the last good totals and
  * stays out of the Liquipedia sync, and only the three typed mrvl errors are swallowed here.
@@ -49,7 +56,7 @@ export async function refreshHeroMatrix({
 }): Promise<ProHeroStats | null> {
   const stored = await readHeroMatrix(store);
 
-  if (isFresh(stored, now)) return stored;
+  if (isFresh(stored, now) || !isAttemptMinute(now)) return stored;
 
   const window = heroMatrixWindow(now);
 

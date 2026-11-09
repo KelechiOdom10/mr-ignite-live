@@ -100,4 +100,23 @@ describe("refreshHeroMatrix", () => {
     await expect(refreshHeroMatrix({ store, mrvl: down, now: NOW })).resolves.toBeNull();
     expect(await readHeroMatrix(store)).toBeNull();
   });
+
+  it("asks mrvl at most six times an hour while it keeps failing", async () => {
+    const store = memoryKvStore();
+    let requests = 0;
+
+    const failing: typeof fetch = async () => {
+      requests++;
+
+      return new Response("bad gateway", { status: 502 });
+    };
+
+    const mrvl = createMrvlClient({ fetch: failing });
+
+    for (let minute = 0; minute < 60; minute++) {
+      await refreshHeroMatrix({ store, mrvl, now: NOW + minute * 60_000 });
+    }
+
+    expect(requests).toBe(6);
+  });
 });

@@ -104,7 +104,6 @@ describe("syncOnce on match day", () => {
       [`stats:v2:${FLY_100T}`]: 1,
       "stats-index:v2": 1,
       "stats-backfill-misses:v1": 1,
-      "hero-matrix:v1": 1,
     });
     expect(outcome.changed).toBe(true);
   });
@@ -123,7 +122,6 @@ describe("syncOnce on match day", () => {
       [`stats:v2:${FLY_100T}`]: 1,
       "stats-index:v2": 1,
       "stats-backfill-misses:v1": 1,
-      "hero-matrix:v1": 1,
     });
     expect(outcome.changedPages).toBe(1);
     const stored = await readStored(day.store);
@@ -307,7 +305,6 @@ describe("syncOnce on match day", () => {
       snapshot: 1,
       "stats-index:v2": 1,
       "stats-backfill-misses:v1": 1,
-      "hero-matrix:v1": 1,
     });
     expect(outcome.updatedStats).toBe(0);
   });
@@ -322,7 +319,6 @@ describe("syncOnce on match day", () => {
       [`stats:v2:${FLY_100T}`]: 1,
       "stats-index:v2": 1,
       "stats-backfill-misses:v1": 1,
-      "hero-matrix:v1": 1,
     });
     day.mrvl.settings.failingPages = [];
     const earlierRequests = day.mrvl.requests.length;
@@ -345,7 +341,6 @@ describe("syncOnce on match day", () => {
       [`stats:v2:${FLY_100T}`]: 1,
       "stats-index:v2": 1,
       "stats-backfill-misses:v1": 1,
-      "hero-matrix:v1": 1,
     });
   });
 });
