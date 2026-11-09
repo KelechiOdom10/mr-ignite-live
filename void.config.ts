@@ -6,6 +6,10 @@ export default defineConfig({
     preview_urls: true,
     routes: [],
   },
+  deploy: {
+    // Cloudflare takes about 55s to route a staged version's readiness probe; Void's staged check gives up first.
+    cloudflare: { mode: "atomic" },
+  },
   worker: {
     compatibility_date: "2026-02-24",
   },
