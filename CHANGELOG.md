@@ -4,6 +4,7 @@ Newest first. One line per change: the outcome first, then the PR.
 
 ## Unreleased
 
+- **Event pages:** finished events show real prize placings, filled from the bracket (#42).
 - **Event pages:** prize distribution by place, and a participants grid. Placings hide with Hide spoilers (#40).
 
 ## 2026-11-09
