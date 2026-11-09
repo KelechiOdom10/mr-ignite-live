@@ -97,7 +97,7 @@ describe("the simulator on recorded drafts", () => {
       const bySide = (side: 1 | 2) =>
         (map.draft ?? []).find((a) => a.side === side)?.camp === 0 ? 0 : 1;
 
-      const [first, second] = outcome(moves);
+      const [first, second] = outcome(IGNITE_2026, moves);
       const sideOf = { 0: first, 1: second };
       expect(sideOf[bySide(1)].bans).toEqual(map.teams[0].bans.map((h) => h.id));
       expect(sideOf[bySide(2)].bans).toEqual(map.teams[1].bans.map((h) => h.id));

@@ -47,7 +47,7 @@ export const IGNITE_2026: DraftFormat = {
     "Read from mrvl.net's draft timelines for Ignite 2026 Stage 2 maps in the Americas, EMEA and China, and matched step for step against the broadcast draft screen for FlyQuest vs 100 Thieves on God Quarry.",
 };
 
-/** Seen in one recorded Season 10.5 Competitive match; shown for comparison, never simulated. */
+/** Seen in one recorded Season 10.5 Competitive match; kept for comparison with the tournament format. */
 export const RANKED_SEASON_10_OBSERVED: DraftFormat = {
   id: "ranked-s10-observed",
   name: "Ranked Competitive bans (one recorded match)",

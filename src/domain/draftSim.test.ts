@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { IGNITE_2026 } from "./draft";
+import { IGNITE_2026, RANKED_SEASON_10_OBSERVED } from "./draft";
 import {
   applyMove,
   currentTurn,
@@ -65,7 +65,7 @@ describe("draft simulator", () => {
       [0, "gambit"],
     ]);
 
-    expect(outcome(moves)[0]).toEqual({
+    expect(outcome(IGNITE_2026, moves)[0]).toEqual({
       bans: ["gambit"],
       protects: ["gambit"],
       unavailable: ["loki"],
@@ -91,7 +91,7 @@ describe("draft simulator edges", () => {
       [1, "gambit"],
     ]);
 
-    expect(outcome(moves).map((o) => o.bans)).toEqual([["gambit"], ["gambit"]]);
+    expect(outcome(IGNITE_2026, moves).map((o) => o.bans)).toEqual([["gambit"], ["gambit"]]);
   });
 
   it("returns the turn to the team that undid its move in a both-teams step", () => {
@@ -168,5 +168,23 @@ describe("draft board", () => {
         sample: { teamDrafts: 2, maps: 1, series: 1, withProtects: 0 },
       }).loki?.protected,
     ).toBeNull();
+  });
+});
+
+describe("ranked draft rules", () => {
+  it("refuses a second team banning a hero the first already banned, since ranked bans aren't shared", () => {
+    const moves = applyMove(RANKED_SEASON_10_OBSERVED, [], 0, "loki");
+
+    expect(moveProblem(RANKED_SEASON_10_OBSERVED, moves, 1, "loki")).toEqual({ kind: "banned" });
+    expect(applyMove(RANKED_SEASON_10_OBSERVED, moves, 1, "loki")).toEqual(moves);
+  });
+
+  it("counts a ranked ban as out for both teams, not just the opponent", () => {
+    const moves = applyMove(RANKED_SEASON_10_OBSERVED, [], 0, "loki");
+
+    expect(outcome(RANKED_SEASON_10_OBSERVED, moves).map((side) => side.unavailable)).toEqual([
+      ["loki"],
+      ["loki"],
+    ]);
   });
 });

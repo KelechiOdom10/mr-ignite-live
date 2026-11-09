@@ -37,6 +37,7 @@ export type MoveProblem =
   | { kind: "finished" }
   | { kind: "not-your-turn" }
   | { kind: "repeat" }
+  | { kind: "banned" }
   | { kind: "protected-by-opponent" };
 
 export function moveProblem(
@@ -53,6 +54,14 @@ export function moveProblem(
 
   if (moves.some((m) => m.camp === camp && m.kind === turn.kind && m.heroId === heroId)) {
     return { kind: "repeat" };
+  }
+
+  if (
+    turn.kind === "ban" &&
+    !format.sharedBans &&
+    moves.some((m) => m.kind === "ban" && m.heroId === heroId)
+  ) {
+    return { kind: "banned" };
   }
 
   if (
@@ -86,14 +95,23 @@ export interface CampOutcome {
   unavailable: string[];
 }
 
-export function outcome(moves: readonly SimMove[]): [CampOutcome, CampOutcome] {
+export function outcome(
+  format: DraftFormat,
+  moves: readonly SimMove[],
+): [CampOutcome, CampOutcome] {
   const of = (camp: Camp, kind: DraftStep["kind"]) =>
     moves.flatMap((m) => (m.camp === camp && m.kind === kind ? [m.heroId] : []));
 
   const side = (camp: Camp): CampOutcome => ({
     bans: of(camp, "ban"),
     protects: of(camp, "protect"),
-    unavailable: [...new Set(of(camp === 0 ? 1 : 0, "ban"))],
+    unavailable: [
+      ...new Set(
+        format.banBlocks === "both teams"
+          ? [...of(0, "ban"), ...of(1, "ban")]
+          : of(camp === 0 ? 1 : 0, "ban"),
+      ),
+    ],
   });
 
   return [side(0), side(1)];
