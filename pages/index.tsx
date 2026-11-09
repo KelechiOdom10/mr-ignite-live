@@ -18,7 +18,7 @@ import { EventRow, eventPhase } from "@/ui/EventRow";
 import { MatchCard } from "@/ui/MatchCard";
 import { REGION_FILTERS, regionKey, type RegionFilter } from "@/ui/region";
 import { dayKey, groupByDay, useHydrated } from "@/ui/time";
-import { UNDERLINE_TAB } from "@/ui/underlineTab";
+import { UnderlineTabsTrigger } from "@/ui/UnderlineTabsTrigger";
 import { useLiveSnapshot } from "@/ui/useLiveSnapshot";
 
 import type { Props } from "./index.server";
@@ -146,9 +146,9 @@ export default function HomePage({ snapshot: initial, view }: Props) {
               >
                 <TabsList aria-label="Region">
                   {REGION_FILTERS.map((r) => (
-                    <TabsTrigger key={r.value} value={r.value} className={UNDERLINE_TAB}>
+                    <UnderlineTabsTrigger key={r.value} value={r.value}>
                       {r.label}
-                    </TabsTrigger>
+                    </UnderlineTabsTrigger>
                   ))}
                 </TabsList>
               </Tabs>
