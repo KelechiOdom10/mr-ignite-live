@@ -1,7 +1,16 @@
 import { Ban, RotateCcw, Shield, Undo2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type KeyboardEvent } from "react";
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/motion/select";
+import { Tabs, TabsList } from "@/components/motion/tabs";
 import type { DraftFormat } from "@/domain/draft";
+import { parseSimFormatId, SIM_FORMAT_IDS, type SimFormatId } from "@/domain/draftFormat";
 import {
   applyMove,
   type Camp,
@@ -10,7 +19,6 @@ import {
   moveProblem,
   outcome,
   type ProRate,
-  type SimMove,
   slotPlan,
   timeline,
 } from "@/domain/draftSim";
@@ -19,17 +27,37 @@ import { cn } from "@/lib/utils";
 
 import { RoleIcon } from "../RoleIcon";
 import { HeroPortrait } from "../StatsPanel";
+import { UnderlineTabsTrigger } from "../UnderlineTabsTrigger";
 import { ACTOR_SHORT } from "./FormatCard";
+import {
+  filterHeroes,
+  isRoleFilter,
+  type RoleFilter,
+  ROLES,
+  type SimSession,
+  switchFormat,
+} from "./simulatorState";
 
 const TEAM: Record<Camp, string> = { 0: "First team", 1: "Second team" };
-const ROLES = ["All", "Vanguard", "Duelist", "Strategist"] as const;
 
 const PROBLEM: Record<MoveProblem["kind"], string> = {
   finished: "The draft is over. Undo a move or start again.",
   "not-your-turn": "It's the other team's move.",
   repeat: "That team has already done that with this hero.",
+  banned: "That hero is already banned.",
   "protected-by-opponent": "The other team protected this hero, so it can't be banned.",
 };
+
+/** Keeps the chosen format in the URL, so a refresh or a shared link opens the same board. */
+function rememberFormat(formatId: SimFormatId) {
+  const params = new URLSearchParams(window.location.search);
+  params.set("format", formatId);
+  window.history.replaceState(
+    window.history.state,
+    "",
+    `${window.location.pathname}?${params}${window.location.hash}`,
+  );
+}
 
 function percent(share: number): string {
   return `${Math.round(share * 100)}%`;
@@ -132,40 +160,68 @@ function TeamBoard({
       ) : (
         heading
       )}
-      <div className="grid gap-1">
-        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-          <Ban className="size-3" aria-hidden /> Bans
-          <span className="hidden sm:inline">· the other team can&apos;t play these</span>
-        </span>
-        {row(bans, plan.bans, "ban")}
-      </div>
-      <div className="grid gap-1">
-        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-          <Shield className="size-3" aria-hidden /> Protects
-          <span className="hidden sm:inline">· the other team can&apos;t ban these</span>
-        </span>
-        {row(protects, plan.protects, "protect")}
-      </div>
+      {plan.bans > 0 && (
+        <div className="grid gap-1">
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Ban className="size-3" aria-hidden /> Bans
+            <span className="hidden sm:inline">
+              {format.banBlocks === "both teams"
+                ? "· neither team can play these"
+                : "· the other team can't play these"}
+            </span>
+          </span>
+          {row(bans, plan.bans, "ban")}
+        </div>
+      )}
+      {plan.protects > 0 && (
+        <div className="grid gap-1">
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Shield className="size-3" aria-hidden /> Protects
+            <span className="hidden sm:inline">· the other team can&apos;t ban these</span>
+          </span>
+          {row(protects, plan.protects, "protect")}
+        </div>
+      )}
     </section>
   );
 }
 
 export function DraftSimulator({
-  format,
+  formatId: initialFormatId,
+  formats,
   heroes,
   rates,
   proDrafts,
 }: {
-  format: DraftFormat;
+  formatId: SimFormatId;
+  formats: Record<SimFormatId, DraftFormat>;
   heroes: Hero[];
   rates: Record<string, ProRate>;
   proDrafts: number;
 }) {
-  const [moves, setMoves] = useState<SimMove[]>([]);
-  const [camp, setCamp] = useState<Camp>(0);
-  const [role, setRole] = useState<(typeof ROLES)[number]>("All");
+  const [session, setSession] = useState<SimSession>({
+    formatId: initialFormatId,
+    moves: [],
+    camp: 0,
+  });
+
+  const [pendingFormat, setPendingFormat] = useState<SimFormatId | null>(null);
+  const [role, setRole] = useState<RoleFilter>("All");
   const [query, setQuery] = useState("");
   const [problem, setProblem] = useState<string | null>(null);
+  const [loadedFormatId, setLoadedFormatId] = useState(initialFormatId);
+
+  // Void keeps this page mounted across navigations, so a new ?format= prop has to reset the board.
+  if (initialFormatId !== loadedFormatId) {
+    setLoadedFormatId(initialFormatId);
+    setSession({ formatId: initialFormatId, moves: [], camp: 0 });
+    setPendingFormat(null);
+    setProblem(null);
+  }
+
+  const { formatId, moves, camp } = session;
+  const format = formats[formatId];
+  const showRates = formatId === "ignite-2026";
 
   const byId = useMemo(() => new Map(heroes.map((h) => [h.id, h])), [heroes]);
   const turn = currentTurn(format, moves);
@@ -177,14 +233,9 @@ export function DraftSimulator({
     : null;
 
   const choosable = turn !== null && turn.waiting.length > 1;
-  const sides = outcome(moves);
+  const sides = outcome(format, moves);
   const steps = timeline(format, moves);
-
-  const shown = heroes.filter(
-    (h) =>
-      (role === "All" || h.role === role) &&
-      h.name.toLowerCase().includes(query.trim().toLowerCase()),
-  );
+  const shown = filterHeroes(heroes, role, query);
 
   function choose(heroId: string) {
     if (acting === null) {
@@ -196,7 +247,69 @@ export function DraftSimulator({
     const why = moveProblem(format, moves, acting, heroId);
     setProblem(why ? PROBLEM[why.kind] : null);
 
-    if (!why) setMoves(applyMove(format, moves, acting, heroId));
+    if (!why) setSession((s) => ({ ...s, moves: applyMove(format, s.moves, acting, heroId) }));
+  }
+
+  function applyFormat(next: SimFormatId) {
+    const switched = switchFormat(session, next);
+
+    if (!switched) return;
+
+    setSession(switched);
+    setPendingFormat(null);
+    setProblem(null);
+    rememberFormat(next);
+  }
+
+  function chooseFormat(next: SimFormatId) {
+    if (next === formatId) {
+      setPendingFormat(null);
+
+      return;
+    }
+
+    if (moves.length > 0) {
+      setPendingFormat(next);
+      setProblem(null);
+
+      return;
+    }
+
+    applyFormat(next);
+  }
+
+  function onRoleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    const tabs = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('[role="tab"]'));
+    const focused = document.activeElement;
+    const index = focused instanceof HTMLElement ? tabs.indexOf(focused) : -1;
+
+    if (index === -1) return;
+
+    const last = tabs.length - 1;
+
+    const next =
+      event.key === "ArrowRight"
+        ? index === last
+          ? 0
+          : index + 1
+        : event.key === "ArrowLeft"
+          ? index === 0
+            ? last
+            : index - 1
+          : event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? last
+              : null;
+
+    if (next === null) return;
+
+    event.preventDefault();
+    tabs[next]?.focus();
+
+    const nextRole = ROLES[next];
+
+    if (nextRole) setRole(nextRole);
   }
 
   const status =
@@ -205,19 +318,34 @@ export function DraftSimulator({
       : "Draft complete";
 
   return (
-    <div className="grid gap-5">
+    <div className="grid grid-cols-1 gap-5">
       {/* The board stays in view on wider screens, so picking never scrolls the result away. */}
-      <div className="z-20 -mx-4 bg-background/95 px-4 pb-2 backdrop-blur [@media(min-width:768px)_and_(min-height:640px)]:sticky [@media(min-width:768px)_and_(min-height:640px)]:top-14 sm:mx-0 sm:px-0">
-        <div className="grid gap-3 rounded-xl border bg-card p-3 sm:p-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="font-medium" aria-live="polite">
-              {status}
-            </p>
-            <div className="flex gap-2">
+      <div className="z-20 -mx-4 min-w-0 bg-background/95 px-4 pb-2 backdrop-blur [@media(min-width:768px)_and_(min-height:640px)]:sticky [@media(min-width:768px)_and_(min-height:640px)]:top-14 sm:mx-0 sm:px-0">
+        <div className="grid min-w-0 grid-cols-1 gap-3 rounded-xl border bg-card p-3 sm:p-4">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <div className="w-full min-w-0 sm:w-96">
+              <span aria-hidden="true" className="mb-1 block text-xs text-muted-foreground">
+                Format
+              </span>
+              <Select value={formatId} onValueChange={(v) => chooseFormat(parseSimFormatId(v))}>
+                <SelectTrigger>
+                  <span className="sr-only">Format: </span>
+                  <SelectValue placeholder={format.name} />
+                </SelectTrigger>
+                <SelectContent>
+                  {SIM_FORMAT_IDS.map((id) => (
+                    <SelectItem key={id} value={id}>
+                      {formats[id].name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="ml-auto flex gap-2">
               <button
                 type="button"
                 onClick={() => {
-                  setMoves(moves.slice(0, -1));
+                  setSession((s) => ({ ...s, moves: s.moves.slice(0, -1) }));
                   setProblem(null);
                 }}
                 disabled={moves.length === 0}
@@ -228,8 +356,7 @@ export function DraftSimulator({
               <button
                 type="button"
                 onClick={() => {
-                  setMoves([]);
-                  setCamp(0);
+                  setSession((s) => ({ ...s, moves: [], camp: 0 }));
                   setProblem(null);
                 }}
                 disabled={moves.length === 0}
@@ -239,6 +366,37 @@ export function DraftSimulator({
               </button>
             </div>
           </div>
+
+          {pendingFormat && (
+            <div
+              role="alert"
+              className="flex flex-wrap items-center gap-2 rounded-md border border-live/40 bg-live/5 p-2 text-sm"
+            >
+              <p className="min-w-0">
+                Start over with {formats[pendingFormat].name}? Your moves so far will be cleared.
+              </p>
+              <div className="ml-auto flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => applyFormat(pendingFormat)}
+                  className="inline-flex h-8 items-center rounded-md bg-primary px-2.5 text-sm font-medium text-primary-foreground"
+                >
+                  Start over
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPendingFormat(null)}
+                  className="inline-flex h-8 items-center rounded-md border px-2.5 text-sm"
+                >
+                  Keep playing
+                </button>
+              </div>
+            </div>
+          )}
+
+          <p className="font-medium" aria-live="polite">
+            {status}
+          </p>
           {choosable && (
             <p className="text-xs text-muted-foreground">
               Both teams ban in this step. Tap a team to pick its ban; the other team goes next.
@@ -261,7 +419,7 @@ export function DraftSimulator({
                 byId={byId}
                 moving={acting === c}
                 canChoose={choosable && (turn?.waiting.includes(c) ?? false)}
-                onChoose={() => setCamp(c)}
+                onChoose={() => setSession((s) => ({ ...s, camp: c }))}
               />
             ))}
           </div>
@@ -299,13 +457,13 @@ export function DraftSimulator({
         </div>
       </div>
 
-      <section aria-labelledby="hero-pool" className="grid gap-3">
+      <section aria-labelledby="hero-pool" className="grid grid-cols-1 gap-3">
         <div className="flex flex-wrap items-end gap-3">
           <div className="mr-auto">
             <h2 id="hero-pool" className="font-medium">
               Heroes
             </h2>
-            {proDrafts > 0 && (
+            {showRates && proDrafts > 0 && (
               <p className="text-xs text-muted-foreground">
                 <span className="block">
                   B and P: how often pros banned and protected each hero.
@@ -317,27 +475,31 @@ export function DraftSimulator({
               </p>
             )}
           </div>
-          <div
-            className="flex rounded-xl bg-card p-1 ring-1 ring-border ring-inset"
-            role="group"
-            aria-label="Role"
+          <Tabs
+            value={role}
+            onValueChange={(v) => {
+              if (isRoleFilter(v)) setRole(v);
+            }}
+            variant="segment"
+            className="min-w-0"
           >
-            {ROLES.map((r) => (
-              <button
-                key={r}
-                type="button"
-                aria-pressed={role === r}
-                onClick={() => setRole(r)}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-sm text-muted-foreground hover:text-foreground",
-                  role === r && "bg-secondary text-foreground",
-                )}
-              >
-                <RoleIcon role={r} />
-                {r}
-              </button>
-            ))}
-          </div>
+            <TabsList
+              aria-label="Role"
+              className="rounded-xl p-1 ring-1 ring-border ring-inset"
+              onKeyDown={onRoleKeyDown}
+            >
+              {ROLES.map((r) => (
+                <UnderlineTabsTrigger
+                  key={r}
+                  value={r}
+                  icon={<RoleIcon role={r} />}
+                  tabIndex={role === r ? 0 : -1}
+                >
+                  {r}
+                </UnderlineTabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
           <label className="grid gap-1 text-xs text-muted-foreground">
             Find a hero
             <input
@@ -352,7 +514,7 @@ export function DraftSimulator({
           {shown.map((h) => {
             const outFor = ([0, 1] as const).filter((c) => sides[c].unavailable.includes(h.id));
             const protectedBy = ([0, 1] as const).filter((c) => sides[c].protects.includes(h.id));
-            const rate = rates[h.id];
+            const rate = showRates ? rates[h.id] : undefined;
             const outForActing = acting !== null && outFor.includes(acting);
 
             const state = [
@@ -362,18 +524,22 @@ export function DraftSimulator({
                   ? `Out for ${TEAM[outFor[0] ?? 0].toLowerCase()}`
                   : null,
               protectedBy.length > 0 ? "Protected" : null,
-            ].filter(Boolean);
+            ].filter((part) => part !== null);
 
-            const proLine = rate
-              ? `Pro drafts: banned ${percent(rate.banned)}${rate.protected === null ? "" : `, protected ${percent(rate.protected)}`}`
-              : "Not seen in cached pro drafts";
+            const proLine = showRates
+              ? rate
+                ? `Pro drafts: banned ${percent(rate.banned)}${rate.protected === null ? "" : `, protected ${percent(rate.protected)}`}`
+                : "Not seen in cached pro drafts"
+              : null;
 
             return (
               <li key={h.id}>
                 <button
                   type="button"
                   onClick={() => choose(h.id)}
-                  aria-label={[h.name, ...state, proLine].join(". ")}
+                  aria-label={[h.name, ...state, proLine]
+                    .filter((part) => part !== null)
+                    .join(". ")}
                   className={cn(
                     "relative grid w-full justify-items-center gap-1 rounded-lg border p-2 text-center transition-colors hover:bg-accent",
                     outForActing && "opacity-45",
@@ -395,21 +561,25 @@ export function DraftSimulator({
                   <span aria-hidden="true" className="w-full truncate text-xs">
                     {h.name}
                   </span>
-                  <span
-                    aria-hidden="true"
-                    className="font-mono text-[0.65rem] whitespace-nowrap text-muted-foreground tabular-nums"
-                  >
-                    {rate ? `B ${percent(rate.banned)}` : "–"}
-                    {rate?.protected != null && (
-                      <span className="hidden sm:inline">{` · P ${percent(rate.protected)}`}</span>
-                    )}
-                  </span>
+                  {showRates && (
+                    <span
+                      aria-hidden="true"
+                      className="font-mono text-[0.65rem] whitespace-nowrap text-muted-foreground tabular-nums"
+                    >
+                      {rate ? `B ${percent(rate.banned)}` : "–"}
+                      {rate?.protected != null && (
+                        <span className="hidden sm:inline">{` · P ${percent(rate.protected)}`}</span>
+                      )}
+                    </span>
+                  )}
                 </button>
               </li>
             );
           })}
         </ul>
       </section>
+
+      <p className="max-w-prose text-xs text-muted-foreground">{format.basis}</p>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { defineHandler, defineHead, type InferProps } from "void";
 
 import { IGNITE_2026, statsFollowingFormat, summariseDrafts, toTeamDrafts } from "@/domain/draft";
+import { parseSimFormatId, SIM_FORMATS } from "@/domain/draftFormat";
 import { proRates } from "@/domain/draftSim";
 import { HERO_ROSTER, ROSTER_ICONS } from "@/domain/heroRoster";
 import { scopeSnapshot } from "@/domain/scope";
@@ -9,7 +10,7 @@ import { currentSnapshot, readAllStats } from "../../src/sync";
 
 export type Props = InferProps<typeof loader>;
 
-export const loader = defineHandler(async () => {
+export const loader = defineHandler(async (c) => {
   const [full, stats] = await Promise.all([currentSnapshot(), readAllStats()]);
   const portraits = new Map<string, string>();
 
@@ -25,7 +26,8 @@ export const loader = defineHandler(async () => {
 
   return {
     snapshot: scopeSnapshot(full, { kind: "events" }, Date.now()),
-    format: IGNITE_2026,
+    formatId: parseSimFormatId(c.req.query("format")),
+    formats: SIM_FORMATS,
     rates: proRates(summary),
     proDrafts: summary.sample.teamDrafts,
     heroes: HERO_ROSTER.map((h) => ({
