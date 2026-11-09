@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import type { PageData, StoredSnapshot } from "@/domain/model";
+import type { PageData, Snapshot, StoredSnapshot } from "@/domain/model";
 import type { MatchStats } from "@/domain/stats";
+import { parseEventInfo, parsePageMatches } from "@/liquipedia/parse";
 
 import { aMap, aMatch } from "../../test/builders";
+import { recordedWikitext } from "../../test/fixtures";
 import {
   applyPages,
   emptyStored,
@@ -91,6 +93,72 @@ describe("toSnapshot", () => {
     expect(snapshot.matches[0]?.team2?.short).toBe("SWAMP");
     expect(snapshot.matches[0]?.eventId).toBe("MR Ignite/2026/Stage 2/Americas");
     expect(snapshot.liquipediaUpdatedAt).toBe("2026-10-16T23:00:00Z");
+  });
+});
+
+describe("toSnapshot prize placings", () => {
+  const AMERICAS = "MR Ignite/2026/Stage 2/Americas";
+  const AMERICAS_GROUPS = "MR Ignite/2026/Stage 2/Americas/Group Stage";
+
+  function recordedPage(title: string, file: string, updatedAt: string): PageData {
+    const text = recordedWikitext(title, file);
+
+    return {
+      revid: 1,
+      updatedAt,
+      event: parseEventInfo(title, text, updatedAt),
+      matches: parsePageMatches(title, text),
+    };
+  }
+
+  function snapshotOf(eventFile: string): Snapshot {
+    const stored: StoredSnapshot = {
+      ...emptyStored(),
+      builtAt: "2026-11-09T00:00:00Z",
+      pages: {
+        [AMERICAS]: recordedPage(AMERICAS, eventFile, "2026-11-09T00:00:00Z"),
+        [AMERICAS_GROUPS]: recordedPage(
+          AMERICAS_GROUPS,
+          "contents-stage2.json",
+          "2026-10-16T00:00:00Z",
+        ),
+      },
+    };
+
+    return toSnapshot(stored, new Date("2026-11-09T00:00:00Z"));
+  }
+
+  function places(snapshot: Snapshot) {
+    const event = snapshot.events.find((e) => e.id === AMERICAS);
+
+    return (event?.prizes ?? []).map((prize) => [prize.place, prize.team?.name ?? null]);
+  }
+
+  it("fills a finished event's places from the bracket, as Liquipedia renders them", () => {
+    const snapshot = snapshotOf("americas-finished.json");
+
+    expect(places(snapshot)).toEqual([
+      [1, "Liquid Citadel"],
+      [2, "FlyQuest"],
+      [3, "Swamp Gaming"],
+      [4, "100 Thieves"],
+      [5, "NRG Shock"],
+      [6, "Spacestation Gaming"],
+      [7, "Dreamland"],
+      [8, "Yeah We Lost"],
+      [9, null],
+      [10, null],
+      [11, null],
+      [12, null],
+    ]);
+    expect(snapshot.events.find((e) => e.id === AMERICAS)?.prizesDerived).toBe(true);
+  });
+
+  it("leaves every place TBD while the playoffs are unfinished", () => {
+    const snapshot = snapshotOf("contents-stage2.json");
+
+    expect(places(snapshot).every(([, team]) => team === null)).toBe(true);
+    expect(snapshot.events.find((e) => e.id === AMERICAS)?.prizesDerived).toBe(false);
   });
 });
 

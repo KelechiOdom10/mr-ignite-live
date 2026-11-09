@@ -1,4 +1,4 @@
-import type { IgniteEvent, Snapshot, Team } from "@/domain/model";
+import type { Snapshot, SnapshotEvent, Team } from "@/domain/model";
 
 import { useSpoilersHidden } from "./spoilers";
 import { TeamLogo } from "./TeamMark";
@@ -7,7 +7,13 @@ function usd(amount: number): string {
   return `$${amount.toLocaleString("en-US")}`;
 }
 
-export function PrizeDistribution({ event, snapshot }: { event: IgniteEvent; snapshot: Snapshot }) {
+export function PrizeDistribution({
+  event,
+  snapshot,
+}: {
+  event: SnapshotEvent;
+  snapshot: Snapshot;
+}) {
   const hidden = useSpoilersHidden();
 
   if (event.prizes.length === 0) return null;
@@ -63,6 +69,12 @@ export function PrizeDistribution({ event, snapshot }: { event: IgniteEvent; sna
           </tbody>
         </table>
       </div>
+      {event.prizesDerived && (
+        <p className="text-xs text-muted-foreground">
+          From the bracket: places Liquipedia's prize pool leaves open, filled from the playoff
+          results.
+        </p>
+      )}
     </section>
   );
 }

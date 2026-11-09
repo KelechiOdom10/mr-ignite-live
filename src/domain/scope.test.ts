@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { aMatch } from "../../test/builders";
-import type { IgniteEvent, Snapshot } from "./model";
+import type { Snapshot, SnapshotEvent } from "./model";
 import { eventIdFromSlug, eventSlug, matchesOfEvent, scopeFromQuery, scopeSnapshot } from "./scope";
 
 const NOW = Date.parse("2026-10-17T00:00:00.000Z");
 
-function anEvent(id: string, endDate: string | null): IgniteEvent {
+function anEvent(id: string, endDate: string | null): SnapshotEvent {
   return {
     id,
     name: id,
@@ -17,6 +17,7 @@ function anEvent(id: string, endDate: string | null): IgniteEvent {
     endDate,
     prizePoolUsd: null,
     prizes: [],
+    prizesDerived: false,
     liquipediaUrl: "https://liquipedia.net/marvelrivals/x",
     updatedAt: "2026-10-16T00:00:00Z",
     iconFile: null,
@@ -24,7 +25,7 @@ function anEvent(id: string, endDate: string | null): IgniteEvent {
   };
 }
 
-function aSnapshot(events: IgniteEvent[], matches: Snapshot["matches"]): Snapshot {
+function aSnapshot(events: SnapshotEvent[], matches: Snapshot["matches"]): Snapshot {
   return {
     builtAt: "2026-10-16T00:00:00.000Z",
     servedAt: "2026-10-16T00:00:00.000Z",
