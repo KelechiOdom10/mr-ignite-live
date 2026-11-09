@@ -174,7 +174,7 @@ export function toSnapshot(stored: StoredSnapshot, servedAt: Date): Snapshot {
     team ? { ...team, short: stored.teams[team.name]?.short ?? team.short } : null;
 
   for (const [title, page] of Object.entries(stored.pages)) {
-    if (page.event) events.push({ ...page.event, prizesDerived: false });
+    if (page.event) events.push({ ...page.event, prizesFromBracket: false });
 
     if (!liquipediaUpdatedAt || page.updatedAt > liquipediaUpdatedAt) {
       liquipediaUpdatedAt = page.updatedAt;
@@ -201,7 +201,7 @@ export function toSnapshot(stored: StoredSnapshot, servedAt: Date): Snapshot {
     if (!groups) return event;
     const { prizes, derived } = fillPlacings(event.prizes, groups);
 
-    return { ...event, prizes, prizesDerived: derived };
+    return { ...event, prizes, prizesFromBracket: derived };
   });
 
   return {

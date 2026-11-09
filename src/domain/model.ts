@@ -102,8 +102,7 @@ export const StoredSnapshotSchema = z.object({
 export type StoredSnapshot = z.infer<typeof StoredSnapshotSchema>;
 
 export const SnapshotEventSchema = IgniteEventSchema.extend({
-  /** True when at least one place came from the bracket rather than a Liquipedia opponent. */
-  prizesDerived: z.boolean(),
+  prizesFromBracket: z.boolean(),
 });
 
 export type SnapshotEvent = z.infer<typeof SnapshotEventSchema>;

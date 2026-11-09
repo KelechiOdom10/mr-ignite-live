@@ -151,14 +151,14 @@ describe("toSnapshot prize placings", () => {
       [11, null],
       [12, null],
     ]);
-    expect(snapshot.events.find((e) => e.id === AMERICAS)?.prizesDerived).toBe(true);
+    expect(snapshot.events.find((e) => e.id === AMERICAS)?.prizesFromBracket).toBe(true);
   });
 
   it("leaves every place TBD while the playoffs are unfinished", () => {
     const snapshot = snapshotOf("contents-stage2.json");
 
     expect(places(snapshot).every(([, team]) => team === null)).toBe(true);
-    expect(snapshot.events.find((e) => e.id === AMERICAS)?.prizesDerived).toBe(false);
+    expect(snapshot.events.find((e) => e.id === AMERICAS)?.prizesFromBracket).toBe(false);
   });
 });
 

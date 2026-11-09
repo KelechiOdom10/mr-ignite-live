@@ -48,11 +48,6 @@ function decidedPlayoffs(matches: Match[], now: number): Decided[] | null {
   return decided;
 }
 
-/**
- * Elimination groups from a finished double-elimination bracket, best place first: the grand final
- * winner, its loser, then each lower-bracket round's losers from the last round back, then the
- * teams that never played a playoff match. Null when the bracket does not say which group is which.
- */
 export function bracketPlacings(matches: Match[], now: number): Team[][] | null {
   const decided = decidedPlayoffs(matches, now);
 
@@ -115,10 +110,6 @@ export function bracketPlacings(matches: Match[], now: number): Team[][] | null 
   return groups;
 }
 
-/**
- * Fills prize slots from the groups in order. A slot takes a group only when the group has the
- * slot's number of teams, and named teams stay put; at the first mismatch the rest stay TBD.
- */
 export function fillPlacings(prizes: PrizePlacement[], groups: Team[][]): PrizePlacings {
   if (prizes.length === 0 || groups.length === 0) return { prizes, derived: false };
 

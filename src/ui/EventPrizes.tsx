@@ -69,7 +69,7 @@ export function PrizeDistribution({
           </tbody>
         </table>
       </div>
-      {event.prizesDerived && (
+      {event.prizesFromBracket && (
         <p className="text-xs text-muted-foreground">
           From the bracket: places Liquipedia's prize pool leaves open, filled from the playoff
           results.
