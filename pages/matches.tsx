@@ -68,8 +68,8 @@ export default function MatchesPage({
 
   const { snapshot, connection, now, refetch } = useLiveSnapshot(initial, {
     view: "matches",
-    event: view.event ?? undefined,
-    team: view.team ?? undefined,
+    event: event ?? undefined,
+    team: team ?? undefined,
   });
 
   const hydrated = useHydrated();
@@ -122,12 +122,8 @@ export default function MatchesPage({
     if (fetchedKey.current === filterKey) return;
 
     fetchedKey.current = filterKey;
-    void refetch({
-      view: "matches",
-      event: event ?? undefined,
-      team: team ?? undefined,
-    });
-  }, [filterKey, event, team, refetch]);
+    void refetch();
+  }, [filterKey, refetch]);
 
   const fallbackTab = hydrated ? smartDefaultTab(live, upcoming, results, now) : "upcoming";
   const tab = chosenTab ?? fallbackTab;
