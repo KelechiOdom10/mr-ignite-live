@@ -1,6 +1,6 @@
 import { Link } from "@void/react";
 
-import type { EventPhase } from "@/domain/homeView";
+import type { EventPhase } from "@/domain/matchesView";
 import { matchState } from "@/domain/matchState";
 import type { IgniteEvent, Match } from "@/domain/model";
 import { eventSlug } from "@/domain/scope";

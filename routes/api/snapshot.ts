@@ -13,6 +13,7 @@ export const GET = defineHandler(async (c) => {
     scopeFromQuery({
       event: c.req.query("event"),
       match: c.req.query("match"),
+      team: c.req.query("team"),
       view: c.req.query("view"),
     }),
     Date.now(),

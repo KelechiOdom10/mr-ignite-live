@@ -1,64 +1,58 @@
+import { Link } from "@void/react";
 import { useMemo, useState } from "react";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/motion/tabs";
 import {
   type EventPhase,
-  type HomeView,
-  homeViewSearch,
   isEventPhase,
-  isHomeRegion,
-  isListTab,
-  type ListTab,
-} from "@/domain/homeView";
+  isRegionFilter,
+  type MatchesView,
+  matchesHref,
+  matchesViewSearch,
+} from "@/domain/matchesView";
 import { matchState } from "@/domain/matchState";
 import type { IgniteEvent, Match } from "@/domain/model";
 import { AppShell } from "@/ui/AppShell";
-import { DayHeading } from "@/ui/DayHeading";
 import { EventRow, eventPhase } from "@/ui/EventRow";
 import { MatchCard } from "@/ui/MatchCard";
 import { REGION_FILTERS, regionKey, type RegionFilter } from "@/ui/region";
-import { dayKey, groupByDay, useHydrated } from "@/ui/time";
 import { UnderlineTabsTrigger } from "@/ui/UnderlineTabsTrigger";
 import { useLiveSnapshot } from "@/ui/useLiveSnapshot";
 
 import type { Props } from "./index.server";
 
-const UPCOMING_LIMIT = 30;
-const RESULTS_LIMIT = 36;
+const SUMMARY_LIMIT = 6;
 
 function inRegion(event: IgniteEvent | undefined, region: RegionFilter) {
   return region === "all" || regionKey(event?.region) === region;
 }
 
-function smartDefaultTab(live: Match[], upcoming: Match[], results: Match[], now: number): ListTab {
-  if (live.length > 0) return "upcoming";
-  const today = dayKey(new Date(now).toISOString());
-  const playedToday = results.some((m) => m.startsAt && dayKey(m.startsAt) === today);
-  const moreToday = upcoming.some((m) => m.startsAt && dayKey(m.startsAt) === today);
-
-  return playedToday && !moreToday ? "results" : "upcoming";
-}
-
 /**
- * Records the tabs in the current entry's query, so back from a match returns to them. It runs
- * only from tab clicks: an effect could fire before the router has pushed a new entry and
- * rewrite the previous one. Replacing rather than pushing keeps tabs out of the back stack, and
- * keeping history.state keeps the router's scroll key. The router's own record of the URL keeps
- * the old query; nothing here reads it.
+ * Records the region and event tabs in the current entry's query, so back from a match returns to
+ * them. It runs only from tab clicks: an effect could fire before the router has pushed a new
+ * entry and rewrite the previous one. Replacing rather than pushing keeps tabs out of the back
+ * stack, and keeping history.state keeps the router's scroll key.
  */
-function rememberView(view: HomeView) {
-  const url = window.location.pathname + homeViewSearch(view) + window.location.hash;
+function rememberView(view: MatchesView) {
+  const url = window.location.pathname + matchesViewSearch(view) + window.location.hash;
 
   window.history.replaceState(window.history.state, "", url);
 }
 
+function SeeAll({ href }: { href: string }) {
+  return (
+    <Link
+      href={href}
+      className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+    >
+      See all
+    </Link>
+  );
+}
+
 export default function HomePage({ snapshot: initial, view }: Props) {
   const { snapshot, connection, now } = useLiveSnapshot(initial);
-  const hydrated = useHydrated();
   const [region, setRegion] = useState<RegionFilter>(view.region);
-
-  const [chosenTab, setChosenTab] = useState<ListTab | null>(view.tab);
-
   const [eventTab, setEventTab] = useState<EventPhase>(view.events);
   const [loadedView, setLoadedView] = useState(view);
 
@@ -68,7 +62,6 @@ export default function HomePage({ snapshot: initial, view }: Props) {
   if (view !== loadedView) {
     setLoadedView(view);
     setRegion(view.region);
-    setChosenTab(view.tab);
     setEventTab(view.events);
   }
 
@@ -92,14 +85,6 @@ export default function HomePage({ snapshot: initial, view }: Props) {
     };
   }, [snapshot.matches, events, region, now]);
 
-  const fallbackTab = hydrated ? smartDefaultTab(live, upcoming, results, now) : "upcoming";
-  const tab = chosenTab ?? fallbackTab;
-
-  const nextUp = upcoming.find((m) => m.team1 && m.team2) ?? upcoming[0];
-
-  const shown =
-    tab === "upcoming" ? upcoming.slice(0, UPCOMING_LIMIT) : results.slice(0, RESULTS_LIMIT);
-
   const sidebarEvents = snapshot.events.filter(
     (e) => inRegion(e, region) && eventPhase(e, now) === eventTab,
   );
@@ -108,10 +93,13 @@ export default function HomePage({ snapshot: initial, view }: Props) {
     <MatchCard key={m.id} match={m} event={events.get(m.eventId)} snapshot={snapshot} now={now} />
   );
 
+  const matchesUrl = (tab: MatchesView["tab"]) => matchesHref({ region, tab });
+  const nothing = live.length === 0 && upcoming.length === 0 && results.length === 0;
+
   return (
     <AppShell snapshot={snapshot} connection={connection} now={now}>
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <div className="min-w-0 space-y-6">
+        <div className="min-w-0 space-y-8">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Matches</h1>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -119,81 +107,76 @@ export default function HomePage({ snapshot: initial, view }: Props) {
             </p>
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="-mx-4 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:px-0">
             <Tabs
-              value={tab}
+              value={region}
               onValueChange={(v) => {
-                if (!isListTab(v)) return;
-                setChosenTab(v);
-                rememberView({ region, tab: v, events: eventTab });
+                if (!isRegionFilter(v)) return;
+                setRegion(v);
+                rememberView({ ...view, region: v, events: eventTab });
               }}
-              variant="segment"
+              variant="underline"
             >
-              <TabsList aria-label="Show" className="rounded-xl p-1 ring-1 ring-border ring-inset">
-                <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-                <TabsTrigger value="results">Results</TabsTrigger>
+              <TabsList aria-label="Region">
+                {REGION_FILTERS.map((r) => (
+                  <UnderlineTabsTrigger key={r.value} value={r.value}>
+                    {r.label}
+                  </UnderlineTabsTrigger>
+                ))}
               </TabsList>
             </Tabs>
-            <div className="-mx-4 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:px-0">
-              <Tabs
-                value={region}
-                onValueChange={(v) => {
-                  if (!isHomeRegion(v)) return;
-                  setRegion(v);
-                  rememberView({ region: v, tab: chosenTab, events: eventTab });
-                }}
-                variant="underline"
-              >
-                <TabsList aria-label="Region">
-                  {REGION_FILTERS.map((r) => (
-                    <UnderlineTabsTrigger key={r.value} value={r.value}>
-                      {r.label}
-                    </UnderlineTabsTrigger>
-                  ))}
-                </TabsList>
-              </Tabs>
-            </div>
           </div>
+
+          {nothing && (
+            <p className="rounded-xl border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
+              Nothing scheduled or played in this region yet.{" "}
+              <Link href="/events" className="text-foreground underline">
+                Browse events
+              </Link>
+              .
+            </p>
+          )}
 
           {live.length > 0 && (
             <section aria-labelledby="live-heading" className="space-y-3">
-              <h2 id="live-heading" className="flex items-center gap-2 text-sm font-semibold">
-                <span className="live-dot size-2 rounded-full bg-live" aria-hidden />
-                Live now
-              </h2>
+              <div className="flex items-baseline justify-between gap-3">
+                <h2 id="live-heading" className="flex items-center gap-2 text-sm font-semibold">
+                  <span className="live-dot size-2 rounded-full bg-live" aria-hidden />
+                  Live now
+                </h2>
+                <SeeAll href={matchesUrl(null)} />
+              </div>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{live.map(card)}</div>
             </section>
           )}
 
-          {tab === "results" && nextUp && (
+          {upcoming.length > 0 && (
             <section aria-labelledby="next-heading" className="space-y-3">
-              <h2 id="next-heading" className="text-sm font-semibold">
-                Next up
-              </h2>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{card(nextUp)}</div>
+              <div className="flex items-baseline justify-between gap-3">
+                <h2 id="next-heading" className="text-sm font-semibold">
+                  Next up
+                </h2>
+                <SeeAll href={matchesUrl(null)} />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {upcoming.slice(0, SUMMARY_LIMIT).map(card)}
+              </div>
             </section>
           )}
 
-          <section
-            aria-label={tab === "upcoming" ? "Upcoming matches" : "Results"}
-            className="space-y-6"
-          >
-            {shown.length === 0 && (
-              <p className="rounded-xl border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
-                {tab === "upcoming"
-                  ? "Nothing scheduled in this region yet. Check Results for the latest series."
-                  : "No results in this region yet."}
-              </p>
-            )}
-            {groupByDay(shown, (m) => m.startsAt, hydrated).map((group) => (
-              <div key={group.key} className="space-y-3">
-                <DayHeading date={group.date} now={now} />
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  {group.items.map(card)}
-                </div>
+          {results.length > 0 && (
+            <section aria-labelledby="results-heading" className="space-y-3">
+              <div className="flex items-baseline justify-between gap-3">
+                <h2 id="results-heading" className="text-sm font-semibold">
+                  Latest results
+                </h2>
+                <SeeAll href={matchesUrl("results")} />
               </div>
-            ))}
-          </section>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {results.slice(0, SUMMARY_LIMIT).map(card)}
+              </div>
+            </section>
+          )}
         </div>
 
         <aside aria-labelledby="events-heading" className="space-y-3">
@@ -205,7 +188,7 @@ export default function HomePage({ snapshot: initial, view }: Props) {
             onValueChange={(v) => {
               if (!isEventPhase(v)) return;
               setEventTab(v);
-              rememberView({ region, tab: chosenTab, events: v });
+              rememberView({ ...view, region, events: v });
             }}
             variant="segment"
           >

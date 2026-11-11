@@ -4,12 +4,13 @@ Newest first. One line per change: the outcome first, then the PR.
 
 ## Unreleased
 
-- **Event pages:** finished events show real prize placings, filled from the bracket (#42).
-- **Draft simulator:** pick a map to see each hero's pro rates on it, from mrvl's last 30 days (#41).
-- **Event pages:** prize distribution by place, and a participants grid. Placings hide with Hide spoilers (#40).
+- **Matches page:** filter results by event, team and date; home is now a summary (#43).
 
 ## 2026-11-09
 
+- **Event pages:** finished events show real prize placings, filled from the bracket (#42).
+- **Draft simulator:** pick a map to see each hero's pro rates on it, from mrvl's last 30 days (#41).
+- **Event pages:** prize distribution by place, and a participants grid. Placings hide with Hide spoilers (#40).
 - **Deploys work again.** They publish first, then check readiness (#38).
 - **Draft simulator:** role tabs with icons, and an Ignite/Ranked format switch (#37).
 - **/drafts:** new 30-day "All pro games" hero table from mrvl (#36).

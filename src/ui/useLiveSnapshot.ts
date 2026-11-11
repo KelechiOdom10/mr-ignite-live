@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { connectLiveStream } from "void/live/client";
 
 import { SnapshotSchema, type Snapshot } from "@/domain/model";
@@ -10,10 +10,16 @@ export type Connection = "connecting" | "live" | "polling";
 
 const POLL_MS = 45_000;
 
-export type LiveScope = { event?: string; match?: string; view?: "events" };
+export type LiveScope = {
+  event?: string;
+  match?: string;
+  team?: string;
+  view?: "events" | "matches";
+};
 
 export function useLiveSnapshot(initial: Snapshot, scope: LiveScope = {}) {
-  const { event: eventId, match: matchId, view } = scope;
+  const { event: eventId, match: matchId, team, view } = scope;
+  const scopeRef = useRef<LiveScope>(scope);
   const [snapshot, setSnapshot] = useState(initial);
   const [previousInitial, setPreviousInitial] = useState(initial);
   const [connection, setConnection] = useState<Connection>("connecting");
@@ -25,14 +31,21 @@ export function useLiveSnapshot(initial: Snapshot, scope: LiveScope = {}) {
     setSnapshot(initial);
   }
 
+  useEffect(() => {
+    scopeRef.current = { event: eventId, match: matchId, team, view };
+  }, [eventId, matchId, team, view]);
+
   const refetch = useCallback(async () => {
+    const next = scopeRef.current;
     const params = new URLSearchParams();
 
-    if (eventId) params.set("event", eventId);
+    if (next.event) params.set("event", next.event);
 
-    if (matchId) params.set("match", matchId);
+    if (next.match) params.set("match", next.match);
 
-    if (view) params.set("view", view);
+    if (next.team) params.set("team", next.team);
+
+    if (next.view) params.set("view", next.view);
     const query = params.size > 0 ? `?${params}` : "";
 
     try {
@@ -47,7 +60,7 @@ export function useLiveSnapshot(initial: Snapshot, scope: LiveScope = {}) {
     } catch (error) {
       setRefreshError(error instanceof Error ? error.message : "Snapshot refresh failed");
     }
-  }, [eventId, matchId, view]);
+  }, []);
 
   useEffect(() => {
     const poll = setInterval(() => void refetch(), POLL_MS);

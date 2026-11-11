@@ -6,6 +6,7 @@ describe("sectionOf", () => {
   it("puts every page in the section its nav item highlights", () => {
     const cases: [string, Section][] = [
       ["/", "matches"],
+      ["/matches", "matches"],
       ["/match/abc", "matches"],
       ["/events", "events"],
       ["/event/MR_Ignite/2026", "events"],
