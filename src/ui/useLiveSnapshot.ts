@@ -10,10 +10,15 @@ export type Connection = "connecting" | "live" | "polling";
 
 const POLL_MS = 45_000;
 
-export type LiveScope = { event?: string; match?: string; view?: "events" };
+export type LiveScope = {
+  event?: string;
+  match?: string;
+  team?: string;
+  view?: "events" | "matches";
+};
 
 export function useLiveSnapshot(initial: Snapshot, scope: LiveScope = {}) {
-  const { event: eventId, match: matchId, view } = scope;
+  const { event: eventId, match: matchId, team, view } = scope;
   const [snapshot, setSnapshot] = useState(initial);
   const [previousInitial, setPreviousInitial] = useState(initial);
   const [connection, setConnection] = useState<Connection>("connecting");
@@ -25,29 +30,35 @@ export function useLiveSnapshot(initial: Snapshot, scope: LiveScope = {}) {
     setSnapshot(initial);
   }
 
-  const refetch = useCallback(async () => {
-    const params = new URLSearchParams();
+  const refetch = useCallback(
+    async (override?: LiveScope) => {
+      const next = override ?? { event: eventId, match: matchId, team, view };
+      const params = new URLSearchParams();
 
-    if (eventId) params.set("event", eventId);
+      if (next.event) params.set("event", next.event);
 
-    if (matchId) params.set("match", matchId);
+      if (next.match) params.set("match", next.match);
 
-    if (view) params.set("view", view);
-    const query = params.size > 0 ? `?${params}` : "";
+      if (next.team) params.set("team", next.team);
 
-    try {
-      const res = await fetch(`/api/snapshot${query}`);
+      if (next.view) params.set("view", next.view);
+      const query = params.size > 0 ? `?${params}` : "";
 
-      if (!res.ok) throw new Error(`Snapshot request failed with HTTP ${res.status}`);
-      const parsed = SnapshotSchema.safeParse(await res.json());
+      try {
+        const res = await fetch(`/api/snapshot${query}`);
 
-      if (!parsed.success) throw new Error("Snapshot response did not match the expected shape");
-      setSnapshot((current) => newerSnapshot(current, parsed.data));
-      setRefreshError(null);
-    } catch (error) {
-      setRefreshError(error instanceof Error ? error.message : "Snapshot refresh failed");
-    }
-  }, [eventId, matchId, view]);
+        if (!res.ok) throw new Error(`Snapshot request failed with HTTP ${res.status}`);
+        const parsed = SnapshotSchema.safeParse(await res.json());
+
+        if (!parsed.success) throw new Error("Snapshot response did not match the expected shape");
+        setSnapshot((current) => newerSnapshot(current, parsed.data));
+        setRefreshError(null);
+      } catch (error) {
+        setRefreshError(error instanceof Error ? error.message : "Snapshot refresh failed");
+      }
+    },
+    [eventId, matchId, team, view],
+  );
 
   useEffect(() => {
     const poll = setInterval(() => void refetch(), POLL_MS);

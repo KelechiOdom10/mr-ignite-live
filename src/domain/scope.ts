@@ -9,7 +9,8 @@ export type SnapshotScope =
   | { kind: "recent" }
   | { kind: "events" }
   | { kind: "event"; eventId: string }
-  | { kind: "match"; matchId: string };
+  | { kind: "match"; matchId: string }
+  | { kind: "matches"; eventId?: string; team?: string };
 
 function involvesTeam(match: Match, names: ReadonlySet<string>): boolean {
   return names.has(match.team1?.name ?? "") || names.has(match.team2?.name ?? "");
@@ -42,10 +43,15 @@ export function scopeSnapshot(snapshot: Snapshot, scope: SnapshotScope, now: num
   const focus =
     scope.kind === "match" ? snapshot.matches.find((m) => m.id === scope.matchId) : undefined;
 
-  const focusEventId = scope.kind === "event" ? scope.eventId : focus?.eventId;
+  const focusEventId =
+    scope.kind === "event" || scope.kind === "matches" ? scope.eventId : focus?.eventId;
 
   const focusTeams = new Set(
-    [focus?.team1?.name, focus?.team2?.name].filter((n) => n !== undefined),
+    [
+      focus?.team1?.name,
+      focus?.team2?.name,
+      scope.kind === "matches" ? scope.team : undefined,
+    ].filter((n) => n !== undefined),
   );
 
   const matches = snapshot.matches.filter(
@@ -73,8 +79,13 @@ export function matchesOfEvent(snapshot: Snapshot, eventId: string): Match[] {
 export function scopeFromQuery(query: {
   event?: string;
   match?: string;
+  team?: string;
   view?: string;
 }): SnapshotScope {
+  if (query.view === "matches") {
+    return { kind: "matches", eventId: query.event, team: query.team };
+  }
+
   if (query.view === "events") return { kind: "events" };
 
   if (query.match) return { kind: "match", matchId: query.match };

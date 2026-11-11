@@ -77,6 +77,23 @@ describe("scopeSnapshot", () => {
     expect(scoped.matches.map((m) => m.id).sort()).toEqual(["a", "b"]);
   });
 
+  it("adds an old event's matches to the matches page when its filter is chosen", () => {
+    // Picking an event in the results filter showed no results: the recent scope had dropped it.
+    const scoped = scopeSnapshot(snapshot, { kind: "matches", eventId: "old" }, NOW);
+    expect(scoped.matches.map((m) => m.id).sort()).toEqual(["a", "b", "c"]);
+    expect(scoped.events.map((e) => e.id).sort()).toEqual(["current", "old"]);
+  });
+
+  it("adds a team's old matches to the matches page when it is the chosen team", () => {
+    const scoped = scopeSnapshot(snapshot, { kind: "matches", team: "Swamp Gaming" }, NOW);
+    expect(scoped.matches.map((m) => m.id).sort()).toEqual(["a", "b"]);
+  });
+
+  it("scopes the matches page to the recent window until a filter is chosen", () => {
+    const scoped = scopeSnapshot(snapshot, { kind: "matches" }, NOW);
+    expect(scoped.matches.map((m) => m.id)).toEqual(["a"]);
+  });
+
   it("keeps the requested event on its page before its bracket has any matches", () => {
     // Announced stages showed "Event not found" because events without matches were dropped.
     const announced = anEvent("announced", null);
@@ -140,6 +157,14 @@ describe("matchesOfEvent", () => {
 describe("scopeFromQuery", () => {
   it("reads the events-list view so its refreshes keep every event", () => {
     expect(scopeFromQuery({ view: "events" })).toEqual({ kind: "events" });
+  });
+
+  it("reads the matches page's filters so its refreshes keep the chosen event and team", () => {
+    expect(scopeFromQuery({ view: "matches", event: "old", team: "Swamp Gaming" })).toEqual({
+      kind: "matches",
+      eventId: "old",
+      team: "Swamp Gaming",
+    });
   });
 });
 

@@ -2,7 +2,7 @@ export type Section = "matches" | "events" | "drafts" | "players" | "review";
 
 /** Main nav, in order. AppShell adds icons; tests check each href lands in its own section. */
 export const NAV_SECTIONS: readonly { href: string; label: string; section: Section }[] = [
-  { href: "/", label: "Matches", section: "matches" },
+  { href: "/matches", label: "Matches", section: "matches" },
   { href: "/events", label: "Events", section: "events" },
   { href: "/drafts", label: "Drafts", section: "drafts" },
   { href: "/players", label: "Players", section: "players" },
