@@ -1,6 +1,7 @@
 import { bracketContainer, PLAYOFFS } from "./bracket";
 import { matchState } from "./matchState";
 import type { Match, Snapshot } from "./model";
+import { teamSpellings } from "./teamIdentity";
 
 const RECENT_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 const EVENTS_LIST_MATCH_WINDOW_MS = 2 * 24 * 60 * 60 * 1000;
@@ -46,12 +47,12 @@ export function scopeSnapshot(snapshot: Snapshot, scope: SnapshotScope, now: num
   const focusEventId =
     scope.kind === "event" || scope.kind === "matches" ? scope.eventId : focus?.eventId;
 
+  // A team recorded under two spellings is one team, so its scope carries every spelling: the
+  // match played under the other one has to reach the page too.
   const focusTeams = new Set(
-    [
-      focus?.team1?.name,
-      focus?.team2?.name,
-      scope.kind === "matches" ? scope.team : undefined,
-    ].filter((n) => n !== undefined),
+    [focus?.team1?.name, focus?.team2?.name, scope.kind === "matches" ? scope.team : undefined]
+      .filter((name) => name !== undefined)
+      .flatMap((name) => [...teamSpellings(snapshot.matches, name)]),
   );
 
   const matches = snapshot.matches.filter(

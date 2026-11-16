@@ -117,6 +117,45 @@ describe("filterResults", () => {
     ]);
   });
 
+  it("finds a team's series under every spelling it was recorded with", () => {
+    // Filtering by the canonical name dropped the series played as "100 thieves".
+    const spelled = [
+      aMatch({
+        id: "other",
+        eventId: "emea",
+        markedFinished: true,
+        startsAt: "2026-10-14T12:00:00.000Z",
+        team1: { name: "Foxtrot", short: "F" },
+        team2: { name: "Golf", short: "G" },
+      }),
+      aMatch({
+        id: "lowercase",
+        eventId: "emea",
+        markedFinished: true,
+        startsAt: "2026-10-15T12:00:00.000Z",
+        team1: { name: "100 thieves", short: "100T" },
+        team2: { name: "Golf", short: "G" },
+      }),
+      aMatch({
+        id: "canonical",
+        eventId: "emea",
+        markedFinished: true,
+        startsAt: "2026-10-16T12:00:00.000Z",
+        team1: { name: "100 Thieves", short: "100T" },
+        team2: { name: "Bravo", short: "B" },
+      }),
+    ];
+
+    expect(ids(filterResults(spelled, events, view({ team: "100 Thieves" }), NOW))).toEqual([
+      "canonical",
+      "lowercase",
+    ]);
+    expect(ids(filterResults(spelled, events, view({ team: "100 thieves" }), NOW))).toEqual([
+      "canonical",
+      "lowercase",
+    ]);
+  });
+
   it("combines the filters with the region tab", () => {
     expect(ids(filterResults(matches, events, view({ region: "emea", range: "7d" }), NOW))).toEqual(
       ["emea-now"],

@@ -89,6 +89,40 @@ describe("scopeSnapshot", () => {
     expect(scoped.matches.map((m) => m.id).sort()).toEqual(["a", "b"]);
   });
 
+  it("carries every spelling of the chosen team, so its older series reach the page", () => {
+    // The other spelling's series were outside the page's scope, so the filter could not show them.
+    const spelled = aSnapshot(
+      [current, old],
+      [
+        aMatch({
+          id: "canonical",
+          eventId: "old",
+          startsAt: "2026-08-01T00:00:00.000Z",
+          team1: { name: "100 Thieves", short: "100T" },
+          team2: { name: "Alpha", short: "A" },
+        }),
+        aMatch({
+          id: "lowercase",
+          eventId: "old",
+          startsAt: "2026-08-02T00:00:00.000Z",
+          team1: { name: "100 thieves", short: "100T" },
+          team2: { name: "Bravo", short: "B" },
+        }),
+        aMatch({
+          id: "elsewhere",
+          eventId: "old",
+          startsAt: "2026-08-02T00:00:00.000Z",
+          team1: { name: "Charlie", short: "C" },
+          team2: { name: "Bravo", short: "B" },
+        }),
+      ],
+    );
+
+    const scoped = scopeSnapshot(spelled, { kind: "matches", team: "100 Thieves" }, NOW);
+
+    expect(scoped.matches.map((m) => m.id).sort()).toEqual(["canonical", "lowercase"]);
+  });
+
   it("scopes the matches page to the recent window until a filter is chosen", () => {
     const scoped = scopeSnapshot(snapshot, { kind: "matches" }, NOW);
     expect(scoped.matches.map((m) => m.id)).toEqual(["a"]);

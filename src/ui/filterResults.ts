@@ -1,6 +1,7 @@
 import type { MatchesView, ResultRange } from "@/domain/matchesView";
 import { matchState } from "@/domain/matchState";
 import type { IgniteEvent, Match } from "@/domain/model";
+import { teamSpellings } from "@/domain/teamIdentity";
 
 import { regionKey } from "./region";
 
@@ -11,6 +12,13 @@ const RANGE_MS: Record<Exclude<ResultRange, "any">, number> = {
   "30d": 30 * DAY_MS,
 };
 
+function playsFor(match: Match, names: ReadonlySet<string>): boolean {
+  return (
+    (match.team1 !== null && names.has(match.team1.name)) ||
+    (match.team2 !== null && names.has(match.team2.name))
+  );
+}
+
 /** Newest first, matching the day groups the page draws. */
 export function filterResults(
   matches: readonly Match[],
@@ -19,6 +27,9 @@ export function filterResults(
   now: number,
 ): Match[] {
   const since = view.range === "any" ? null : now - RANGE_MS[view.range];
+  // A team's series are recorded under whichever spelling the source used, so the filter matches
+  // all of them rather than the one name the option happens to show.
+  const teams = view.team === null ? null : teamSpellings(matches, view.team);
 
   return matches
     .filter((match) => {
@@ -27,9 +38,7 @@ export function filterResults(
 
       if (view.event !== null && match.eventId !== view.event) return false;
 
-      const team = view.team;
-
-      if (team !== null && match.team1?.name !== team && match.team2?.name !== team) return false;
+      if (teams !== null && !playsFor(match, teams)) return false;
 
       if (matchState(match, now).status !== "finished") return false;
 

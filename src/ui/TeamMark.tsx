@@ -10,16 +10,19 @@ export function logoUrl(info: TeamInfo | undefined): string | undefined {
 export function TeamLogo({
   team,
   info,
+  logo,
   size = 24,
   className,
 }: {
   team: Team | null;
   info?: TeamInfo;
+  /** A logo URL the caller already resolved, such as a filter option's team record. */
+  logo?: string | null;
   size?: number;
   className?: string;
 }) {
   const box = { width: size, height: size };
-  const src = logoUrl(info);
+  const src = logo ? proxiedImage(logo) : logoUrl(info);
 
   if (src) {
     return (
