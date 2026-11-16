@@ -24,7 +24,7 @@ import {
 } from "@/domain/draftSim";
 import { mapDisplayName } from "@/domain/maps";
 import type { ProHeroStats } from "@/domain/proHeroStats";
-import { simMapRates } from "@/domain/simMap";
+import { simMapRates, simMapTiles } from "@/domain/simMap";
 import type { Hero } from "@/domain/stats";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +32,7 @@ import { RoleIcon } from "../RoleIcon";
 import { HeroPortrait } from "../StatsPanel";
 import { UnderlineTabsTrigger } from "../UnderlineTabsTrigger";
 import { ACTOR_SHORT } from "./FormatCard";
+import { MapPicker } from "./MapPicker";
 import {
   filterHeroes,
   isRoleFilter,
@@ -42,8 +43,6 @@ import {
 } from "./simulatorState";
 
 const TEAM: Record<Camp, string> = { 0: "First team", 1: "Second team" };
-
-const ALL_MAPS = "all";
 
 const PROBLEM: Record<MoveProblem["kind"], string> = {
   finished: "The draft is over. Undo a move or start again.",
@@ -252,6 +251,7 @@ export function DraftSimulator({
   const mapLabel = map ? mapDisplayName(map) : "all maps";
 
   const byId = useMemo(() => new Map(heroes.map((h) => [h.id, h])), [heroes]);
+  const tiles = useMemo(() => simMapTiles(maps), [maps]);
   const turn = currentTurn(format, moves);
 
   const acting: Camp | null = turn
@@ -355,7 +355,7 @@ export function DraftSimulator({
       {/* The board stays in view on wider screens, so picking never scrolls the result away. */}
       <div className="z-20 -mx-4 min-w-0 bg-background/95 px-4 pb-2 backdrop-blur [@media(min-width:768px)_and_(min-height:640px)]:sticky [@media(min-width:768px)_and_(min-height:640px)]:top-14 sm:mx-0 sm:px-0">
         <div className="grid min-w-0 grid-cols-1 gap-3 rounded-xl border bg-card p-3 sm:p-4">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <div className="relative flex min-w-0 flex-wrap items-center gap-2">
             <div className="w-full min-w-0 sm:w-96">
               <span aria-hidden="true" className="mb-1 block text-xs text-muted-foreground">
                 Format
@@ -374,29 +374,7 @@ export function DraftSimulator({
                 </SelectContent>
               </Select>
             </div>
-            <div className="w-full min-w-0 sm:w-56">
-              <span aria-hidden="true" className="mb-1 block text-xs text-muted-foreground">
-                Map
-              </span>
-              <Select
-                value={map ?? ALL_MAPS}
-                onValueChange={(v) => chooseMap(v === ALL_MAPS ? null : v)}
-                disabled={!heroMatrix}
-              >
-                <SelectTrigger>
-                  <span className="sr-only">Map: </span>
-                  <SelectValue placeholder={map ? mapLabel : "All maps"} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL_MAPS}>All maps</SelectItem>
-                  {maps.map((m) => (
-                    <SelectItem key={m} value={m}>
-                      {mapDisplayName(m)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <MapPicker tiles={tiles} value={map} onChange={chooseMap} disabled={!heroMatrix} />
             <div className="ml-auto flex gap-2">
               <button
                 type="button"
