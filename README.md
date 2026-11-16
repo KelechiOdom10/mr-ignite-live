@@ -36,6 +36,8 @@ Player data comes from [RivalsTracker](https://rivalstracker.com), which relays 
 bun run deploy                        # first time: choose Cloudflare or a Void platform
 ```
 
+It serves https://rivalshub.kellycooks.dev, alongside the Worker's workers.dev and preview hostnames.
+
 ## Layout
 
 | Path                                          | What                                                                          |

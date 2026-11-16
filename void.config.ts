@@ -4,7 +4,7 @@ export default defineConfig({
   cloudflare: {
     workers_dev: true,
     preview_urls: true,
-    routes: [],
+    routes: [{ pattern: "rivalshub.kellycooks.dev", custom_domain: true }],
   },
   deploy: {
     // Cloudflare takes about 55s to route a staged version's readiness probe; Void's staged check gives up first.

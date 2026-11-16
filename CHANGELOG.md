@@ -4,6 +4,8 @@ Newest first. One line per change: the outcome first, then the PR.
 
 ## Unreleased
 
+- **The site is live on rivalshub.kellycooks.dev,** alongside its workers.dev hostname (#49).
+
 ## 2026-11-16
 
 - **Matches page:** Upcoming shows the undated bracket, and filters stay on Results (#45).
