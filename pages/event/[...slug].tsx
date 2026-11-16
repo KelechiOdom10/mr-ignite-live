@@ -5,7 +5,7 @@ import { matchesOfEvent } from "@/domain/scope";
 import { cn } from "@/lib/utils";
 import { AppShell } from "@/ui/AppShell";
 import { Bracket } from "@/ui/Bracket";
-import { DayHeading } from "@/ui/DayHeading";
+import { DayHeading, UNDATED_DAY_LABEL } from "@/ui/DayHeading";
 import { EventParticipants, PrizeDistribution } from "@/ui/EventPrizes";
 import { EventIcon } from "@/ui/EventRow";
 import { MatchCard } from "@/ui/MatchCard";
@@ -102,7 +102,11 @@ export default function EventPage({ snapshot: initial, eventId }: Props) {
           <div className="space-y-6">
             {groupByDay(groups, (m) => m.startsAt, hydrated).map((group) => (
               <div key={group.key} className="space-y-3">
-                <DayHeading date={group.date} now={now} />
+                <DayHeading
+                  date={group.date}
+                  now={now}
+                  undatedLabel={group.key === "tbd" ? UNDATED_DAY_LABEL : undefined}
+                />
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                   {group.items.map((m) => (
                     <MatchCard

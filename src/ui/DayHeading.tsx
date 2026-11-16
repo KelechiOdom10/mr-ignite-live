@@ -2,6 +2,9 @@ import { formatDate, formatDay } from "./time";
 
 const RELATIVE = new Set(["Today", "Tomorrow", "Yesterday"]);
 
+/** The heading for a group of series Liquipedia hasn't given a date, so every surface names it the same. */
+export const UNDATED_DAY_LABEL = "Date to be confirmed";
+
 export function DayHeading({
   date,
   now,
