@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import type { Match } from "./model";
+
 const RegionSchema = z.enum(["all", "americas", "emea", "china", "pacific"]);
 const ListTabSchema = z.enum(["upcoming", "results"]);
 const EventPhaseSchema = z.enum(["ongoing", "upcoming", "completed"]);
@@ -85,6 +87,30 @@ export function matchesViewSearch(view: MatchesView): string {
 
 export function hasResultFilters(view: MatchesView): boolean {
   return view.event !== null || view.team !== null || view.range !== DEFAULT_MATCHES_VIEW.range;
+}
+
+/**
+ * Which tab /matches opens on. Live series render above either list, so they keep it on upcoming;
+ * results win once nothing more is coming, or the day's play is over.
+ */
+export function smartDefaultTab(
+  live: readonly Match[],
+  upcoming: readonly Match[],
+  results: readonly Match[],
+  now: number,
+): ListTab {
+  if (live.length > 0 || results.length === 0) return "upcoming";
+
+  if (upcoming.length === 0) return "results";
+
+  const playedToday = results.some((m) => m.startsAt !== null && isToday(m.startsAt, now));
+  const moreToday = upcoming.some((m) => m.startsAt !== null && isToday(m.startsAt, now));
+
+  return playedToday && !moreToday ? "results" : "upcoming";
+}
+
+function isToday(iso: string, now: number): boolean {
+  return new Date(iso).toDateString() === new Date(now).toDateString();
 }
 
 export function matchesHref(view: { region: MatchesView["region"]; tab: ListTab | null }): string {

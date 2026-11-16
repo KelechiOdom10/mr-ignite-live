@@ -10,6 +10,7 @@ import {
   type MatchesView,
   matchesViewSearch,
   type ResultRange,
+  smartDefaultTab,
 } from "@/domain/matchesView";
 import { matchState } from "@/domain/matchState";
 import type { IgniteEvent, Match } from "@/domain/model";
@@ -19,7 +20,7 @@ import { filterResults } from "@/ui/filterResults";
 import { MatchCard } from "@/ui/MatchCard";
 import { REGION_FILTERS, type RegionFilter, regionKey } from "@/ui/region";
 import { ResultsFilter, type ResultFilterChange } from "@/ui/ResultsFilter";
-import { dayKey, groupByDay, useHydrated } from "@/ui/time";
+import { groupByDay, useHydrated } from "@/ui/time";
 import { UnderlineTabsTrigger } from "@/ui/UnderlineTabsTrigger";
 import { useLiveSnapshot } from "@/ui/useLiveSnapshot";
 
@@ -30,15 +31,6 @@ const RESULTS_LIMIT = 36;
 
 function inRegion(event: IgniteEvent | undefined, region: RegionFilter) {
   return region === "all" || regionKey(event?.region) === region;
-}
-
-function smartDefaultTab(live: Match[], upcoming: Match[], results: Match[], now: number): ListTab {
-  if (live.length > 0) return "upcoming";
-  const today = dayKey(new Date(now).toISOString());
-  const playedToday = results.some((m) => m.startsAt && dayKey(m.startsAt) === today);
-  const moreToday = upcoming.some((m) => m.startsAt && dayKey(m.startsAt) === today);
-
-  return playedToday && !moreToday ? "results" : "upcoming";
 }
 
 /**
