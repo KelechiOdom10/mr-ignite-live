@@ -4,6 +4,7 @@ Newest first. One line per change: the outcome first, then the PR.
 
 ## Unreleased
 
+- **Design reviews have rendered evidence:** screenshot and measurement harnesses (#55).
 - **Draft simulator maps are visual:** art tiles with a mobile picker sheet (#54).
 - **Matches filters:** the Team filter lists each team once, with its logo, instead of once per spelling (#53).
 - **The tab shows the site's mark,** /matches stays on Upcoming while a series is unplayed, and the event page names its undated group too (#52).
