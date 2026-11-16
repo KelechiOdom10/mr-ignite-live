@@ -20,7 +20,9 @@ bunx void db migrate   # create or update the local D1 tables (players section)
 bun run dev            # http://localhost:5180 (players section replays recorded fixtures)
 ```
 
-`bun run dev`, `build`, `preview` and `deploy` run Vite and void under Node 22.12 or newer; `scripts/run-node.ts` finds one in `$NODE`, on `PATH`, or under `~/.nvm/versions/node`. Bun alone can't run them, because void's Cloudflare config migration fails under bun on macOS with `cf could not translate the built Cloudflare configuration`.
+`bun run dev`, `build`, `preview`, `deploy` and `codegen` run Vite and void under Node 22.12 or newer; `scripts/run-node.ts` finds one in `$NODE`, on `PATH`, or under `~/.nvm/versions/node`. Bun alone can't run Vite or deploy, because void's Cloudflare config migration fails under bun on macOS with `cf could not translate the built Cloudflare configuration`.
+
+`bun run check` (format, lint, boundaries, typecheck, tests) writes `.void/` before it typechecks, so it works on a fresh clone without a dev run or a build first.
 
 Cron triggers don't fire under `vite dev`, so in development `/api/snapshot` syncs itself at most once a minute. To fire the cron by hand, use the curl command Void prints on start.
 
