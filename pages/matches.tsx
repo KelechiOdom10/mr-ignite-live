@@ -17,7 +17,7 @@ import {
 import { matchState } from "@/domain/matchState";
 import type { IgniteEvent, Match } from "@/domain/model";
 import { AppShell } from "@/ui/AppShell";
-import { DayHeading } from "@/ui/DayHeading";
+import { DayHeading, UNDATED_DAY_LABEL } from "@/ui/DayHeading";
 import { filterResults } from "@/ui/filterResults";
 import { MatchCard } from "@/ui/MatchCard";
 import { REGION_FILTERS, type RegionFilter, regionKey } from "@/ui/region";
@@ -248,7 +248,7 @@ export default function MatchesPage({
               <DayHeading
                 date={group.date}
                 now={now}
-                undatedLabel={group.key === "tbd" ? "Date to be confirmed" : undefined}
+                undatedLabel={group.key === "tbd" ? UNDATED_DAY_LABEL : undefined}
               />
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {group.items.map(card)}
