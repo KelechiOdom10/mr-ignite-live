@@ -32,8 +32,23 @@ Player data comes from [RivalsTracker](https://rivalstracker.com), which relays 
 
 ## Deploy
 
+A push to `main` deploys to Cloudflare from GitHub Actions, and only after the same check a pull request gets: `.github/workflows/deploy.yml` runs `ci.yml` first and will not deploy a tree that fails it. Runs queue rather than cancel, and the deploy job runs in the `production` environment, so required reviewers can be added there without touching the workflow. To redeploy by hand, run Actions → Deploy → Run workflow on `main`; from any other branch it runs the check and skips the deploy.
+
+The deploy needs one secret, `CLOUDFLARE_API_TOKEN`, set as a repository secret or as an environment secret on `production`, and the workflow stops at its first step with that instruction when it is missing. The Cloudflare API token needs:
+
+| Scope   | Permission               | For                                                                       |
+| ------- | ------------------------ | ------------------------------------------------------------------------- |
+| Account | Workers Scripts: Edit    | uploads the version, publishes it, applies Durable Object migrations      |
+| Account | Workers KV Storage: Read | binds the `KV` namespace; Edit when a deploy creates a namespace          |
+| Account | D1: Edit                 | applies pending `db/migrations`; a deploy with none pending only reads it |
+| Zone    | Workers Routes: Edit     | attaches the `rivalshub.kellycooks.dev` route                             |
+| Zone    | DNS: Edit                | creates that custom domain's DNS record and certificate                   |
+| Zone    | Zone: Read               | reads the zone those routes belong to                                     |
+
+Zone Resources must include `kellycooks.dev`. The zone rows only matter once the route lands in `void.config.ts`. No account id or worker subdomain is needed: `void.lock.json` records the account, and `preview_urls` gives the readiness check a URL to probe.
+
 ```sh
-bun run deploy                        # first time: choose Cloudflare or a Void platform
+bun run deploy                        # deploy from this machine instead
 ```
 
 It serves https://rivalshub.kellycooks.dev, alongside the Worker's workers.dev and preview hostnames.
