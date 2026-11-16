@@ -13,6 +13,8 @@ import {
   matchesViewSearch,
   smartDefaultTab,
   type ListTab,
+  upcomingSeries,
+  withListTab,
 } from "./matchesView";
 import type { Match } from "./model";
 
@@ -47,6 +49,19 @@ describe("matchesViewFromQuery", () => {
       DEFAULT_MATCHES_VIEW,
     );
   });
+
+  it("drops results filters from a URL that names Upcoming", () => {
+    // A bookmarked ?tab=upcoming&team=… described filters the page never applied.
+    expect(
+      matchesViewFromQuery({
+        tab: "upcoming",
+        region: "pacific",
+        event: "MR Ignite/2026/Stage 2/EMEA",
+        team: "Liquid Citadel",
+        range: "7d",
+      }),
+    ).toEqual({ ...DEFAULT_MATCHES_VIEW, tab: "upcoming", region: "pacific" });
+  });
 });
 
 describe("matchesViewSearch", () => {
@@ -74,6 +89,77 @@ describe("matchesViewSearch", () => {
     expect(
       matchesViewFromQuery(Object.fromEntries(new URLSearchParams(matchesViewSearch(view)))),
     ).toEqual(view);
+  });
+});
+
+describe("withListTab", () => {
+  it("drops the results filters when the reader switches to Upcoming", () => {
+    // Upcoming ignored event, team and range while the URL kept them, describing a view the page
+    // was not showing.
+    const onResults = {
+      ...DEFAULT_MATCHES_VIEW,
+      tab: "results",
+      region: "emea",
+      event: "MR Ignite/2026/Stage 2/EMEA",
+      team: "Liquid Citadel",
+      range: "7d",
+    } as const;
+
+    expect(withListTab(onResults, "upcoming")).toEqual({
+      ...DEFAULT_MATCHES_VIEW,
+      tab: "upcoming",
+      region: "emea",
+    });
+  });
+
+  it("keeps them when the reader goes back to Results", () => {
+    const onUpcoming = {
+      ...DEFAULT_MATCHES_VIEW,
+      tab: "upcoming",
+      event: "MR Ignite/2026/Stage 2/EMEA",
+      team: "Liquid Citadel",
+      range: "7d",
+    } as const;
+
+    expect(withListTab(onUpcoming, "results")).toEqual({ ...onUpcoming, tab: "results" });
+  });
+});
+
+describe("upcomingSeries", () => {
+  const dated = (id: string, startsAt: string) => aMatch({ id, startsAt });
+  const undated = (id: string) => aMatch({ id, startsAt: null });
+
+  it("carries the undated series after the dated ones, soonest first", () => {
+    // Upcoming kept only series with a time, so a live Grand Finals bracket left it saying nothing
+    // was scheduled.
+    const series = [
+      undated("bracket_final"),
+      dated("later", "2026-11-18T20:00:00.000Z"),
+      undated("bracket_qf"),
+      dated("sooner", "2026-11-17T18:00:00.000Z"),
+    ];
+
+    expect(upcomingSeries(series, 30).map((m) => m.id)).toEqual([
+      "sooner",
+      "later",
+      "bracket_final",
+      "bracket_qf",
+    ]);
+  });
+
+  it("counts only dated series against the limit", () => {
+    const series = [
+      dated("third", "2026-11-19T20:00:00.000Z"),
+      dated("first", "2026-11-17T20:00:00.000Z"),
+      dated("second", "2026-11-18T20:00:00.000Z"),
+      undated("bracket_final"),
+    ];
+
+    expect(upcomingSeries(series, 2).map((m) => m.id)).toEqual([
+      "first",
+      "second",
+      "bracket_final",
+    ]);
   });
 });
 

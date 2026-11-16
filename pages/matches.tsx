@@ -11,6 +11,8 @@ import {
   matchesViewSearch,
   type ResultRange,
   smartDefaultTab,
+  upcomingSeries,
+  withListTab,
 } from "@/domain/matchesView";
 import { matchState } from "@/domain/matchState";
 import type { IgniteEvent, Match } from "@/domain/model";
@@ -100,7 +102,7 @@ export default function MatchesPage({
 
     return {
       live: liveMatches,
-      upcoming: upcomingMatches.filter((m) => m.startsAt),
+      upcoming: upcomingSeries(upcomingMatches, UPCOMING_LIMIT),
       results: filterResults(snapshot.matches, events, filters, now),
     };
   }, [snapshot.matches, events, filters, region, now]);
@@ -123,11 +125,7 @@ export default function MatchesPage({
   const narrower = hasResultFilters(filters);
 
   const shown =
-    tab === "upcoming"
-      ? upcoming.slice(0, UPCOMING_LIMIT)
-      : narrower
-        ? results
-        : results.slice(0, RESULTS_LIMIT);
+    tab === "upcoming" ? upcoming : narrower ? results : results.slice(0, RESULTS_LIMIT);
 
   const card = (m: Match) => (
     <MatchCard key={m.id} match={m} event={events.get(m.eventId)} snapshot={snapshot} now={now} />
@@ -161,8 +159,13 @@ export default function MatchesPage({
             value={tab}
             onValueChange={(v) => {
               if (!isListTab(v)) return;
+              const next = withListTab(filters, v);
+
               setChosenTab(v);
-              rememberView({ ...filters, tab: v });
+              setEvent(next.event);
+              setTeam(next.team);
+              setRange(next.range);
+              rememberView(next);
             }}
             variant="segment"
           >
@@ -242,7 +245,11 @@ export default function MatchesPage({
           )}
           {groupByDay(shown, (m) => m.startsAt, hydrated).map((group) => (
             <div key={group.key} className="space-y-3">
-              <DayHeading date={group.date} now={now} />
+              <DayHeading
+                date={group.date}
+                now={now}
+                undatedLabel={group.key === "tbd" ? "Date to be confirmed" : undefined}
+              />
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {group.items.map(card)}
               </div>

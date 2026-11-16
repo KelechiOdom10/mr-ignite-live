@@ -12,10 +12,20 @@ function newestFirst(a: SnapshotEvent, b: SnapshotEvent): number {
 
 /**
  * The event filter's choices. They come from the full snapshot, because the page's scoped one
- * holds only the recent events plus the chosen filters' matches.
+ * holds only the recent events plus the chosen filters' matches. `chosen` stays offered even with
+ * no finished series, so the select can't read "All events" while a filter is on.
  */
-export function eventOptions(snapshot: Snapshot): EventOption[] {
+export function eventOptions(
+  snapshot: Snapshot,
+  now: number,
+  chosen: string | null = null,
+): EventOption[] {
+  const played = new Set(
+    snapshot.matches.filter((m) => matchState(m, now).status === "finished").map((m) => m.eventId),
+  );
+
   return snapshot.events
+    .filter((event) => played.has(event.id) || event.id === chosen)
     .toSorted((a, b) => newestFirst(a, b) || a.name.localeCompare(b.name))
     .map((event) => ({ id: event.id, name: event.name }));
 }
