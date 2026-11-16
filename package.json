@@ -11,7 +11,8 @@
     "fmt:check": "oxfmt --check .",
     "lint": "oxlint --deny-warnings",
     "boundaries": "bun scripts/check-boundaries.ts",
-    "typecheck": "bun scripts/typecheck.ts",
+    "codegen": "bun scripts/run-node.ts void prepare",
+    "typecheck": "bun run codegen && bun scripts/typecheck.ts",
     "test": "vitest run",
     "check": "bun run fmt:check && bun run lint && bun run boundaries && bun run typecheck && bun run test"
   },

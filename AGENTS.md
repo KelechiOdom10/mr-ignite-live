@@ -4,15 +4,18 @@ A personal Marvel Rivals site, local-only. The esports section has live Ignite s
 
 ## Commands
 
-| Command          | What                                                                                      |
-| ---------------- | ----------------------------------------------------------------------------------------- |
-| `bun run dev`    | Dev server on http://localhost:5180 (syncs on read; crons don't fire in dev)              |
-| `bun run check`  | Format check, lint (warnings fail), boundaries, typecheck, tests. Run before every commit |
-| `bun run fmt`    | Format                                                                                    |
-| `bun run test`   | Vitest (`src/**/*.test.ts`, `scripts/**/*.test.ts`)                                       |
-| `bun run deploy` | `void deploy`                                                                             |
+| Command           | What                                                                                      |
+| ----------------- | ----------------------------------------------------------------------------------------- |
+| `bun run dev`     | Dev server on http://localhost:5180 (syncs on read; crons don't fire in dev)              |
+| `bun run check`   | Format check, lint (warnings fail), boundaries, typecheck, tests. Run before every commit |
+| `bun run codegen` | Write `.void/` (route, env and db types, tsconfig); `typecheck` and `check` run it first  |
+| `bun run fmt`     | Format                                                                                    |
+| `bun run test`    | Vitest (`src/**/*.test.ts`, `scripts/**/*.test.ts`)                                       |
+| `bun run deploy`  | `void deploy`                                                                             |
 
-`bun run dev`, `build`, `preview` and `deploy` run Vite and void under Node 22.12 or newer: `scripts/run-node.ts` looks in `$NODE`, on `PATH`, then `~/.nvm/versions/node`. Bun alone can't run them, because void's Cloudflare config migration fails under it on macOS with `cf could not translate the built Cloudflare configuration`.
+`bun run dev`, `build`, `preview`, `deploy` and `codegen` run Vite and void under Node 22.12 or newer: `scripts/run-node.ts` looks in `$NODE`, on `PATH`, then `~/.nvm/versions/node`. Bun alone can't run Vite or deploy, because void's Cloudflare config migration fails under it on macOS with `cf could not translate the built Cloudflare configuration`.
+
+`bun run typecheck` depends on `codegen`, so `.void/` is git-ignored and regenerated: typechecking a fresh clone, without a dev run or a build first, means the same thing as typechecking a warm tree.
 
 ## Architecture
 

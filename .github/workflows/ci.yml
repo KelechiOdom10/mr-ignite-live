@@ -25,7 +25,6 @@ jobs:
         with:
           bun-version: 1.4.2
       - run: bun install --frozen-lockfile
-      - run: bunx void prepare
       - name: D1 migrations match db/schema.ts
         run: bunx void db generate && git diff --exit-code -- db/migrations && test -z "$(git status --porcelain -- db/migrations)"
       - run: bun run check

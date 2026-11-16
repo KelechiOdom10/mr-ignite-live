@@ -13,7 +13,6 @@ Run from the checkout you are verifying (a worktree is best: see Isolation).
 
 ```sh
 bun install --frozen-lockfile        # first run in a new checkout or worktree
-bunx void prepare                    # generates .void/ types; typecheck fails without them
 bunx void db migrate                 # local D1 tables for favourites
 PLAYER_DATA_MODE=fixtures bun scripts/run-node.ts vite --port 5191 --strictPort > /tmp/rivals-hub-verify.log 2>&1 &
 ```
@@ -80,7 +79,7 @@ Leave `.void/` (git-ignored) and the screenshots.
 
 ## Gotchas
 
-- `bun run check` is format, lint (warnings fail), boundaries, typecheck and tests. Run it before every commit; it needs `.void/` from `bunx void prepare`.
+- `bun run check` is format, lint (warnings fail), boundaries, typecheck and tests. Run it before every commit; it writes `.void/` before it typechecks, so a fresh worktree needs nothing else.
 - If your clone excludes `.claude/` (for example in `.git/info/exclude`), `oxfmt .` skips these skill files locally but CI checks them. After editing them, run `bunx oxfmt .claude/skills/verify/SKILL.md .claude/skills/verify/features/*.md`.
 - Don't edit `src/components/` or `src/lib/` (vendored beUI).
 - Restart the dev server after switching to a branch that adds or removes pages. Vite keeps the old route table and answers 404, and an open tab may need a full reload.
