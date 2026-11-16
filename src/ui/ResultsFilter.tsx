@@ -9,8 +9,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/motion/select";
-import type { EventOption } from "@/domain/matchesOptions";
+import type { EventOption, TeamOption } from "@/domain/matchesOptions";
 import { hasResultFilters, type MatchesView, type ResultRange } from "@/domain/matchesView";
+import { teamShortName } from "@/domain/teams";
+
+import { TeamLogo } from "./TeamMark";
 
 const ANY = "__any";
 
@@ -35,6 +38,19 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+function TeamRow({ team }: { team: TeamOption }) {
+  return (
+    <span className="flex min-w-0 flex-1 items-center gap-2">
+      <TeamLogo
+        team={{ name: team.name, short: teamShortName(team.name) }}
+        logo={team.logo}
+        size={18}
+      />
+      <span className="min-w-0 truncate">{team.name}</span>
+    </span>
+  );
+}
+
 export function ResultsFilter({
   view,
   events,
@@ -44,11 +60,12 @@ export function ResultsFilter({
 }: {
   view: MatchesView;
   events: readonly EventOption[];
-  teams: readonly string[];
+  teams: readonly TeamOption[];
   onChange: (change: ResultFilterChange) => void;
   onClear: () => void;
 }) {
   const rangeLabel = RANGE_FILTERS.find((r) => r.value === view.range)?.label;
+  const chosenTeam = teams.find((team) => team.spellings.includes(view.team ?? ""));
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
@@ -81,13 +98,19 @@ export function ResultsFilter({
         >
           <SelectTrigger>
             <span className="sr-only">Team</span>
-            <SelectValue placeholder="All teams" className="truncate" />
+            {chosenTeam ? (
+              <TeamRow team={chosenTeam} />
+            ) : (
+              <span className="min-w-0 truncate text-muted-foreground">
+                {view.team ?? "All teams"}
+              </span>
+            )}
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="max-h-80 overflow-y-auto">
             <SelectItem value={ANY}>All teams</SelectItem>
             {teams.map((team) => (
-              <SelectItem key={team} value={team}>
-                {team}
+              <SelectItem key={team.name} value={team.name}>
+                <TeamRow team={team} />
               </SelectItem>
             ))}
           </SelectContent>

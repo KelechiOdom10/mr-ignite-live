@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { aMatch } from "../../test/builders";
 import { eventOptions, teamOptions } from "./matchesOptions";
-import type { Snapshot, SnapshotEvent } from "./model";
+import type { Match, Snapshot, SnapshotEvent } from "./model";
 
 const NOW = Date.parse("2026-10-17T00:00:00.000Z");
 
@@ -23,6 +23,14 @@ function anEvent(id: string, name: string, endDate: string | null): SnapshotEven
     iconFile: null,
     iconUrl: null,
   };
+}
+
+function aTeam(name: string): Match["team1"] {
+  return { name, short: name.slice(0, 3) };
+}
+
+function aSeries(id: string, team1: string, team2: string): Match {
+  return aMatch({ id, markedFinished: true, team1: aTeam(team1), team2: aTeam(team2) });
 }
 
 function aSnapshot(events: SnapshotEvent[], matches: Snapshot["matches"]): Snapshot {
@@ -109,6 +117,81 @@ describe("teamOptions", () => {
       ],
     );
 
-    expect(teamOptions(snapshot, NOW)).toEqual(["Alpha", "Zeta"]);
+    expect(teamOptions(snapshot, NOW).map((team) => team.name)).toEqual(["Alpha", "Zeta"]);
+  });
+
+  it("lists one row per team however its name was spelled", () => {
+    // "100 Thieves" and "100 thieves" were two rows, which read as unaggregated data.
+    const snapshot = aSnapshot(
+      [],
+      [
+        aSeries("canonical", "100 Thieves", "Grin"),
+        aSeries("canonical-2", "100 Thieves", "GRIN"),
+        aSeries("lowercase", "100 thieves", "Grin"),
+      ],
+    );
+
+    expect(teamOptions(snapshot, NOW)).toEqual([
+      {
+        name: "100 Thieves",
+        logo: null,
+        spellings: ["100 Thieves", "100 thieves"],
+      },
+      { name: "Grin", logo: null, spellings: ["Grin", "GRIN"] },
+    ]);
+  });
+
+  it("folds case, punctuation and spacing differences into one team", () => {
+    const snapshot = aSnapshot(
+      [],
+      [
+        aSeries("punctuation", "Virtus.pro", "Virtus.Pro"),
+        aSeries("dot", "Gen.G Esports", "Gen.GEsports"),
+        aSeries("space", "Team Liquid", "TeamLiquid"),
+      ],
+    );
+
+    expect(teamOptions(snapshot, NOW).map((team) => team.name)).toEqual([
+      "Gen.G Esports",
+      "Team Liquid",
+      "Virtus.Pro",
+    ]);
+  });
+
+  it("keeps teams whose names only look alike apart, because a wrong merge hides a fixture", () => {
+    const snapshot = aSnapshot(
+      [],
+      [aSeries("eq", "RAD", "RAD Esports"), aSeries("letter", "N1EX", "N1HEX")],
+    );
+
+    expect(teamOptions(snapshot, NOW).map((team) => team.name)).toEqual([
+      "N1EX",
+      "N1HEX",
+      "RAD",
+      "RAD Esports",
+    ]);
+  });
+
+  it("offers the team's logo, from any spelling that has one, and null without", () => {
+    const snapshot = {
+      ...aSnapshot([], [aSeries("a", "100 Thieves", "100 thieves"), aSeries("b", "Grin", "GRIN")]),
+      teams: {
+        "100 Thieves": {
+          short: "100T",
+          logoDark: "https://liquipedia.net/commons/images/100t_allmode.png",
+          logoLight: null,
+        },
+        "100 thieves": { short: "100T", logoDark: null, logoLight: null },
+      },
+    };
+
+    expect(teamOptions(snapshot, NOW)).toEqual([
+      {
+        name: "100 Thieves",
+        logo: "https://liquipedia.net/commons/images/100t_allmode.png",
+        spellings: ["100 Thieves", "100 thieves"],
+      },
+      { name: "Grin", logo: null, spellings: ["Grin", "GRIN"] },
+    ]);
   });
 });
