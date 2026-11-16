@@ -12,7 +12,7 @@ A personal Marvel Rivals site, local-only. The esports section has live Ignite s
 | `bun run test`   | Vitest (`src/**/*.test.ts`, `scripts/**/*.test.ts`)                                       |
 | `bun run deploy` | `void deploy`                                                                             |
 
-`bun run dev` starts Vite under Node 22.12 or newer: `scripts/dev.ts` looks in `$NODE`, on `PATH`, then `~/.nvm/versions/node`. Bun alone can't run the dev server, because void's Cloudflare config migration fails under it on macOS with `cf could not translate the built Cloudflare configuration`.
+`bun run dev`, `build`, `preview` and `deploy` run Vite and void under Node 22.12 or newer: `scripts/run-node.ts` looks in `$NODE`, on `PATH`, then `~/.nvm/versions/node`. Bun alone can't run them, because void's Cloudflare config migration fails under it on macOS with `cf could not translate the built Cloudflare configuration`.
 
 ## Architecture
 

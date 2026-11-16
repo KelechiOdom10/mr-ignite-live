@@ -20,7 +20,7 @@ bunx void db migrate   # create or update the local D1 tables (players section)
 bun run dev            # http://localhost:5180 (players section replays recorded fixtures)
 ```
 
-`bun run dev` starts Vite under Node 22.12 or newer; `scripts/dev.ts` finds one in `$NODE`, on `PATH`, or under `~/.nvm/versions/node`. Bun alone can't run it: void's Cloudflare config migration fails under bun on macOS with `cf could not translate the built Cloudflare configuration`.
+`bun run dev`, `build`, `preview` and `deploy` run Vite and void under Node 22.12 or newer; `scripts/run-node.ts` finds one in `$NODE`, on `PATH`, or under `~/.nvm/versions/node`. Bun alone can't run them, because void's Cloudflare config migration fails under bun on macOS with `cf could not translate the built Cloudflare configuration`.
 
 Cron triggers don't fire under `vite dev`, so in development `/api/snapshot` syncs itself at most once a minute. To fire the cron by hand, use the curl command Void prints on start.
 
@@ -31,7 +31,7 @@ Player data comes from [RivalsTracker](https://rivalstracker.com), which relays 
 ## Deploy
 
 ```sh
-bunx void deploy                      # first time: choose Cloudflare or a Void platform
+bun run deploy                        # first time: choose Cloudflare or a Void platform
 ```
 
 ## Layout

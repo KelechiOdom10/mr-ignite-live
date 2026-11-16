@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from "node:child_process";
-import { readdirSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -63,6 +63,22 @@ function candidates(): string[] {
   return [process.env.NODE, "node", ...installed].filter((path): path is string => Boolean(path));
 }
 
+const [command, ...args] = process.argv.slice(2);
+
+if (!command) {
+  console.error(
+    `Usage: bun scripts/run-node.ts <command> [args…], where <command> is a node_modules/.bin entry such as vite or void.`,
+  );
+  process.exit(1);
+}
+
+const entry = fileURLToPath(new URL(`../node_modules/.bin/${command}`, import.meta.url));
+
+if (!existsSync(entry)) {
+  console.error(`Cannot run ${command}: ${entry} does not exist. Run bun install first.`);
+  process.exit(1);
+}
+
 const runtime = candidates()
   .map(usable)
   .find((found): found is Runtime => Boolean(found));
@@ -70,7 +86,7 @@ const runtime = candidates()
 if (!runtime) {
   console.error(
     [
-      `The dev server runs Vite under Node ${VITE_NODE_FLOOR.join(".")} or newer: bun cannot run void's Cloudflare config migration ("cf could not translate the built Cloudflare configuration").`,
+      `${command} runs under Node ${VITE_NODE_FLOOR.join(".")} or newer: bun cannot run void's Cloudflare config migration ("cf could not translate the built Cloudflare configuration").`,
       "No suitable Node found in $NODE, on PATH, or under ~/.nvm/versions/node.",
       "Install it (nvm install 24) or point NODE at a Node binary, then run this again.",
     ].join("\n"),
@@ -78,10 +94,9 @@ if (!runtime) {
   process.exit(1);
 }
 
-console.info(`Dev server on ${runtime.version} (${runtime.path})`);
+console.info(`${command} on Node ${runtime.version} (${runtime.path})`);
 
-const vite = fileURLToPath(new URL("../node_modules/vite/bin/vite.js", import.meta.url));
-const child = spawn(runtime.path, [vite, ...process.argv.slice(2)], { stdio: "inherit" });
+const child = spawn(runtime.path, [entry, ...args], { stdio: "inherit" });
 
 child.on("exit", (code, signal) => {
   process.exit(signal ? 1 : (code ?? 0));
