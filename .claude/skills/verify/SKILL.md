@@ -15,7 +15,7 @@ Run from the checkout you are verifying (a worktree is best: see Isolation).
 bun install --frozen-lockfile        # first run in a new checkout or worktree
 bunx void prepare                    # generates .void/ types; typecheck fails without them
 bunx void db migrate                 # local D1 tables for favourites
-PLAYER_DATA_MODE=fixtures bunx vite --port 5191 --strictPort > /tmp/rivals-hub-verify.log 2>&1 &
+PLAYER_DATA_MODE=fixtures bun scripts/dev.ts --port 5191 --strictPort > /tmp/rivals-hub-verify.log 2>&1 &
 ```
 
 Ready when `/tmp/rivals-hub-verify.log` prints `Local: http://localhost:5191/` and `curl -s localhost:5191/api/credits` answers `{"mode":"fixtures",...}`.
