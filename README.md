@@ -38,14 +38,14 @@ The deploy needs one secret, `CLOUDFLARE_API_TOKEN`, set as a repository secret 
 
 | Scope   | Permission               | For                                                                       |
 | ------- | ------------------------ | ------------------------------------------------------------------------- |
-| Account | Workers Scripts: Edit    | uploads the version, publishes it, applies Durable Object migrations      |
+| Account | Workers Scripts: Edit    | uploads the version and publishes it                                      |
 | Account | Workers KV Storage: Read | binds the `KV` namespace; Edit when a deploy creates a namespace          |
 | Account | D1: Edit                 | applies pending `db/migrations`; a deploy with none pending only reads it |
 | Zone    | Workers Routes: Edit     | attaches the `rivalshub.kellycooks.dev` route                             |
 | Zone    | DNS: Edit                | creates that custom domain's DNS record and certificate                   |
 | Zone    | Zone: Read               | reads the zone those routes belong to                                     |
 
-Zone Resources must include `kellycooks.dev`. The zone rows only matter once the route lands in `void.config.ts`. No account id or worker subdomain is needed: `void.lock.json` records the account, and `preview_urls` gives the readiness check a URL to probe.
+Zone Resources must include `kellycooks.dev`, which the `rivalshub.kellycooks.dev` custom domain in `void.config.ts` attaches to. No account id or worker subdomain is needed: `void.lock.json` records the account, and `preview_urls` gives the readiness check a URL to probe.
 
 ```sh
 bun run deploy                        # deploy from this machine instead
