@@ -122,7 +122,8 @@ export function hasResultFilters(view: MatchesView): boolean {
 
 /**
  * Which tab /matches opens on. Live series render above either list, so they keep it on upcoming;
- * results win once nothing more is coming, or the day's play is over.
+ * results win once nothing more is coming, or the day's play is over. An undated series has no date
+ * to rule it out for today and the page lists it under Upcoming, so it counts as still coming.
  */
 export function smartDefaultTab(
   live: readonly Match[],
@@ -135,9 +136,9 @@ export function smartDefaultTab(
   if (upcoming.length === 0) return "results";
 
   const playedToday = results.some((m) => m.startsAt !== null && isToday(m.startsAt, now));
-  const moreToday = upcoming.some((m) => m.startsAt !== null && isToday(m.startsAt, now));
+  const moreComing = upcoming.some((m) => m.startsAt === null || isToday(m.startsAt, now));
 
-  return playedToday && !moreToday ? "results" : "upcoming";
+  return playedToday && !moreComing ? "results" : "upcoming";
 }
 
 function isToday(iso: string, now: number): boolean {

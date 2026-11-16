@@ -232,6 +232,16 @@ describe("smartDefaultTab", () => {
       "results",
     ],
     [
+      "with today's series played and only undated series left, the default stays upcoming",
+      [[], [aMatch({ startsAt: null })], [played(todayAt(12))]],
+      "upcoming",
+    ],
+    [
+      "with today's series played and the next one dated tomorrow, the default is results",
+      [[], [played(tomorrowAt(14))], [played(todayAt(12))]],
+      "results",
+    ],
+    [
       "with more scheduled later today, the default stays upcoming",
       [[], [played(todayAt(21))], [played(todayAt(12))]],
       "upcoming",
