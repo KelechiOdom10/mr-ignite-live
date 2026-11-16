@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { ProHeroStat, ProHeroStats } from "./proHeroStats";
-import { parseSimMap, simMapOptions, simMapRates } from "./simMap";
+import { parseSimMap, simMapOptions, simMapRates, simMapTiles } from "./simMap";
 
 function hero(overrides: Partial<ProHeroStat> & { id: string; games: number }): ProHeroStat {
   return {
@@ -100,5 +100,24 @@ describe("simMapRates", () => {
   it("returns nothing when the matrix is missing, so the page keeps its synced-series rates", () => {
     expect(simMapRates(null, null)).toBeNull();
     expect(simMapRates(null, "yggdrasill path")).toBeNull();
+  });
+});
+
+describe("simMapTiles", () => {
+  it("gives each map the catalogue's art and mode", () => {
+    expect(simMapTiles(["god quarry"])).toEqual([
+      {
+        name: "god quarry",
+        label: "God Quarry",
+        mode: "Domination",
+        imageUrl: "https://www.mrvl.net/images/maps/god-quarry.png",
+      },
+    ]);
+  });
+
+  it("keeps a map the catalogue lacks as a plain tile rather than guessing a URL", () => {
+    expect(simMapTiles(["brand new map"])).toEqual([
+      { name: "brand new map", label: "Brand New Map", mode: null, imageUrl: null },
+    ]);
   });
 });
