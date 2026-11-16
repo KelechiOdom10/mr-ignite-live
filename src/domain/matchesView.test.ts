@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { aMatch } from "../../test/builders";
 import {
   DEFAULT_MATCHES_VIEW,
   hasResultFilters,
@@ -10,7 +11,10 @@ import {
   matchesHref,
   matchesViewFromQuery,
   matchesViewSearch,
+  smartDefaultTab,
+  type ListTab,
 } from "./matchesView";
+import type { Match } from "./model";
 
 describe("matchesViewFromQuery", () => {
   it("reads the tabs and filters the reader left", () => {
@@ -102,5 +106,63 @@ describe("tab guards", () => {
 describe("MATCH_REGIONS", () => {
   it("lists all regions first, in display order", () => {
     expect(MATCH_REGIONS).toEqual(["all", "americas", "emea", "china", "pacific"]);
+  });
+});
+
+describe("smartDefaultTab", () => {
+  const NOW = Date.parse("2026-11-16T18:00:00.000Z");
+  const THIRTY_DAYS_AGO = Date.parse("2026-10-17T12:00:00.000Z");
+  const played = (startsAt: number) => aMatch({ startsAt: new Date(startsAt).toISOString() });
+
+  // Local-clock hours, so the day boundary is the reader's whatever zone the suite runs in.
+  const todayAt = (hour: number) => {
+    const d = new Date(NOW);
+    d.setHours(hour, 0, 0, 0);
+
+    return d.getTime();
+  };
+
+  const tomorrowAt = (hour: number) => {
+    const d = new Date(todayAt(hour));
+    d.setDate(d.getDate() + 1);
+
+    return d.getTime();
+  };
+
+  const cases: Array<[string, [Match[], Match[], Match[]], ListTab]> = [
+    [
+      "with no live and no upcoming matches but finished results, the default is results",
+      [[], [], [played(THIRTY_DAYS_AGO)]],
+      "results",
+    ],
+    [
+      "with a series live, the default is upcoming even when nothing else is scheduled",
+      [[played(NOW)], [], [played(THIRTY_DAYS_AGO)]],
+      "upcoming",
+    ],
+    [
+      "with today's series played and nothing further scheduled, the default is results",
+      [[], [], [played(todayAt(12))]],
+      "results",
+    ],
+    [
+      "with more scheduled later today, the default stays upcoming",
+      [[], [played(todayAt(21))], [played(todayAt(12))]],
+      "upcoming",
+    ],
+    [
+      "with everything scheduled for later days, the default stays upcoming",
+      [[], [played(tomorrowAt(14))], [played(THIRTY_DAYS_AGO)]],
+      "upcoming",
+    ],
+    [
+      "with nothing played and nothing scheduled, the default stays upcoming",
+      [[], [], []],
+      "upcoming",
+    ],
+  ];
+
+  it.each(cases)("%s", (_name, [live, upcoming, results], expected) => {
+    expect(smartDefaultTab(live, upcoming, results, NOW)).toBe(expected);
   });
 });

@@ -5,6 +5,7 @@ Newest first. One line per change: the outcome first, then the PR.
 ## Unreleased
 
 - **Matches page:** filter results by event, team and date; home is now a summary (#43).
+- **Matches page:** opens on Results when nothing is scheduled, instead of an empty Upcoming (#44).
 
 ## 2026-11-09
 
