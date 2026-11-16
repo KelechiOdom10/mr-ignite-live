@@ -1,4 +1,4 @@
-import { Check, ChevronDown, LayoutGrid } from "lucide-react";
+import { Check, ChevronDown, LayoutGrid, X } from "lucide-react";
 import { type KeyboardEvent, useCallback, useEffect, useId, useRef, useState } from "react";
 
 import type { SimMapTile } from "@/domain/simMap";
@@ -7,21 +7,12 @@ import { cn } from "@/lib/utils";
 
 import { proxiedImage } from "../images";
 
-interface Option {
-  /** Null is the unfiltered board. */
-  name: string | null;
-  label: string;
-  mode: string | null;
-  imageUrl: string | null;
-}
-
-const ALL_MAPS: Option = { name: null, label: "All maps", mode: null, imageUrl: null };
-
 const TILE =
-  "group relative flex w-full cursor-pointer flex-col overflow-hidden rounded-lg border text-left outline-none transition-[border-color,transform] duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground active:scale-[0.98] motion-reduce:transition-none";
+  "group relative flex w-full cursor-pointer scroll-m-2 flex-col overflow-hidden rounded-lg border text-left outline-none transition-[border-color,transform] duration-150 focus-visible:outline-3 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-foreground active:scale-[0.98] motion-reduce:transition-none";
 
-function Tile({ option, selected }: { option: Option; selected: boolean }) {
-  const art = proxiedImage(option.imageUrl);
+function Tile({ option, selected }: { option: SimMapTile; selected: boolean }) {
+  const [failed, setFailed] = useState(false);
+  const art = failed ? undefined : proxiedImage(option.imageUrl);
 
   return (
     <>
@@ -32,6 +23,7 @@ function Tile({ option, selected }: { option: Option; selected: boolean }) {
             alt=""
             loading="lazy"
             decoding="async"
+            onError={() => setFailed(true)}
             className="size-full object-cover transition-[filter] duration-150 group-hover:brightness-110 group-focus-visible:brightness-110"
           />
         ) : (
@@ -74,40 +66,58 @@ export function MapPicker({
   disabled: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [mobile, setMobile] = useState(false);
   const [active, setActive] = useState(0);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
-  const panelRef = useRef<HTMLDivElement | null>(null);
+  const panelRef = useRef<HTMLDialogElement | null>(null);
+  const resetRef = useRef<HTMLButtonElement | null>(null);
   const openingFocus = useRef(0);
   const listId = useId();
+  const titleId = useId();
 
-  const options: Option[] = [
-    ALL_MAPS,
-    ...tiles.map((tile) => ({
-      name: tile.name,
-      label: tile.label,
-      mode: tile.mode,
-      imageUrl: tile.imageUrl,
-    })),
-  ];
-
-  const selectedIndex = Math.max(
-    0,
-    options.findIndex((option) => option.name === value),
-  );
-
-  const current = options[selectedIndex] ?? ALL_MAPS;
-  const currentArt = proxiedImage(current.imageUrl);
+  const selectedIndex = tiles.findIndex((tile) => tile.name === value);
+  const current = tiles[selectedIndex];
+  const currentArt = proxiedImage(current?.imageUrl);
 
   const close = useCallback(() => {
+    const returnFocus = panelRef.current?.contains(document.activeElement);
+    panelRef.current?.close();
     setOpen(false);
 
-    if (panelRef.current?.contains(document.activeElement)) {
+    if (returnFocus) {
       triggerRef.current?.focus({ preventScroll: true });
     }
   }, []);
 
   useDismiss(open, close, rootRef, { behavior: "consume" });
+
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 639px)");
+
+    const update = () => {
+      setMobile(query.matches);
+      setOpen(false);
+    };
+
+    update();
+    query.addEventListener("change", update);
+
+    return () => query.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    if (!open || !mobile) return;
+    const dialog = panelRef.current;
+    const overflow = document.body.style.overflow;
+    dialog?.showModal();
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = overflow;
+      dialog?.close();
+    };
+  }, [open, mobile]);
 
   // Focus only as the panel opens: while it is open the arrow keys own focus, and re-running this
   // when `active` changes would pull it back to where the panel started.
@@ -115,9 +125,11 @@ export function MapPicker({
     if (!open) return;
 
     const focused =
-      panelRef.current?.querySelectorAll<HTMLButtonElement>("[data-map-option]")[
-        openingFocus.current
-      ];
+      openingFocus.current < 0
+        ? resetRef.current
+        : panelRef.current?.querySelectorAll<HTMLButtonElement>("[data-map-option]")[
+            openingFocus.current
+          ];
 
     focused?.focus({ preventScroll: true });
     focused?.scrollIntoView({ block: "nearest" });
@@ -131,7 +143,7 @@ export function MapPicker({
     }
 
     openingFocus.current = selectedIndex;
-    setActive(selectedIndex);
+    setActive(Math.max(0, selectedIndex));
     setOpen(true);
   }
 
@@ -153,7 +165,7 @@ export function MapPicker({
   }
 
   function onPanelKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    const last = options.length - 1;
+    const last = tiles.length - 1;
     const grid = event.currentTarget.querySelector("[data-map-grid]");
 
     const columns =
@@ -167,12 +179,122 @@ export function MapPicker({
     else if (event.key === "ArrowUp") moveFocus(event, Math.max(active - columns, 0));
     else if (event.key === "Home") moveFocus(event, 0);
     else if (event.key === "End") moveFocus(event, last);
-    else if (event.key === "Tab") setOpen(false);
   }
 
+  function onPanelTab(event: KeyboardEvent<HTMLDialogElement>) {
+    if (!mobile || event.key !== "Tab") return;
+
+    const buttons = event.currentTarget.querySelectorAll<HTMLButtonElement>(
+      'button:not([tabindex="-1"])',
+    );
+
+    const first = buttons[0];
+    const last = buttons[buttons.length - 1];
+
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last?.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first?.focus();
+    }
+  }
+
+  const panel = open && (
+    <dialog
+      ref={panelRef}
+      id={listId}
+      open={mobile ? undefined : true}
+      aria-modal={mobile || undefined}
+      aria-labelledby={titleId}
+      onKeyDown={onPanelTab}
+      onCancel={(event) => {
+        event.preventDefault();
+        close();
+      }}
+      onBlur={(event) => {
+        if (!mobile && event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) {
+          setOpen(false);
+        }
+      }}
+      className={cn(
+        "z-30 m-0 flex min-h-0 w-auto max-w-none flex-col overflow-hidden rounded-xl border border-border bg-background p-0 text-foreground shadow-lg",
+        mobile
+          ? "fixed inset-x-3 top-16 h-[calc(100dvh-8rem-env(safe-area-inset-bottom))] max-h-none backdrop:top-14 backdrop:bottom-[calc(3.5rem+env(safe-area-inset-bottom))] backdrop:bg-background/95"
+          : "absolute inset-x-0 top-full mt-2 max-h-[min(70vh,34rem)]",
+      )}
+    >
+      <div className="shrink-0 border-b bg-card px-3 pb-3">
+        <div className="flex items-center justify-between gap-3">
+          <h2 id={titleId} className="text-sm font-semibold">
+            Choose a map
+          </h2>
+          <button
+            type="button"
+            aria-label="Close map picker"
+            onClick={close}
+            className="-mr-2 grid size-11 cursor-pointer place-items-center rounded-lg text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-foreground focus-visible:outline-3 focus-visible:outline-foreground active:bg-accent"
+          >
+            <X className="size-4" aria-hidden />
+          </button>
+        </div>
+        <button
+          ref={resetRef}
+          type="button"
+          aria-pressed={value === null}
+          onClick={() => choose(null)}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowDown" && tiles.length > 0) {
+              event.preventDefault();
+              setActive(0);
+              panelRef.current?.querySelector<HTMLButtonElement>("[data-map-option]")?.focus();
+            }
+          }}
+          className={cn(
+            "inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border px-3 text-sm font-medium transition-colors duration-150 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-foreground active:brightness-90",
+            value === null
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-border-strong bg-background hover:bg-accent",
+          )}
+        >
+          <LayoutGrid className="size-4" aria-hidden />
+          All maps
+          {value === null && <Check className="size-4" strokeWidth={3} aria-hidden />}
+        </button>
+      </div>
+      <div
+        role="listbox"
+        aria-label="Maps"
+        onKeyDown={onPanelKeyDown}
+        className="min-h-0 overflow-y-auto overscroll-contain p-3"
+      >
+        <div data-map-grid className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {tiles.map((option, index) => (
+            <button
+              key={option.name}
+              type="button"
+              role="option"
+              aria-selected={index === selectedIndex}
+              data-map-option=""
+              tabIndex={index === active ? 0 : -1}
+              onFocus={() => setActive(index)}
+              onClick={() => choose(option.name)}
+              className={cn(
+                TILE,
+                index === selectedIndex
+                  ? "border-primary ring-2 ring-primary"
+                  : "border-border hover:border-border-strong",
+              )}
+            >
+              <Tile option={option} selected={index === selectedIndex} />
+            </button>
+          ))}
+        </div>
+      </div>
+    </dialog>
+  );
+
   return (
-    // display: contents keeps the panel out of the header's flex layout while still spanning the
-    // board card it belongs to, and lets a click anywhere else in the card dismiss it.
     <div ref={rootRef} className="contents">
       <div className="w-full min-w-0 sm:w-56">
         <span aria-hidden="true" className="mb-1 block text-xs text-muted-foreground">
@@ -182,7 +304,7 @@ export function MapPicker({
           ref={triggerRef}
           type="button"
           disabled={disabled}
-          aria-haspopup="listbox"
+          aria-haspopup="dialog"
           aria-expanded={open}
           aria-controls={open ? listId : undefined}
           onClick={toggle}
@@ -202,7 +324,7 @@ export function MapPicker({
           )}
           <span className="min-w-0 flex-1 truncate text-left">
             <span className="sr-only">Map: </span>
-            {current.label}
+            {current?.label ?? "All maps"}
           </span>
           <ChevronDown
             aria-hidden
@@ -214,38 +336,7 @@ export function MapPicker({
         </button>
       </div>
 
-      {open && (
-        <div
-          ref={panelRef}
-          id={listId}
-          role="listbox"
-          aria-label="Map"
-          onKeyDown={onPanelKeyDown}
-          className="absolute inset-x-0 top-full z-30 mt-2 max-h-[min(60vh,26rem)] overflow-y-auto overscroll-contain rounded-xl border border-border bg-background p-2 shadow-lg"
-        >
-          <div data-map-grid className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-            {options.map((option, index) => (
-              <button
-                key={option.name ?? "all"}
-                type="button"
-                role="option"
-                aria-selected={index === selectedIndex}
-                data-map-option=""
-                tabIndex={index === active ? 0 : -1}
-                onClick={() => choose(option.name)}
-                className={cn(
-                  TILE,
-                  index === selectedIndex
-                    ? "border-primary ring-2 ring-primary"
-                    : "border-border hover:border-border-strong",
-                )}
-              >
-                <Tile option={option} selected={index === selectedIndex} />
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      {panel}
     </div>
   );
 }

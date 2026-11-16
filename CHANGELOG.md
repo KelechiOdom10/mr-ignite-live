@@ -4,7 +4,7 @@ Newest first. One line per change: the outcome first, then the PR.
 
 ## Unreleased
 
-- **Draft simulator:** the map picker is a grid of map art, keyed and readable at a glance (#54).
+- **Draft simulator maps are visual:** art tiles with a mobile picker sheet (#54).
 - **Matches filters:** the Team filter lists each team once, with its logo, instead of once per spelling (#53).
 - **The tab shows the site's mark,** /matches stays on Upcoming while a series is unplayed, and the event page names its undated group too (#52).
 - **Pushes to main deploy the site** once the checks pass, from GitHub Actions (#51).
