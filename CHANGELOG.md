@@ -5,6 +5,7 @@ Newest first. One line per change: the outcome first, then the PR.
 ## Unreleased
 
 - **The site is live on rivalshub.kellycooks.dev,** alongside its workers.dev hostname (#49).
+- **Checks pass on a fresh clone:** `bun run check` generates Void's types before it typechecks (#48).
 
 ## 2026-11-16
 
