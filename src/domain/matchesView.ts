@@ -57,7 +57,7 @@ export function matchesViewFromQuery(query: {
   team?: string;
   range?: string;
 }): MatchesView {
-  return {
+  const view: MatchesView = {
     region: RegionSchema.catch(DEFAULT_MATCHES_VIEW.region).parse(query.region),
     tab: ListTabSchema.nullable()
       .catch(null)
@@ -67,6 +67,37 @@ export function matchesViewFromQuery(query: {
     team: FilterValueSchema.catch(null).parse(query.team),
     range: ResultRangeSchema.catch(DEFAULT_MATCHES_VIEW.range).parse(query.range),
   };
+
+  return view.tab === "upcoming" ? withListTab(view, "upcoming") : view;
+}
+
+/**
+ * The view a tab shows. Event, team and range only filter Results, so Upcoming drops them rather
+ * than leave a URL describing filters the page ignores.
+ */
+export function withListTab(view: MatchesView, tab: ListTab): MatchesView {
+  return tab === "upcoming"
+    ? { ...view, tab, event: null, team: null, range: DEFAULT_MATCHES_VIEW.range }
+    : { ...view, tab };
+}
+
+/**
+ * Upcoming series in listing order: dated ones soonest first, then the undated bracket series,
+ * which have no time to sort by. `limit` counts dated series only, so a full schedule can't push
+ * the bracket off the page.
+ */
+export function upcomingSeries(matches: readonly Match[], limit: number): Match[] {
+  const dated: { at: number; match: Match }[] = [];
+  const undated: Match[] = [];
+
+  for (const match of matches) {
+    if (match.startsAt === null) undated.push(match);
+    else dated.push({ at: Date.parse(match.startsAt), match });
+  }
+
+  const soonest = dated.toSorted((a, b) => a.at - b.at);
+
+  return [...soonest.slice(0, limit).map((entry) => entry.match), ...undated];
 }
 
 /** The query string for a view, leaving out defaults so the plain URLs stay clean. */

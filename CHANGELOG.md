@@ -4,6 +4,7 @@ Newest first. One line per change: the outcome first, then the PR.
 
 ## Unreleased
 
+- **Matches page:** Upcoming shows the undated bracket, and filters stay on Results (#45).
 - **Matches page:** filter results by event, team and date; home is now a summary (#43).
 - **Matches page:** opens on Results when nothing is scheduled, instead of an empty Upcoming (#44).
 - **Dev server, build and deploy work on macOS again:** they run Vite and void under Node, found on `PATH` or in nvm (#46).

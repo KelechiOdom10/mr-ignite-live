@@ -29,7 +29,7 @@ export const loader = defineHandler(async (c) => {
 
   return {
     snapshot: scoped,
-    events: eventOptions(snapshot),
+    events: eventOptions(snapshot, now, view.event),
     teams: teamOptions(snapshot, now),
     view,
   };
