@@ -1,67 +1,69 @@
 # Rivals Hub
 
-A personal Marvel Rivals site. Its esports section has live Ignite 2026 scores, brackets and results, built on [Void](https://void.cloud) with [beUI](https://beui.dev) components.
+A Marvel Rivals companion for following Ignite, exploring pro drafts, and looking up player performance. Scores, brackets, match stats and ranked profiles in one place, without an account.
 
-## How it stays live
+**[Open Rivals Hub →](https://rivalshub.kellycooks.dev)**
 
-1. `crons/sync-liquipedia.ts` runs every minute. It asks Liquipedia for the revision ids of every `MR Ignite/2026/*` page in one request, then downloads only the pages that changed (a second request).
-2. Parsed events and matches are stored as one KV value (`snapshot`). Each run computes the next value from Liquipedia's changed pages and mrvl's map results and writes it at most once, only when it changed.
-3. After a change, the cron publishes on the `scores` live topic (`void/live`, SSE). Open pages refetch `/api/snapshot`, and also poll every 45s as a fallback.
-4. Score changes show as toasts (map won, series won, match went live).
-5. The same cron links live and recent series to mrvl.net and stores MVP/SVP, heroes, bans, protects in draft order and player stats per map (`stats:v2:<matchId>`). Map winners mrvl has before Liquipedia fill in early. See [ADR 4](docs/adr/0004-mrvl-for-player-stats.md). `/drafts` counts them per hero and `/drafts/simulator` steps through the Ignite 2026 draft.
+![Rivals Hub's draft explorer showing hero picks, bans and protects alongside map and event filters](docs/images/rivals-hub-drafts.png)
 
-Liquipedia asks API users for an identifying User-Agent, gzip, and at most one request every 2 seconds; `src/liquipedia/client.ts` enforces that within an isolate. Each run also stops at 8 Liquipedia requests or 30 seconds, whichever comes first, so it can't overlap the next minute's run in another isolate; pages it couldn't fetch wait for the next run. See [ADR 5](docs/adr/0005-per-run-liquipedia-budget.md). Team logos, event icons and mrvl hero/map art go through `/api/image` because Liquipedia blocks hotlinking.
+The live draft explorer, captured 18 November 2026. Pro statistics from mrvl.net; game artwork belongs to its respective owners.
+
+## Features
+
+- **Follow Ignite 2026** — live scores, upcoming series, results and regional event brackets.
+- **Go inside a match** — map results, player stats, MVP/SVP and draft picks where the sources provide them.
+- **Explore drafts** — hero picks, bans and protects, map filters and a step-by-step Ignite draft simulator.
+- **Look up players** — ranked profiles, hero performance, match history, favourites and the PC leaderboard. Private histories stay private.
+- **Review matches** — keep a local review workspace with bookmarks and notes.
+- **Stay spoiler-free** — hide results while browsing, with times shown in your own timezone.
+- **Jump anywhere** — search teams, matches, events, players and pages with ⌘K / Ctrl+K.
+
+Coverage and freshness depend on the upstream sources; missing stats aren't estimated.
+
+## Tech stack
+
+[React](https://react.dev), [TypeScript](https://www.typescriptlang.org), [Void](https://void.cloud) and [Vite](https://vite.dev), with [Tailwind CSS](https://tailwindcss.com), [beUI](https://beui.dev) and [Motion](https://motion.dev). Hosted on Cloudflare Workers with KV for esports snapshots and D1 for player caching and favourites. [Zod](https://zod.dev) validates incoming data.
 
 ## Run locally
 
+Install [Bun](https://bun.sh) 1.4.2 and Node.js 24.22.2 (the version in `.node-version`), then:
+
 ```sh
-bun install
-bunx void db migrate   # create or update the local D1 tables (players section)
-bun run dev            # http://localhost:5180 (players section replays recorded fixtures)
+git clone https://github.com/KelechiOdom10/mr-ignite-live.git
+cd mr-ignite-live
+bun install --frozen-lockfile
+bunx void db migrate
+PLAYER_DATA_MODE=fixtures bun run dev
 ```
 
-`bun run dev`, `build`, `preview`, `deploy` and `codegen` run Vite and void under Node 22.12 or newer; `scripts/run-node.ts` finds one in `$NODE`, on `PATH`, or under `~/.nvm/versions/node`. Bun alone can't run Vite or deploy, because void's Cloudflare config migration fails under bun on macOS with `cf could not translate the built Cloudflare configuration`.
+Open **http://localhost:5180**. No provider key or Cloudflare token is needed for local development. Player pages replay recorded fixtures by default; try [Sypeh](http://localhost:5180/player/670067075). This is **not a fully offline demo**: esports pages sync Liquipedia and mrvl, and images may use the network. A cold snapshot can take minutes to build. Don't enable live player requests just to test a change.
 
-`bun run check` (format, lint, boundaries, typecheck, tests) writes `.void/` before it typechecks, so it works on a fresh clone without a dev run or a build first.
+## Development
 
-Cron triggers don't fire under `vite dev`, so in development `/api/snapshot` syncs itself at most once a minute. To fire the cron by hand, use the curl command Void prints on start.
+```sh
+bun run check       # formatting, lint, boundaries, generated types and tests
+bun run test        # Vitest suite
+bun run fmt         # format
+bun run build       # production build
+```
 
-## Players section
-
-Player data comes from [RivalsTracker](https://rivalstracker.com), which relays the game's own profile, match and leaderboard data. By default the dev server replays recorded responses at no cost. Production must set `PLAYER_DATA_MODE=live`; `PLAYER_DATA_REQUESTS_PER_DAY` (default 300) caps upstream requests and `/api/credits` shows today's count. `PLAYER_DATA_MODE=off` turns the players section off. See [ADR 9](docs/adr/0009-rivalstracker-for-player-data.md).
+Read [AGENTS.md](AGENTS.md) before contributing. Run `bun run check` before a commit, preserve recorded fixtures, and never commit tokens or `.env` files. The [verification guide](.claude/skills/verify/SKILL.md) covers isolated browser testing; [architecture and operations](docs/architecture.md) explains the sync, directory layout, environment settings and remaining scripts.
 
 ## Deploy
 
-A push to `main` deploys to Cloudflare from GitHub Actions, and only after the same check a pull request gets: `.github/workflows/deploy.yml` runs `ci.yml` first and will not deploy a tree that fails it. Runs queue rather than cancel, and the deploy job runs in the `production` environment, so required reviewers can be added there without touching the workflow. To redeploy by hand, run Actions → Deploy → Run workflow on `main`; from any other branch it runs the check and skips the deploy.
+**A push or merge to `main` automatically deploys production after checks pass.** Don't merge a change as a way to preview it. Deployment requires your own Cloudflare credentials; a fork must use its own resources and domain, not the saved production configuration. See [deployment setup and token permissions](docs/architecture.md#deploy).
 
-The deploy needs one secret, `CLOUDFLARE_API_TOKEN`, set as a repository secret or as an environment secret on `production`, and the workflow stops at its first step with that instruction when it is missing. The Cloudflare API token needs:
+## Data and acknowledgements
 
-| Scope   | Permission               | For                                                                       |
-| ------- | ------------------------ | ------------------------------------------------------------------------- |
-| Account | Workers Scripts: Edit    | uploads the version and publishes it                                      |
-| Account | Workers KV Storage: Read | binds the `KV` namespace; Edit when a deploy creates a namespace          |
-| Account | D1: Edit                 | applies pending `db/migrations`; a deploy with none pending only reads it |
-| Zone    | Workers Routes: Edit     | attaches the `rivalshub.kellycooks.dev` route                             |
-| Zone    | DNS: Edit                | creates that custom domain's DNS record and certificate                   |
-| Zone    | Zone: Read               | reads the zone those routes belong to                                     |
+- [Liquipedia](https://liquipedia.net/marvelrivals/) supplies tournament schedules, brackets and results.
+- [mrvl.net](https://www.mrvl.net) supplies pro player/map stats and draft data.
+- [RivalsTracker](https://rivalstracker.com) supplies player profiles, ranked matches and the leaderboard.
+- [beUI](https://beui.dev) supplies the copied UI components.
 
-Zone Resources must include `kellycooks.dev`, which the `rivalshub.kellycooks.dev` custom domain in `void.config.ts` attaches to. No account id or worker subdomain is needed: `void.lock.json` records the account, and `preview_urls` gives the readiness check a URL to probe.
+See [data sources and reuse](docs/data-sources.md) and [third-party notices](THIRD_PARTY_NOTICES.md). Provider data, game artwork and logos aren't ours to relicense. This is an independent fan project, not affiliated with or endorsed by Marvel, NetEase Games, the tournament organisers or the data providers. Their names and trademarks belong to their respective owners.
 
-```sh
-bun run deploy                        # deploy from this machine instead
-```
+## Author and license
 
-It serves https://rivalshub.kellycooks.dev, alongside the Worker's workers.dev and preview hostnames.
+Built by [Kelechi Odom](https://github.com/KelechiOdom10).
 
-## Layout
-
-| Path                                          | What                                                                          |
-| --------------------------------------------- | ----------------------------------------------------------------------------- |
-| `src/domain/`                                 | Zod schemas, `matchState` (live / upcoming / finished) and scoping            |
-| `src/liquipedia/`                             | Liquipedia API client (pacing and per-run budget), wikitext parser, teams     |
-| `src/mrvl/`                                   | mrvl.net client and Liquipedia↔mrvl linking                                   |
-| `src/store/plan.ts`                           | Pure sync planning: what changed, the next stored snapshot                    |
-| `src/store/run.ts`                            | One sync run: fetch, compute, write each KV key at most once                  |
-| `src/store/snapshot.ts`, `src/store/stats.ts` | Liquipedia and mrvl fetching, KV reads and writes through a `KvStore`         |
-| `src/sync.ts`, `crons/`, `routes/`, `pages/`  | Runtime shell: binds void/kv, D1 and the clients, cron, API routes, SSR pages |
-| `src/ui/`, `src/components/motion/`           | React views; beUI components (copied from the registry)                       |
+An open-source license for the original application code has not yet been selected. Public visibility alone does not grant an open-source license; the third-party licenses and data restrictions still apply.
