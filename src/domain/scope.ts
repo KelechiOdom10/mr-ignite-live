@@ -18,6 +18,10 @@ function involvesTeam(match: Match, names: ReadonlySet<string>): boolean {
 }
 
 export function scopeSnapshot(snapshot: Snapshot, scope: SnapshotScope, now: number): Snapshot {
+  if (scope.kind === "recent" || scope.kind === "matches") {
+    return { ...snapshot, servedAt: new Date(now).toISOString() };
+  }
+
   if (scope.kind === "events") {
     const nearTerm = snapshot.matches.filter(
       (m) => m.startsAt && Date.parse(m.startsAt) > now - EVENTS_LIST_MATCH_WINDOW_MS,
@@ -44,13 +48,12 @@ export function scopeSnapshot(snapshot: Snapshot, scope: SnapshotScope, now: num
   const focus =
     scope.kind === "match" ? snapshot.matches.find((m) => m.id === scope.matchId) : undefined;
 
-  const focusEventId =
-    scope.kind === "event" || scope.kind === "matches" ? scope.eventId : focus?.eventId;
+  const focusEventId = scope.kind === "event" ? scope.eventId : focus?.eventId;
 
   // A team recorded under two spellings is one team, so its scope carries every spelling: the
   // match played under the other one has to reach the page too.
   const focusTeams = new Set(
-    [focus?.team1?.name, focus?.team2?.name, scope.kind === "matches" ? scope.team : undefined]
+    [focus?.team1?.name, focus?.team2?.name]
       .filter((name) => name !== undefined)
       .flatMap((name) => [...teamSpellings(snapshot.matches, name)]),
   );

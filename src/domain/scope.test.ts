@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { aMatch } from "../../test/builders";
+import recorded from "../../test/fixtures/snapshot/stage2-americas.json";
+import { matchState } from "./matchState";
+import { SnapshotSchema } from "./model";
 import type { Snapshot, SnapshotEvent } from "./model";
 import { eventIdFromSlug, eventSlug, matchesOfEvent, scopeFromQuery, scopeSnapshot } from "./scope";
 
@@ -37,6 +40,22 @@ function aSnapshot(events: SnapshotEvent[], matches: Snapshot["matches"]): Snaps
 }
 
 describe("scopeSnapshot", () => {
+  it("does not lose recorded results when the clock crosses the event's 30-day cutoff", () => {
+    const archive = SnapshotSchema.parse(recorded);
+
+    for (const date of ["2026-11-16T23:59:59Z", "2026-11-17T00:00:00Z", "2026-11-18T12:00:00Z"]) {
+      const now = Date.parse(date);
+
+      for (const query of [{}, { view: "matches" }]) {
+        const scoped = scopeSnapshot(archive, scopeFromQuery(query), now);
+        const results = scoped.matches.filter((m) => matchState(m, now).status === "finished");
+
+        expect(results).toHaveLength(44);
+        expect(results.at(-1)?.id).toBe("kOKqgtPHq4_R5M1");
+      }
+    }
+  });
+
   const current = anEvent("current", "2026-10-18");
   const old = anEvent("old", "2026-08-01");
 
@@ -61,10 +80,10 @@ describe("scopeSnapshot", () => {
     ],
   );
 
-  it("keeps events that ended within 30 days and drops older ones", () => {
+  it("keeps the home archive even when events ended more than 30 days ago", () => {
     const scoped = scopeSnapshot(snapshot, { kind: "recent" }, NOW);
-    expect(scoped.events.map((e) => e.id)).toEqual(["current"]);
-    expect(scoped.matches.map((m) => m.id)).toEqual(["a"]);
+    expect(scoped.events.map((e) => e.id)).toEqual(["current", "old"]);
+    expect(scoped.matches.map((m) => m.id)).toEqual(["a", "b", "c"]);
   });
 
   it("adds an older event's matches on its event page", () => {
@@ -84,9 +103,9 @@ describe("scopeSnapshot", () => {
     expect(scoped.events.map((e) => e.id).sort()).toEqual(["current", "old"]);
   });
 
-  it("adds a team's old matches to the matches page when it is the chosen team", () => {
+  it("keeps the archive available when a team filter is chosen", () => {
     const scoped = scopeSnapshot(snapshot, { kind: "matches", team: "Swamp Gaming" }, NOW);
-    expect(scoped.matches.map((m) => m.id).sort()).toEqual(["a", "b"]);
+    expect(scoped.matches.map((m) => m.id).sort()).toEqual(["a", "b", "c"]);
   });
 
   it("carries every spelling of the chosen team, so its older series reach the page", () => {
@@ -120,12 +139,12 @@ describe("scopeSnapshot", () => {
 
     const scoped = scopeSnapshot(spelled, { kind: "matches", team: "100 Thieves" }, NOW);
 
-    expect(scoped.matches.map((m) => m.id).sort()).toEqual(["canonical", "lowercase"]);
+    expect(scoped.matches.map((m) => m.id).sort()).toEqual(["canonical", "elsewhere", "lowercase"]);
   });
 
-  it("scopes the matches page to the recent window until a filter is chosen", () => {
+  it("keeps the unfiltered matches archive independent of the recent window", () => {
     const scoped = scopeSnapshot(snapshot, { kind: "matches" }, NOW);
-    expect(scoped.matches.map((m) => m.id)).toEqual(["a"]);
+    expect(scoped.matches.map((m) => m.id)).toEqual(["a", "b", "c"]);
   });
 
   it("keeps the requested event on its page before its bracket has any matches", () => {
