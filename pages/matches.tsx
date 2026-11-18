@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Button } from "@/components/motion/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/motion/tabs";
@@ -60,7 +60,7 @@ export default function MatchesPage({
   const [range, setRange] = useState<ResultRange>(view.range);
   const [loadedView, setLoadedView] = useState(view);
 
-  const { snapshot, connection, now, refetch } = useLiveSnapshot(initial, {
+  const { snapshot, connection, now } = useLiveSnapshot(initial, {
     view: "matches",
     event: event ?? undefined,
     team: team ?? undefined,
@@ -106,18 +106,6 @@ export default function MatchesPage({
       results: filterResults(snapshot.matches, events, filters, now),
     };
   }, [snapshot.matches, events, filters, region, now]);
-
-  // Picking an old event or team pulls its matches into the page's scope, so the client has to ask
-  // for them; the loader only scoped the entry it rendered.
-  const filterKey = `${event ?? ""}\u0000${team ?? ""}`;
-  const fetchedKey = useRef(filterKey);
-
-  useEffect(() => {
-    if (fetchedKey.current === filterKey) return;
-
-    fetchedKey.current = filterKey;
-    void refetch();
-  }, [filterKey, refetch]);
 
   const fallbackTab = hydrated ? smartDefaultTab(live, upcoming, results, now) : "upcoming";
   const tab = chosenTab ?? fallbackTab;
@@ -215,15 +203,6 @@ export default function MatchesPage({
           </section>
         )}
 
-        {tab === "results" && nextUp && (
-          <section aria-labelledby="next-heading" className="space-y-3">
-            <h2 id="next-heading" className="text-sm font-semibold">
-              Next up
-            </h2>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{card(nextUp)}</div>
-          </section>
-        )}
-
         <section
           aria-label={tab === "upcoming" ? "Upcoming matches" : "Results"}
           className="space-y-6"
@@ -256,6 +235,15 @@ export default function MatchesPage({
             </div>
           ))}
         </section>
+
+        {tab === "results" && !narrower && nextUp && (
+          <section aria-labelledby="next-heading" className="space-y-3">
+            <h2 id="next-heading" className="text-sm font-semibold">
+              Next up
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{card(nextUp)}</div>
+          </section>
+        )}
       </div>
     </AppShell>
   );

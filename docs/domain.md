@@ -17,5 +17,6 @@
 
 ## Scope (`src/domain/scope.ts`)
 
-- The home page gets events that ended in the last 30 days, plus any live match.
-- An event page gets only that event's matches.
+- Home and the matches archive receive all available events and matches, including on live refresh. Age does not remove results; only an explicit date filter limits them. Home renders a bounded summary, and the unfiltered Results list initially shows 36 series.
+- Event and match detail scopes include recent events, live matches and the requested event; match detail also keeps both teams' older matches for form and head-to-head.
+- The events list keeps every event with near-term matches and their playoff dependencies for spoiler masking.

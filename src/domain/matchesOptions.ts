@@ -20,11 +20,6 @@ function newestFirst(a: SnapshotEvent, b: SnapshotEvent): number {
   return (b.endDate ?? b.startDate ?? "").localeCompare(a.endDate ?? a.startDate ?? "");
 }
 
-/**
- * The event filter's choices. They come from the full snapshot, because the page's scoped one
- * holds only the recent events plus the chosen filters' matches. `chosen` stays offered even with
- * no finished series, so the select can't read "All events" while a filter is on.
- */
 export function eventOptions(
   snapshot: Snapshot,
   now: number,

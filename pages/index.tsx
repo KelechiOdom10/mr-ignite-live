@@ -67,7 +67,7 @@ export default function HomePage({ snapshot: initial, view }: Props) {
 
   const events = useMemo(() => new Map(snapshot.events.map((e) => [e.id, e])), [snapshot.events]);
 
-  const { live, upcoming, results } = useMemo(() => {
+  const { live, upcoming, undated, results } = useMemo(() => {
     const byStatus: Record<"live" | "upcoming" | "finished", Match[]> = {
       live: [],
       upcoming: [],
@@ -81,6 +81,7 @@ export default function HomePage({ snapshot: initial, view }: Props) {
     return {
       live: byStatus.live,
       upcoming: byStatus.upcoming.filter((m) => m.startsAt),
+      undated: byStatus.upcoming.filter((m) => !m.startsAt),
       results: byStatus.finished.toReversed(),
     };
   }, [snapshot.matches, events, region, now]);
@@ -94,7 +95,9 @@ export default function HomePage({ snapshot: initial, view }: Props) {
   );
 
   const matchesUrl = (tab: MatchesView["tab"]) => matchesHref({ region, tab });
-  const nothing = live.length === 0 && upcoming.length === 0 && results.length === 0;
+
+  const nothing =
+    live.length === 0 && upcoming.length === 0 && undated.length === 0 && results.length === 0;
 
   return (
     <AppShell snapshot={snapshot} connection={connection} now={now}>
@@ -129,7 +132,7 @@ export default function HomePage({ snapshot: initial, view }: Props) {
 
           {nothing && (
             <p className="rounded-xl border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
-              Nothing scheduled or played in this region yet.{" "}
+              No matches are available in this region.{" "}
               <Link href="/events" className="text-foreground underline">
                 Browse events
               </Link>
@@ -176,6 +179,16 @@ export default function HomePage({ snapshot: initial, view }: Props) {
                 {results.slice(0, SUMMARY_LIMIT).map(card)}
               </div>
             </section>
+          )}
+
+          {undated.length > 0 && (
+            <p className="text-sm text-muted-foreground">
+              Upcoming series have no confirmed dates yet.{" "}
+              <Link href={matchesUrl("upcoming")} className="text-foreground underline">
+                View upcoming series
+              </Link>
+              .
+            </p>
           )}
         </div>
 
