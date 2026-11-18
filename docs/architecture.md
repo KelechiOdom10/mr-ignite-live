@@ -72,6 +72,10 @@ bun run deploy                        # deploy from this machine instead
 
 It serves https://rivalshub.kellycooks.dev, alongside the Worker's workers.dev and preview hostnames.
 
+If publication fails, Actions retains `deployment-diagnostics-<run>-<attempt>` for seven days. It contains only allowlisted failure UUIDs and reasons plus a bounded, read-only observation of current traffic, the expected custom domain, the minute cron and Worker visibility. Missing permissions are reported as unavailable; diagnostics do not request broader scopes, retry deployment or change its failed result. The artifact is a later observation, not the deployment-list responses that the CLI saw during publication. Raw Void logs and response/error bodies are not uploaded. This improves evidence for the recurring ownership-verification failure; the ownership fix is separate.
+
+A pinned Bun patch, `patches/@void%2Fdeploy-cloudflare@1.7.0.patch`, confirms Worker ownership after an atomic publish. Void 1.7 reads production traffic immediately after publishing, and that read can still name the version serving beforehand. The stock guard treated that stale read as a competing deploy and failed with `deployment-changed` even when its own repair had already confirmed the new version owns traffic. The patch re-reads a bounded number of times while traffic still names the pre-publish version, and still fails closed on a third version, split traffic, an unreadable status or an exhausted bound. It publishes nothing and mutates no triggers. `scripts/void-deploy-guard.test.ts` proves it through the real guard with `fetch` at the Cloudflare HTTP boundary, with the CLI asserted never to run. Add a line under **Unreleased** in `CHANGELOG.md` when Void ships an equivalent fix and this patch is dropped.
+
 ## Layout
 
 | Path                                          | What                                                                          |
