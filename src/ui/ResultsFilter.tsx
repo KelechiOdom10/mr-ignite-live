@@ -13,6 +13,7 @@ import type { EventOption, TeamOption } from "@/domain/matchesOptions";
 import { hasResultFilters, type MatchesView, type ResultRange } from "@/domain/matchesView";
 import { teamShortName } from "@/domain/teams";
 
+import { EventSelect } from "./EventSelect";
 import { TeamLogo } from "./TeamMark";
 
 const ANY = "__any";
@@ -70,24 +71,12 @@ export function ResultsFilter({
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
       <Field label="Event">
-        <Select
+        <EventSelect
           className="w-full min-w-0 sm:w-60"
-          value={view.event ?? ANY}
-          onValueChange={(value) => onChange({ event: value === ANY ? null : value })}
-        >
-          <SelectTrigger>
-            <span className="sr-only">Event</span>
-            <SelectValue placeholder="All events" className="truncate" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ANY}>All events</SelectItem>
-            {events.map((event) => (
-              <SelectItem key={event.id} value={event.id}>
-                {event.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          value={view.event}
+          events={events}
+          onChange={(event) => onChange({ event })}
+        />
       </Field>
 
       <Field label="Team">
