@@ -4,6 +4,7 @@ Newest first. One line per change: the outcome first, then the PR.
 
 ## Unreleased
 
+- **Phone taps land more reliably:** the logo, Search, spoiler switch and See all have 44px touch areas (#62).
 - **Find an event by typing:** the Results event list has a search box and a scrollable list (#64).
 - **Upcoming lists known matchups first:** series with both teams come before the empty bracket slots (#62).
 - **Results come first on phones:** filters sit behind a Filters button, with active ones as chips (#60).

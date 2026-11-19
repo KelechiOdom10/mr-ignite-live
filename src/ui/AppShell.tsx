@@ -123,7 +123,7 @@ export function AppShell({
           <div className="flex min-w-0 items-center gap-6">
             <Link
               href="/"
-              className="flex shrink-0 items-center gap-2 font-semibold whitespace-nowrap"
+              className="flex h-11 shrink-0 items-center gap-2 font-semibold whitespace-nowrap"
             >
               <Zap className="size-5 fill-primary text-primary" aria-hidden />
               <span>Rivals Hub</span>
@@ -157,14 +157,16 @@ export function AppShell({
             <button
               type="button"
               onClick={() => setSearchOpen(true)}
-              className="inline-flex h-9 items-center gap-2 rounded-md border px-3 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              className="group -mx-px inline-flex h-11 items-center px-px text-sm text-muted-foreground"
             >
-              <Search className="size-4" aria-hidden />
-              <span className="hidden xl:inline">Search</span>
-              <kbd className="hidden rounded bg-muted px-1.5 font-mono text-[0.7rem] xl:inline">
-                ⌘K
-              </kbd>
-              <span className="sr-only xl:hidden">Search</span>
+              <span className="inline-flex h-9 items-center gap-2 rounded-md border px-3 transition-colors group-hover:bg-accent group-hover:text-foreground">
+                <Search className="size-4" aria-hidden />
+                <span className="hidden xl:inline">Search</span>
+                <kbd className="hidden rounded bg-muted px-1.5 font-mono text-[0.7rem] xl:inline">
+                  ⌘K
+                </kbd>
+                <span className="sr-only xl:hidden">Search</span>
+              </span>
             </button>
             <div className="hidden sm:block xl:hidden">
               <SpoilerToggle compact />
