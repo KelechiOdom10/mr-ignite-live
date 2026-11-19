@@ -1,3 +1,4 @@
+import { proHeroGroupFor } from "@/domain/proHeroStats";
 import { AppShell } from "@/ui/AppShell";
 import { DraftFilters } from "@/ui/drafts/DraftFilters";
 import { DraftSource } from "@/ui/drafts/DraftSource";
@@ -28,6 +29,9 @@ export default function DraftsPage({
 }: Props) {
   const { snapshot, connection, now } = useLiveSnapshot(initial, { view: "events" });
 
+  const filtered = filter.eventId !== null || filter.map !== null || filter.mode !== null;
+  const proGames = heroMatrix ? (proHeroGroupFor(heroMatrix.groups, filter.map)?.games ?? 0) : 0;
+
   return (
     <AppShell snapshot={snapshot} connection={connection} now={now}>
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -49,11 +53,7 @@ export default function DraftsPage({
         <DraftFilters options={options} selected={filter} />
       </div>
 
-      {summary.sample.teamDrafts === 0 ? (
-        <p className="mt-6 rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-          No cached maps match these filters.
-        </p>
-      ) : (
+      {summary.sample.teamDrafts > 0 && (
         <div className="mt-6 flex flex-wrap gap-x-10 gap-y-3">
           <Stat value={summary.sample.maps} label="maps" />
           <Stat value={summary.sample.series} label="series" />
@@ -63,11 +63,29 @@ export default function DraftsPage({
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="min-w-0">
-          {summary.sample.teamDrafts > 0 && (
-            <>
-              <h2 className="mb-2 text-sm font-medium">Series we synced</h2>
-              <DraftTable summary={summary} />
-            </>
+          <h2 className="mb-2 text-sm font-medium">Ignite picks and bans</h2>
+          {summary.sample.teamDrafts > 0 ? (
+            <DraftTable summary={summary} />
+          ) : filtered ? (
+            <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+              No Ignite games match these filters.{" "}
+              <a href="/drafts" className="text-foreground underline">
+                Clear filters
+              </a>
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              We haven&apos;t recorded picks and bans for any Ignite series yet.
+              {proGames > 0 && (
+                <>
+                  {" "}
+                  <a href="#pro-hero-totals" className="text-foreground underline">
+                    See all pro games below
+                  </a>
+                  .
+                </>
+              )}
+            </p>
           )}
           <ProHeroTable stats={heroMatrix} map={filter.map} />
         </div>

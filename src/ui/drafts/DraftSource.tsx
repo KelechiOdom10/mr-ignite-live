@@ -27,7 +27,7 @@ export function DraftSource({
         Where this comes from
       </h2>
       <p className="mt-1 text-muted-foreground">
-        Scoreboards cached from mrvl.net{newest ? `, updated ${newest}` : ""}.{" "}
+        Scoreboards from mrvl.net{newest ? `, updated ${newest}` : ""}.{" "}
         <span className="text-foreground">
           Counts describe these pro maps only, not win rates; ranked drafts work differently.
         </span>
@@ -41,7 +41,7 @@ export function DraftSource({
           <ul className="grid gap-1.5 text-xs text-muted-foreground">
             <li>
               {coverage.mapsWithOrder === 0
-                ? "No cached map has its draft order yet, so protects aren't counted."
+                ? "We don't have the draft order for any map yet, so protects aren't counted."
                 : `Draft order and protects are kept for ${coverage.mapsWithOrder} of ${coverage.maps} maps; older maps count bans and plays only.`}
             </li>
             {coverage.mapsWithOrder > 0 && (
@@ -57,8 +57,8 @@ export function DraftSource({
             </li>
             {coverage.finishedSeriesWithoutStats > 0 && (
               <li>
-                {coverage.finishedSeriesWithoutStats} finished series in scope have no cached
-                scoreboard, so they&apos;re missing.
+                We have no scoreboard for {coverage.finishedSeriesWithoutStats} finished series, so
+                they&apos;re left out.
               </li>
             )}
           </ul>

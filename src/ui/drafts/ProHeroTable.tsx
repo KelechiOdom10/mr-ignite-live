@@ -55,7 +55,7 @@ export function ProHeroTable({ stats, map }: { stats: ProHeroStats | null; map: 
   return (
     <section aria-labelledby="pro-hero-totals" className="mt-6">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h2 id="pro-hero-totals" className="text-sm font-medium">
+        <h2 id="pro-hero-totals" className="scroll-mt-20 text-sm font-medium">
           All pro games mrvl tracked
         </h2>
         <a
