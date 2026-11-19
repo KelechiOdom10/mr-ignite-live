@@ -88,7 +88,7 @@ export const MapOverrideSchema = MapResultSchema.omit({ vod: true });
 
 export type MapOverride = z.infer<typeof MapOverrideSchema>;
 
-export const STORED_SNAPSHOT_VERSION = 7;
+export const STORED_SNAPSHOT_VERSION = 8;
 
 export const StoredSnapshotSchema = z.object({
   version: z.literal(STORED_SNAPSHOT_VERSION),

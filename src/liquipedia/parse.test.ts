@@ -96,6 +96,16 @@ describe("parseEventInfo", () => {
     expect(eventIdFor(AMERICAS_GROUPS)).toBe(AMERICAS);
   });
 
+  it.each([
+    ["MR Ignite/2026/Grand Finals/Additional Data", "a tab of the Grand Finals page"],
+    ["MR Ignite/2026/Grand Finals/Qualification", "a tab of the Grand Finals page"],
+    ["MR Ignite/2026/Mid-Season Qualifiers/Oceania", "a page marked for deletion"],
+    ["MR Ignite/2026", "the series page"],
+  ])("returns no event for %s, which has no league infobox (%s)", (title) => {
+    const text = recordedWikitext(title, "contents-grand-finals.json");
+    expect(parseEventInfo(title, text, "2026-11-19T00:00:00Z")).toBeNull();
+  });
+
   it("carries the prize distribution parsed from the same page", () => {
     const event = parseEventInfo(AMERICAS, recordedWikitext(AMERICAS), "2026-10-16T22:22:40Z");
     expect(event?.prizes).toHaveLength(12);

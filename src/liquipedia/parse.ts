@@ -188,7 +188,10 @@ export function parsePageMatches(title: string, text: string): Match[] {
 
 export function parseEventInfo(title: string, text: string, updatedAt: string): IgniteEvent | null {
   if (title.endsWith(GROUP_STAGE_SUFFIX)) return null;
-  const info = findTemplates(text, "Infobox league")[0]?.params ?? {};
+  const league = findTemplates(text, "Infobox league")[0];
+
+  if (!league) return null;
+  const info = league.params;
   const parts = title.split("/");
   const region = parts.findLast((p) => REGIONS.includes(p)) ?? "Global";
   const name = stripMarkup(info.name ?? `Ignite 2026 ${parts.slice(2).join(" ")}`);
