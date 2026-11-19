@@ -150,3 +150,33 @@ describe("verifyPublishedCloudflareOwner", () => {
     expect(scripted.calls).toHaveLength(1);
   });
 });
+
+describe("verifyPublishedCloudflareOwner with the real pause", () => {
+  it("waits on its own timer and succeeds when no sleep is injected", async () => {
+    const scripted = scriptedFetch([predecessorAt100, candidateAt100]);
+    const trips: string[] = [];
+
+    const options: CloudflareVersionActivationOptions = {
+      runWrangler: createCloudflareMetadataRunner({
+        runWrangler: guardedCli(trips),
+        accountId: "ab6145b5f4d74c798229173319deaf21",
+        apiBaseUrl: "https://api.cloudflare.com/client/v4",
+        workerName: "rivals-hub",
+        getToken: async () => "session-token",
+        verifyUploader: () => true,
+        fetch: scripted.fetchImpl,
+        env: {},
+      }),
+      verifyUploader: () => true,
+      workerName: "rivals-hub",
+      message: "test",
+      publicationConfirmDelayMs: 1,
+    };
+
+    await expect(
+      verifyPublishedCloudflareOwner(options, candidate, predecessor),
+    ).resolves.toBeNull();
+    expect(scripted.calls).toHaveLength(2);
+    expect(trips).toEqual([]);
+  });
+});

@@ -25,7 +25,7 @@ index 5aceeef888abbae01a79ce4c9c2c36b9e2e662bb..985c57a0a2a70ba1a63a576acec4ca56
    runWrangler: CloudflareCommandRunner;
    accountId: string;
 diff --git a/dist/index.mjs b/dist/index.mjs
-index c803fb63d8d1b71c795a8382f75f6e1adcc7a416..f8c8da673c610e87909a5c7bfe1aca750b1ee398 100644
+index c803fb63d8d1b71c795a8382f75f6e1adcc7a416..3f732c4256cad9216bcbea4c768b63380cd7044e 100644
 --- a/dist/index.mjs
 +++ b/dist/index.mjs
 @@ -2020,39 +2020,7 @@ async function bootstrapFirstDeployment(options, previousVersionId, atomic = fal
@@ -116,7 +116,7 @@ index c803fb63d8d1b71c795a8382f75f6e1adcc7a416..f8c8da673c610e87909a5c7bfe1aca75
 +	}
 +}
 +function pauseBeforeOwnerRecheck(milliseconds) {
-+	return new Promise((resolve) => setTimeout(resolve, milliseconds));
++	return new Promise((resolve) => globalThis.setTimeout(resolve, milliseconds));
 +}
  function stagedVersionPercentages(previousVersionId, versionId) {
  	return previousVersionId ? [{
