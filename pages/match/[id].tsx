@@ -33,7 +33,7 @@ export default function MatchPage({ snapshot: initial, matchId, stats }: Props) 
       <AppShell snapshot={snapshot} connection={connection} now={now}>
         <NotFoundGlitch
           title="Match not found"
-          description="This series is no longer listed on Liquipedia."
+          description="We can't find this series any more. It may have been removed or renamed."
           homeLabel="Back to matches"
           browseHref="/events"
           browseLabel="Browse events"
@@ -360,12 +360,11 @@ function MatchDetail({
               role="note"
               className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-sm"
             >
-              Liquipedia and mrvl.net disagree on{" "}
+              Two sources name the same map differently:{" "}
               {conflicts
-                .map((c) => `map ${c.index} (Liquipedia: ${c.liquipedia}; mrvl: ${c.mrvl})`)
+                .map((c) => `map ${c.index} (Liquipedia: ${c.liquipedia}; mrvl.net: ${c.mrvl})`)
                 .join(", ")}
-              . Rivals Hub shows both names and doesn&apos;t pick one; the stats below are
-              mrvl&apos;s.
+              . We show both names and don&apos;t pick one; the stats below come from mrvl.net.
             </p>
           )}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">

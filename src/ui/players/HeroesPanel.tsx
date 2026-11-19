@@ -135,7 +135,7 @@ export function HeroesPanel({
       </ul>
       <p className="text-xs text-muted-foreground">
         {coveredMatches > 0
-          ? `Recent heroes come from ${coveredMatches} opened ${coveredMatches === 1 ? "match" : "matches"}.`
+          ? `Based on the ${coveredMatches} ${coveredMatches === 1 ? "match" : "matches"} opened so far.`
           : "Open a match to see which heroes this player used."}
       </p>
     </section>

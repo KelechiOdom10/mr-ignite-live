@@ -204,8 +204,8 @@ function HeroBreakdown({
               </dl>
             ) : (
               <p className="mt-3 text-xs text-muted-foreground">
-                Per-hero stats weren&apos;t saved when this {combined ? "series" : "map"} was
-                cached, so only time played is known.
+                We don&apos;t have per-hero stats for this {combined ? "series" : "map"}, only how
+                long each hero was played.
               </p>
             )}
           </div>

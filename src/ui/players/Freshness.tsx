@@ -8,7 +8,7 @@ export function Freshness({ freshness, now }: { freshness: FreshnessData; now: n
 
   return (
     <span className="text-xs text-muted-foreground">
-      {age ? `Updated ${age}` : "Cached"}
+      {age ? `Updated ${age}` : "Saved earlier"}
       {freshness.stale && " · may be out of date"}
     </span>
   );

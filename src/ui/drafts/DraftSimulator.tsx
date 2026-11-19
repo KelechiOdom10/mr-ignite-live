@@ -597,21 +597,20 @@ export function DraftSimulator({
                 {matrix ? (
                   <>
                     <span className="block">
-                      mrvl · last 30 days · {matrix.group.games} games on {mapLabel}
+                      Last 30 days of pro games · {matrix.group.games} games on {mapLabel}
                     </span>
                     <span className="block">
-                      Pk pick, B ban, Pr protect, W win. Rates are in %. Win shows from 10 games and
-                      is winning play time, not a chance of winning.
+                      Pk is picks, B bans, Pr protects, W win rate, as percentages. Win appears once
+                      a hero has 10 games and means the share of play time that ended in a win.
                     </span>
                   </>
                 ) : (
                   <>
                     <span className="block">
-                      B and P: how often pros banned and protected each hero.
+                      Ban and protect: how often pros banned and protected each hero.
                     </span>
                     <span className="block">
-                      From {proDrafts} team drafts on cached maps that followed this draft step for
-                      step.
+                      From {proDrafts} team drafts, on maps that followed this draft order exactly.
                     </span>
                   </>
                 )}
@@ -676,12 +675,12 @@ export function DraftSimulator({
 
             const proLine = matrix
               ? rate
-                ? `mrvl, last 30 days, ${matrix.group.games} games on ${mapLabel}: picked ${shareOrDash(rate.pick)}, banned ${shareOrDash(rate.banned)}, protected ${shareOrDash(rate.protected)}, win ${rate.win == null ? "not shown (under 10 games)" : percent(rate.win)}`
-                : `Not in mrvl's pro games on ${mapLabel}`
+                ? `Last 30 days of pro games: ${matrix.group.games} games on ${mapLabel}, picked ${shareOrDash(rate.pick)}, banned ${shareOrDash(rate.banned)}, protected ${shareOrDash(rate.protected)}, win ${rate.win == null ? "not shown (under 10 games)" : percent(rate.win)}`
+                : `Not in any pro game on ${mapLabel}`
               : showRates
                 ? rate
                   ? `Pro drafts: banned ${percent(rate.banned)}${rate.protected === null ? "" : `, protected ${percent(rate.protected)}`}`
-                  : "Not seen in cached pro drafts"
+                  : "Not in the pro drafts we have"
                 : null;
 
             return (

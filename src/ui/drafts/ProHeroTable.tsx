@@ -33,7 +33,7 @@ export function ProHeroTable({ stats, map }: { stats: ProHeroStats | null; map: 
   if (!stats) {
     return (
       <p className="mt-6 rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-        mrvl&apos;s pro totals aren&apos;t available yet.
+        Pro game totals aren&apos;t available yet.
       </p>
     );
   }
@@ -43,7 +43,7 @@ export function ProHeroTable({ stats, map }: { stats: ProHeroStats | null; map: 
   if (!group) {
     return (
       <p className="mt-6 rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-        mrvl tracked no pro games on this map in the last 30 days.
+        No pro games on this map in the last 30 days.
       </p>
     );
   }
@@ -56,7 +56,7 @@ export function ProHeroTable({ stats, map }: { stats: ProHeroStats | null; map: 
     <section aria-labelledby="pro-hero-totals" className="mt-6">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h2 id="pro-hero-totals" className="scroll-mt-20 text-sm font-medium">
-          All pro games mrvl tracked
+          All pro games, last 30 days
         </h2>
         <a
           href="https://www.mrvl.net/stats"
@@ -71,9 +71,8 @@ export function ProHeroTable({ stats, map }: { stats: ProHeroStats | null; map: 
       <div className="mt-2 overflow-x-auto rounded-lg border">
         <table className="w-full text-sm">
           <caption className="sr-only">
-            Every pro game mrvl tracked in {range}: hero, games played, pick rate, ban rate, protect
-            rate and time-weighted win rate. This table counts every region and ignores the event
-            filter.
+            Every pro game in {range}: hero, games played, pick rate, ban rate, protect rate and
+            time-weighted win rate. This table counts every region and ignores the event filter.
           </caption>
           <thead className="bg-card text-left text-xs text-muted-foreground">
             <tr>
@@ -85,15 +84,15 @@ export function ProHeroTable({ stats, map }: { stats: ProHeroStats | null; map: 
               </th>
               <th scope="col" className="px-2 py-2 text-right font-medium sm:px-3">
                 Pick
-                <span className="hidden font-normal sm:block">of available time</span>
+                <span className="hidden font-normal sm:block">of play time</span>
               </th>
               <th scope="col" className="px-2 py-2 text-right font-medium sm:px-3">
                 Ban
-                <span className="hidden font-normal sm:block">of team-games</span>
+                <span className="hidden font-normal sm:block">of games, per team</span>
               </th>
               <th scope="col" className="px-2 py-2 text-right font-medium sm:px-3">
                 Protect
-                <span className="hidden font-normal sm:block">of team-games</span>
+                <span className="hidden font-normal sm:block">of games, per team</span>
               </th>
               <th scope="col" className="px-2 py-2 text-right font-medium sm:px-3">
                 Win
@@ -128,8 +127,8 @@ export function ProHeroTable({ stats, map }: { stats: ProHeroStats | null; map: 
         </table>
       </div>
       <p className="mt-2 text-xs text-muted-foreground">
-        Play-time weighted. Win is winning play time over total play time, shown from 10 games, not
-        a chance of winning.
+        Win is the share of a hero&apos;s play time that ended in a win, shown once a hero has 10 or
+        more games. It isn&apos;t a chance of winning.
       </p>
     </section>
   );

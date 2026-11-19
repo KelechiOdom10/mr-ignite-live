@@ -43,19 +43,21 @@ export const PROBLEM_MESSAGES: Record<PlayerProblem, { title: string; detail: st
     title: "Career is private",
     detail: "This player hides their career stats.",
   },
-  not_found: { title: "Not found", detail: "RivalsTracker has no record of this." },
+  not_found: {
+    title: "Player not found",
+    detail: "We couldn't find this player's ranked profile.",
+  },
   budget_reached: {
-    title: "Request budget reached",
-    detail:
-      "Rivals Hub has used its RivalsTracker request budget for today. Cached data still shows.",
+    title: "Daily lookup limit reached",
+    detail: "Rivals Hub has used today's player lookups. Saved profiles still show.",
   },
   not_configured: {
     title: "Player data isn't available",
-    detail: "This site isn't connected to RivalsTracker, so ranked profiles can't load.",
+    detail: "Ranked profiles can't load because this site isn't connected to RivalsTracker.",
   },
   unavailable: {
-    title: "RivalsTracker is unavailable",
-    detail: "It didn't answer as expected. Try again in a few minutes.",
+    title: "Player data is unavailable",
+    detail: "RivalsTracker isn't responding. Try again in a few minutes.",
   },
 };
 

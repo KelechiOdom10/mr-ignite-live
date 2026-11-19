@@ -187,7 +187,8 @@ export const action = defineHandler.withValidator({ body: ActionBody })(async (c
     return c.json(
       {
         errors: {
-          intent: "Couldn't refresh: the request budget is spent or RivalsTracker is down.",
+          intent:
+            "Couldn't refresh this player right now. You may have reached today's lookups, or RivalsTracker may be down.",
         },
       },
       422,

@@ -57,7 +57,7 @@ export default function DraftsPage({
         <div className="mt-6 flex flex-wrap gap-x-10 gap-y-3">
           <Stat value={summary.sample.maps} label="maps" />
           <Stat value={summary.sample.series} label="series" />
-          <Stat value={summary.sample.teamDrafts} label="team drafts (one side of one map)" />
+          <Stat value={summary.sample.teamDrafts} label="team drafts (one team, one map)" />
         </div>
       )}
 
