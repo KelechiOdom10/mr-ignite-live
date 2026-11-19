@@ -44,7 +44,7 @@ export const IGNITE_2026: DraftFormat = {
   ],
   confirmed: true,
   basis:
-    "Read from mrvl.net's draft timelines for Ignite 2026 Stage 2 maps in the Americas, EMEA and China, and matched step for step against the broadcast draft screen for FlyQuest vs 100 Thieves on God Quarry.",
+    "Draft order for Ignite 2026, taken from mrvl.net's draft timelines for Stage 2 maps in the Americas, EMEA and China, and checked step for step against the FlyQuest vs 100 Thieves broadcast on God Quarry.",
 };
 
 /** Seen in one recorded Season 10.5 Competitive match; kept for comparison with the tournament format. */
@@ -56,7 +56,7 @@ export const RANKED_SEASON_10_OBSERVED: DraftFormat = {
   steps: [first("ban"), second("ban"), second("ban"), first("ban"), first("ban"), second("ban")],
   confirmed: false,
   basis:
-    "One recorded Season 10.5 Grandmaster+ match: six different heroes, banned in this order, none played. Not confirmed by official notes.",
+    "One recorded Season 10.5 Grandmaster+ match: six different heroes, banned in this order, none played. Not officially confirmed.",
 };
 
 function actsIn(step: DraftStep, camp: number): boolean {

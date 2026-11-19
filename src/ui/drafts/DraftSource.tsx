@@ -52,8 +52,8 @@ export function DraftSource({
             )}
             <li>
               {coverage.bansBroken === 0
-                ? `None of the ${coverage.bans} bans was played by the team it was aimed at.`
-                : `${coverage.bansBroken} of ${coverage.bans} bans were played by the team they were aimed at.`}
+                ? "No team played a hero that was banned against it."
+                : `${coverage.bansBroken} of ${coverage.bans} banned heroes were played by the team they were banned against.`}
             </li>
             {coverage.finishedSeriesWithoutStats > 0 && (
               <li>

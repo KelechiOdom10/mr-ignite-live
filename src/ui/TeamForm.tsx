@@ -79,7 +79,7 @@ export function TeamForm({ team, snapshot, now }: { team: Team; snapshot: Snapsh
             >
               <Link
                 href={`/match/${r.match.id}`}
-                aria-label={`${r.won ? "Won" : "Lost"} ${r.score} against ${r.opponent?.name ?? "TBD"}`}
+                aria-label={`${r.won ? "Won" : "Lost"} ${r.score} against ${r.opponent?.name ?? "a team to be decided"}`}
                 className={cn(
                   "relative flex size-10 flex-col items-center justify-center gap-0.5 rounded-lg ring-1 ring-inset transition-transform hover:-translate-y-0.5",
                   r.won ? "bg-win/10 ring-win/30" : "bg-live/10 ring-live/30",

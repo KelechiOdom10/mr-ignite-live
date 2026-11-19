@@ -122,8 +122,8 @@ export function ReviewWorkspace() {
     return (
       <p role="alert" className="flex items-start gap-3 rounded-lg border bg-card p-4 text-sm">
         <CircleAlert className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
-        This browser won't let Rivals Hub store reviews (IndexedDB is off, often in private
-        windows). Open the site in a normal window to review footage.
+        This browser is blocking the storage Rivals Hub needs for reviews, which usually happens in
+        a private window. Open the site in a normal window to review footage.
       </p>
     );
   }

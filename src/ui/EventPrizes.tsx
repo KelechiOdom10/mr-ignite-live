@@ -71,7 +71,7 @@ export function PrizeDistribution({
       </div>
       {event.prizesFromBracket && (
         <p className="text-xs text-muted-foreground">
-          From the bracket: places Liquipedia's prize pool leaves open, filled from the playoff
+          Some places weren&apos;t listed in the prize pool, so we filled them in from the playoff
           results.
         </p>
       )}

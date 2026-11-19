@@ -7,7 +7,7 @@ verified-at: pending (feat/draft-map-picker)
 Two tables, deliberately separate:
 
 - **Ignite picks and bans** (`DraftTable`) counts plays, bans and protects over mrvl scoreboards the sync fetched within 12 hours of the series.
-- **All pro games mrvl tracked** (`ProHeroTable`) covers the last 30 days from mrvl's hero-matrix query, including series the sync missed.
+- **All pro games, last 30 days** (`ProHeroTable`) covers the last 30 days from mrvl's hero-matrix query, including series the sync missed.
 
 ## Handles
 
@@ -23,13 +23,13 @@ Two tables, deliberately separate:
 
 1. Open `/drafts`. Both tables render when stats and hero totals are present.
 2. Pick a map in the filter. The map filter controls **both** tables.
-3. Pick an event. **Ignite picks and bans** narrows; **All pro games mrvl tracked** stays put, and its caption still says "every region".
+3. Pick an event. **Ignite picks and bans** narrows; **All pro games, last 30 days** stays put, and its caption still says "every region".
 4. Resize to 390×844. Both tables may scroll inside their own `overflow-x-auto` box; the page itself must not scroll sideways.
 5. Win-rate cells show "—" below 10 games, and the note under the table says it is not a chance of winning.
-6. Open `/drafts/simulator`. The hero cards show Pk, B, Pr and W rates from mrvl's Overall group, with "mrvl · last 30 days · {games} games on all maps".
+6. Open `/drafts/simulator`. The hero cards show Pk, B, Pr and W rates from mrvl's Overall group, with "Last 30 days of pro games · {games} games on all maps".
 7. Pick a map in the simulator's Map select. The cards switch to that map's group and the label names the map and its games; the format's steps and any moves stay put. Reload: `?map=` keeps the choice. Choose All maps: `?map=` is dropped.
 8. A win rate below 10 games shows "—", and the note says win is play time, not a chance of winning.
-9. Without hero totals (`hero-matrix:v1` missing), the Map select is disabled with its reason and the cards keep the synced-series B and P label.
+9. Without hero totals (`hero-matrix:v1` missing), the Map select is disabled with its reason and the cards keep the B and P label from the drafts we have.
 
 ## Evidence
 

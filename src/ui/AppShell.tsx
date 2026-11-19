@@ -82,9 +82,9 @@ function SyncStatus({
       {connection === "live"
         ? "Live updates on"
         : connection === "polling"
-          ? "Checking every 45s"
-          : "Connecting"}
-      {updated && <span>· Liquipedia updated {updated}</span>}
+          ? "Refreshing every 45 seconds"
+          : "Connecting to live scores"}
+      {updated && <span>· Scores updated {updated}</span>}
     </span>
   );
 }

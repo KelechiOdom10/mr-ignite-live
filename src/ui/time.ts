@@ -99,7 +99,7 @@ export function formatDate(iso: string): string {
 export function formatShortRange(start: string | null, end: string | null): string {
   const fmt = new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" });
 
-  if (!start) return "Dates TBD";
+  if (!start) return "Dates to be confirmed";
 
   return end
     ? `${fmt.format(new Date(start))} – ${fmt.format(new Date(end))}`
