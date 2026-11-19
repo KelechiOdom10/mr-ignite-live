@@ -2,6 +2,7 @@ import { Link } from "@void/react";
 import { useMemo, useState } from "react";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/motion/tabs";
+import { eventPhase, nextEvent } from "@/domain/eventPhase";
 import {
   type EventPhase,
   isEventPhase,
@@ -13,7 +14,7 @@ import {
 import { matchState } from "@/domain/matchState";
 import type { IgniteEvent, Match } from "@/domain/model";
 import { AppShell } from "@/ui/AppShell";
-import { EventRow, eventPhase } from "@/ui/EventRow";
+import { EventRow } from "@/ui/EventRow";
 import { MatchCard } from "@/ui/MatchCard";
 import { REGION_FILTERS, regionKey, type RegionFilter } from "@/ui/region";
 import { UnderlineTabsTrigger } from "@/ui/UnderlineTabsTrigger";
@@ -86,9 +87,11 @@ export default function HomePage({ snapshot: initial, view }: Props) {
     };
   }, [snapshot.matches, events, region, now]);
 
-  const sidebarEvents = snapshot.events.filter(
-    (e) => inRegion(e, region) && eventPhase(e, now) === eventTab,
-  );
+  const regionEvents = snapshot.events.filter((e) => inRegion(e, region));
+  const sidebarEvents = regionEvents.filter((e) => eventPhase(e, now) === eventTab);
+
+  const upNext =
+    eventTab === "ongoing" && sidebarEvents.length === 0 ? nextEvent(regionEvents, now) : undefined;
 
   const card = (m: Match) => (
     <MatchCard key={m.id} match={m} event={events.get(m.eventId)} snapshot={snapshot} now={now} />
@@ -226,6 +229,12 @@ export default function HomePage({ snapshot: initial, view }: Props) {
                 now={now}
               />
             ))}
+            {upNext && (
+              <>
+                <h3 className="px-1 pt-2 text-xs font-medium text-muted-foreground">Next event</h3>
+                <EventRow event={upNext} matches={[]} now={now} />
+              </>
+            )}
           </div>
         </aside>
       </div>
