@@ -100,6 +100,15 @@ export function upcomingSeries(matches: readonly Match[], limit: number): Match[
   return [...soonest.slice(0, limit).map((entry) => entry.match), ...undated];
 }
 
+export function splitBracketSlots(matches: readonly Match[]) {
+  const known: Match[] = [];
+  const awaiting: Match[] = [];
+
+  for (const match of matches) (match.team1 && match.team2 ? known : awaiting).push(match);
+
+  return { known, awaiting };
+}
+
 /** The query string for a view, leaving out defaults so the plain URLs stay clean. */
 export function matchesViewSearch(view: MatchesView): string {
   const entries = [
