@@ -227,6 +227,7 @@ export default function MatchesPage({
           {groupByDay(shown, (m) => m.startsAt, hydrated).map((group) => {
             const slots =
               tab === "upcoming" && group.key === "tbd" ? splitBracketSlots(group.items) : null;
+
             const sections =
               slots && slots.known.length > 0 && slots.awaiting.length > 0
                 ? [

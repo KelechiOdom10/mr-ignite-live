@@ -100,10 +100,7 @@ export function upcomingSeries(matches: readonly Match[], limit: number): Match[
   return [...soonest.slice(0, limit).map((entry) => entry.match), ...undated];
 }
 
-export function splitBracketSlots(matches: readonly Match[]): {
-  known: Match[];
-  awaiting: Match[];
-} {
+export function splitBracketSlots(matches: readonly Match[]) {
   const known: Match[] = [];
   const awaiting: Match[] = [];
 

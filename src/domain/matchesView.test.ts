@@ -181,6 +181,7 @@ describe("splitBracketSlots", () => {
       slot("known_2", true, true),
       slot("tbd_2", false, false),
     ];
+
     const { known, awaiting } = splitBracketSlots(series);
 
     expect(known.map((m) => m.id)).toEqual(["known_1", "known_2"]);
@@ -189,6 +190,7 @@ describe("splitBracketSlots", () => {
 
   it("keeps every series, so regrouping cannot change what the page lists", () => {
     const series = [slot("a", false, false), slot("b", true, true), slot("c", false, true)];
+
     const { known, awaiting } = splitBracketSlots(series);
 
     expect([...known, ...awaiting].toSorted((a, b) => a.id.localeCompare(b.id))).toEqual(series);
