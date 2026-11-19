@@ -1,4 +1,23 @@
-import type { MapResult, Match } from "@/domain/model";
+import type { IgniteEvent, MapResult, Match } from "@/domain/model";
+
+export function anEvent(overrides: Partial<IgniteEvent> = {}): IgniteEvent {
+  return {
+    id: "MR Ignite/2026/Grand Finals",
+    name: "Marvel Rivals Ignite 2026: Grand Finals",
+    ticker: "Grand Finals",
+    region: "Global",
+    stage: "Grand Finals",
+    startDate: "2026-11-23",
+    endDate: "2026-11-29",
+    prizePoolUsd: null,
+    prizes: [],
+    liquipediaUrl: "https://liquipedia.net/marvelrivals/MR_Ignite/2026/Grand_Finals",
+    updatedAt: "2026-11-19T12:00:00.000Z",
+    iconFile: null,
+    iconUrl: null,
+    ...overrides,
+  };
+}
 
 export function aMatch(overrides: Partial<Match> = {}): Match {
   return {
