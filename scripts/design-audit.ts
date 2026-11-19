@@ -265,9 +265,17 @@ const MEASURE = String.raw`(() => {
     const r = el.getBoundingClientRect();
     if (r.bottom < 0 || r.top > document.documentElement.scrollHeight) continue;
     if (el.closest('[role="listbox"]') && el.getAttribute("role") !== "option") continue;
+    let w = r.width;
+    let h = r.height;
+    for (const pseudo of ["::before", "::after"]) {
+      const ps = getComputedStyle(el, pseudo);
+      if (ps.position !== "absolute" || ps.content === "none") continue;
+      w = Math.max(w, parseFloat(ps.width) || 0);
+      h = Math.max(h, parseFloat(ps.height) || 0);
+    }
     targets.push({
-      w: Math.round(r.width),
-      h: Math.round(r.height),
+      w: Math.round(w),
+      h: Math.round(h),
       name: (
         el.getAttribute("aria-label") ||
         el.textContent ||

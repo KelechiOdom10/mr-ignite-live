@@ -24,10 +24,9 @@ export default function DraftSimulatorPage({
       </a>
       <h1 className="mt-2 text-2xl font-semibold tracking-tight">Draft simulator</h1>
       <p className="mt-1 max-w-prose text-sm text-muted-foreground">
-        Play both sides of a draft. Bans and protects follow the selected format&apos;s rules.
-        Nothing here predicts who wins.
+        Play both sides. Nothing here predicts who wins.
       </p>
-      <div className="mt-6">
+      <div className="mt-4 sm:mt-6">
         <DraftSimulator
           formatId={formatId}
           formats={formats}

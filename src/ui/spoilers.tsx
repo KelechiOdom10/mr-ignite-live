@@ -61,6 +61,7 @@ export function SpoilerToggle({ compact = false }: { compact?: boolean }) {
       onCheckedChange={write}
       label={compact ? undefined : "Hide spoilers"}
       ariaLabel="Hide scores and results"
+      className="[&>button]:relative [&>button]:after:absolute [&>button]:after:-inset-y-2 [&>button]:after:inset-x-0 [&>label]:py-3"
     />
   );
 }

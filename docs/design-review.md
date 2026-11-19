@@ -48,7 +48,7 @@ Each surface gets an exact 1440×900 and 390×844 PNG named `<surface>-<size>-fo
 - Padding/gap/margin values against a named scale, plus actual vertical distances between same-column sibling blocks. Optical 1/2px adjustments are counted separately from the 4px rhythm.
 - Text contrast using canvas-resolved CSS colours (including OKLCH), alpha compositing and backgrounds under the text. Gradients and layered selected-tab labels are skipped rather than reported as proven contrast passes.
 - Chromatic hue families in text, fills and borders (not image assets); this is a colour-budget prompt, not proof that the colours are semantically wrong.
-- Standalone interactive rectangles on narrow screens, page overflow and the first 24 desktop Tab stops' outline/box-shadow presence. Inline prose links are excluded from the target-size heuristic.
+- Standalone interactive rectangles on narrow screens, page overflow and the first 24 desktop Tab stops' outline/box-shadow presence. Inline prose links are excluded from the target-size heuristic, and an absolutely positioned `::before` or `::after` counts toward a control's hit area.
 - First-viewport match density in `main`, excluding the global score strip, and a representative match card's type ranks.
 
 The limits are a proposed Rivals Hub bar, not numbers reverse-engineered from every reference. Existing pages can fail. Do not change unrelated UI or vendored beUI just to turn the report green.
