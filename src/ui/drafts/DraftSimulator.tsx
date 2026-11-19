@@ -1,5 +1,5 @@
-import { Ban, RotateCcw, Shield, Undo2 } from "lucide-react";
-import { useMemo, useState, type KeyboardEvent } from "react";
+import { Ban, ChevronDown, RotateCcw, Search, Shield, Undo2 } from "lucide-react";
+import { useId, useMemo, useState, type KeyboardEvent } from "react";
 
 import {
   Select,
@@ -68,6 +68,20 @@ function rememberQuery(key: "format" | "map", value: string | null) {
   );
 }
 
+// scrollIntoView would also scroll the page, so only the strip is moved.
+function showStep(item: HTMLLIElement | null) {
+  const strip = item?.parentElement;
+
+  if (!item || !strip) return;
+
+  const edge = strip.getBoundingClientRect();
+  const box = item.getBoundingClientRect();
+
+  if (box.left >= edge.left && box.right <= edge.right) return;
+
+  strip.scrollTo({ left: strip.scrollLeft + box.left - edge.left - 8 });
+}
+
 function percent(share: number): string {
   return `${Math.round(share * 100)}%`;
 }
@@ -82,7 +96,7 @@ function Slot({ hero, kind }: { hero: Hero | undefined; kind: "ban" | "protect" 
       <span
         aria-hidden="true"
         className={cn(
-          "size-[26px] shrink-0 rounded-md border border-dashed sm:size-9",
+          "size-9 shrink-0 rounded-md border border-dashed",
           kind === "protect" ? "border-win/40" : "border-border-strong",
         )}
       />
@@ -97,11 +111,7 @@ function Slot({ hero, kind }: { hero: Hero | undefined; kind: "ban" | "protect" 
       )}
       title={hero.name}
     >
-      <HeroPortrait
-        hero={hero}
-        size={36}
-        className={cn("max-sm:!size-[26px]", kind === "ban" && "grayscale")}
-      />
+      <HeroPortrait hero={hero} size={36} className={kind === "ban" ? "grayscale" : undefined} />
       <span className="sr-only">{hero.name}</span>
     </span>
   );
@@ -130,7 +140,7 @@ function TeamBoard({
   const plan = slotPlan(format, camp);
 
   const row = (ids: string[], count: number, kind: "ban" | "protect") => (
-    <div className="flex gap-1 sm:flex-wrap sm:gap-1.5">
+    <div className="flex flex-wrap gap-1.5">
       {Array.from({ length: count }, (_, i) => (
         <Slot key={`${kind}-${i}`} hero={ids[i] ? byId.get(ids[i]) : undefined} kind={kind} />
       ))}
@@ -139,14 +149,14 @@ function TeamBoard({
 
   const heading = (
     <span className="flex items-center justify-between gap-2">
-      <span className="font-medium whitespace-nowrap">{TEAM[camp]}</span>
+      <span className="text-sm font-medium whitespace-nowrap sm:text-base">{TEAM[camp]}</span>
       {moving && (
-        <span className="rounded bg-primary px-1.5 py-0.5 text-[0.7rem] font-medium text-primary-foreground">
+        <span className="rounded bg-primary px-1 py-0.5 text-xs font-medium text-primary-foreground">
           Moving
         </span>
       )}
       {!moving && canChoose && (
-        <span className="hidden text-[0.7rem] whitespace-nowrap text-muted-foreground sm:inline">
+        <span className="hidden text-xs whitespace-nowrap text-muted-foreground sm:inline">
           Tap to move
         </span>
       )}
@@ -157,7 +167,7 @@ function TeamBoard({
     <section
       aria-label={TEAM[camp]}
       className={cn(
-        "grid gap-2 rounded-lg border p-2 transition-colors sm:p-3",
+        "relative grid gap-1 rounded-lg border p-2 transition-colors sm:gap-2 sm:p-3",
         moving ? "border-primary bg-primary/5" : "border-border",
       )}
     >
@@ -166,18 +176,34 @@ function TeamBoard({
           type="button"
           aria-pressed={moving}
           onClick={onChoose}
-          className="rounded text-left outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
+          className="rounded text-left outline-offset-2 after:absolute after:inset-0 after:content-[''] focus-visible:outline-2 focus-visible:outline-primary"
         >
           {heading}
         </button>
       ) : (
         heading
       )}
+      <p className="flex items-center gap-3 text-xs text-muted-foreground tabular-nums sm:hidden">
+        {plan.bans > 0 && (
+          <span className="flex items-center gap-1">
+            <Ban className="size-3" aria-hidden />
+            {bans.length}/{plan.bans}
+            <span className="sr-only"> bans</span>
+          </span>
+        )}
+        {plan.protects > 0 && (
+          <span className="flex items-center gap-1">
+            <Shield className="size-3" aria-hidden />
+            {protects.length}/{plan.protects}
+            <span className="sr-only"> protects</span>
+          </span>
+        )}
+      </p>
       {plan.bans > 0 && (
-        <div className="grid gap-1">
+        <div className="hidden gap-1 sm:grid">
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
             <Ban className="size-3" aria-hidden /> Bans
-            <span className="hidden sm:inline">
+            <span>
               {format.banBlocks === "both teams"
                 ? "· neither team can play these"
                 : "· the other team can't play these"}
@@ -187,10 +213,10 @@ function TeamBoard({
         </div>
       )}
       {plan.protects > 0 && (
-        <div className="grid gap-1">
+        <div className="hidden gap-1 sm:grid">
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
             <Shield className="size-3" aria-hidden /> Protects
-            <span className="hidden sm:inline">· the other team can&apos;t ban these</span>
+            <span>· the other team can&apos;t ban these</span>
           </span>
           {row(protects, plan.protects, "protect")}
         </div>
@@ -229,6 +255,8 @@ export function DraftSimulator({
   const [role, setRole] = useState<RoleFilter>("All");
   const [query, setQuery] = useState("");
   const [problem, setProblem] = useState<string | null>(null);
+  const [setupOpen, setSetupOpen] = useState(false);
+  const setupId = useId();
   const [loaded, setLoaded] = useState({ formatId: initialFormatId, map: initialMap });
 
   // Void keeps this page mounted across navigations, so new props have to reset the board.
@@ -345,67 +373,105 @@ export function DraftSimulator({
     if (nextRole) setRole(nextRole);
   }
 
-  const status =
-    turn && acting !== null
-      ? `Step ${turn.step + 1} of ${format.steps.length} · ${TEAM[acting]} ${turn.kind === "ban" ? "bans" : "protects"}`
-      : "Draft complete";
+  const buttonBase =
+    "inline-flex size-11 items-center justify-center gap-1.5 rounded-md border text-sm outline-offset-2 transition-colors focus-visible:outline-2 focus-visible:outline-primary enabled:hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50 sm:h-8 sm:w-auto sm:px-2.5";
+
+  const historyButtons = (className: string) => (
+    <div className={cn("flex shrink-0 gap-2", className)}>
+      <button
+        type="button"
+        onClick={() => {
+          setSession((s) => ({ ...s, moves: s.moves.slice(0, -1) }));
+          setProblem(null);
+        }}
+        disabled={moves.length === 0}
+        className={buttonBase}
+      >
+        <Undo2 className="size-4 sm:size-3.5" aria-hidden />
+        <span className="sr-only sm:not-sr-only">Undo</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setSession((s) => ({ ...s, moves: [], camp: 0 }));
+          setProblem(null);
+        }}
+        disabled={moves.length === 0}
+        className={buttonBase}
+      >
+        <RotateCcw className="size-4 sm:size-3.5" aria-hidden />
+        <span className="sr-only sm:not-sr-only">Start again</span>
+      </button>
+    </div>
+  );
 
   return (
-    <div className="grid grid-cols-1 gap-5">
+    <div className="grid grid-cols-1 gap-4 sm:gap-5">
       {/* The board stays in view on wider screens, so picking never scrolls the result away. */}
       <div className="z-20 -mx-4 min-w-0 bg-background/95 px-4 pb-2 backdrop-blur [@media(min-width:768px)_and_(min-height:640px)]:sticky [@media(min-width:768px)_and_(min-height:640px)]:top-14 sm:mx-0 sm:px-0">
         <div className="grid min-w-0 grid-cols-1 gap-3 rounded-xl border bg-card p-3 sm:p-4">
           <div className="relative flex min-w-0 flex-wrap items-center gap-2">
-            <div className="w-full min-w-0 sm:w-96">
-              <span aria-hidden="true" className="mb-1 block text-xs text-muted-foreground">
-                Format
+            <button
+              type="button"
+              aria-expanded={setupOpen}
+              aria-controls={setupId}
+              onClick={() => setSetupOpen((open) => !open)}
+              className="order-1 flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-lg border bg-background px-3 text-left outline-offset-2 transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-primary sm:hidden"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium">{format.name}</span>
+                <span className="block truncate text-xs text-muted-foreground">
+                  {map ? mapDisplayName(map) : "All maps"} ·{" "}
+                  {setupOpen ? "Hide" : "Change format or map"}
+                </span>
               </span>
-              <Select value={formatId} onValueChange={(v) => chooseFormat(parseSimFormatId(v))}>
-                <SelectTrigger>
-                  <span className="sr-only">Format: </span>
-                  <SelectValue placeholder={format.name} />
-                </SelectTrigger>
-                <SelectContent>
-                  {SIM_FORMAT_IDS.map((id) => (
-                    <SelectItem key={id} value={id}>
-                      {formats[id].name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ChevronDown
+                aria-hidden
+                className={cn(
+                  "size-4 shrink-0 text-muted-foreground transition-transform duration-150 motion-reduce:transition-none",
+                  setupOpen && "rotate-180",
+                )}
+              />
+            </button>
+            <div
+              id={setupId}
+              className={cn(
+                "order-3 grid w-full gap-3 sm:order-2 sm:contents",
+                !setupOpen && "max-sm:hidden",
+              )}
+            >
+              <div className="w-full min-w-0 sm:w-96">
+                <span aria-hidden="true" className="mb-1 block text-xs text-muted-foreground">
+                  Format
+                </span>
+                <Select value={formatId} onValueChange={(v) => chooseFormat(parseSimFormatId(v))}>
+                  <SelectTrigger>
+                    <span className="sr-only">Format: </span>
+                    <SelectValue placeholder={format.name} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SIM_FORMAT_IDS.map((id) => (
+                      <SelectItem key={id} value={id}>
+                        {formats[id].name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <MapPicker tiles={tiles} value={map} onChange={chooseMap} disabled={!heroMatrix} />
             </div>
-            <MapPicker tiles={tiles} value={map} onChange={chooseMap} disabled={!heroMatrix} />
-            <div className="ml-auto flex gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setSession((s) => ({ ...s, moves: s.moves.slice(0, -1) }));
-                  setProblem(null);
-                }}
-                disabled={moves.length === 0}
-                className="inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-sm disabled:opacity-50"
+            {!heroMatrix && (
+              <p
+                className={cn(
+                  "order-4 w-full text-xs text-muted-foreground",
+                  !setupOpen && "max-sm:hidden",
+                )}
               >
-                <Undo2 className="size-3.5" aria-hidden /> Undo
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSession((s) => ({ ...s, moves: [], camp: 0 }));
-                  setProblem(null);
-                }}
-                disabled={moves.length === 0}
-                className="inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-sm disabled:opacity-50"
-              >
-                <RotateCcw className="size-3.5" aria-hidden /> Start again
-              </button>
-            </div>
+                Map rates need mrvl&apos;s hero totals, which aren&apos;t available yet.
+              </p>
+            )}
+            {historyButtons("order-2 max-sm:hidden sm:ml-auto")}
           </div>
-
-          {!heroMatrix && (
-            <p className="text-xs text-muted-foreground">
-              Map rates need mrvl&apos;s hero totals, which aren&apos;t available yet.
-            </p>
-          )}
 
           {pendingFormat && (
             <div
@@ -434,17 +500,39 @@ export function DraftSimulator({
             </div>
           )}
 
-          <p className="font-medium" aria-live="polite">
-            {status}
-          </p>
+          <div className="flex items-center justify-between gap-3">
+            <div className="grid min-w-0 gap-1 sm:flex-1">
+              <p
+                className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between sm:gap-3"
+                aria-live="polite"
+              >
+                {turn && acting !== null ? (
+                  <>
+                    <span className="order-2 text-xs whitespace-nowrap text-muted-foreground tabular-nums">
+                      Step {turn.step + 1} of {format.steps.length}
+                    </span>
+                    <span className="order-1 font-semibold">
+                      {TEAM[acting]} {turn.kind === "ban" ? "bans" : "protects"}
+                    </span>
+                  </>
+                ) : (
+                  <span className="font-semibold">Draft complete</span>
+                )}
+              </p>
+              {problem && (
+                <p role="alert" className="text-sm text-live">
+                  {problem}
+                </p>
+              )}
+            </div>
+            {historyButtons("sm:hidden")}
+          </div>
           {choosable && (
-            <p className="text-xs text-muted-foreground">
-              Both teams ban in this step. Tap a team to pick its ban; the other team goes next.
-            </p>
-          )}
-          {problem && (
-            <p role="alert" className="text-sm text-live">
-              {problem}
+            <p className="-mt-1 text-xs text-muted-foreground">
+              <span className="sm:hidden">Both teams ban now. Tap a team, then a hero.</span>
+              <span className="max-sm:hidden">
+                Both teams ban in this step. Tap a team to pick its ban; the other team goes next.
+              </span>
             </p>
           )}
 
@@ -464,10 +552,11 @@ export function DraftSimulator({
             ))}
           </div>
 
-          <ol aria-label="Draft order" className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+          <ol aria-label="Draft order" className="flex gap-2 overflow-x-auto scrollbar-none">
             {steps.map((s) => (
               <li
                 key={s.index}
+                ref={s.state === "current" ? showStep : undefined}
                 aria-current={s.state === "current" ? "step" : undefined}
                 className={cn(
                   "flex min-w-max items-center gap-1.5 rounded-md border px-2 py-1 text-xs",
@@ -500,7 +589,7 @@ export function DraftSimulator({
       <section aria-labelledby="hero-pool" className="grid grid-cols-1 gap-3">
         <div className="flex flex-wrap items-end gap-3">
           <div className="mr-auto">
-            <h2 id="hero-pool" className="font-medium">
+            <h2 id="hero-pool" className="font-semibold">
               Heroes
             </h2>
             {showRates && (
@@ -554,17 +643,22 @@ export function DraftSimulator({
               ))}
             </TabsList>
           </Tabs>
-          <label className="grid gap-1 text-xs text-muted-foreground">
-            Find a hero
+          <label className="relative block w-full sm:w-52">
+            <span className="sr-only">Find a hero</span>
+            <Search
+              aria-hidden
+              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+            />
             <input
               type="search"
+              placeholder="Find a hero"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="h-9 w-44 rounded-md border bg-background px-2 text-base sm:text-sm"
+              className="h-10 w-full rounded-md border bg-background pr-3 pl-9 text-base outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary sm:h-9 sm:text-sm"
             />
           </label>
         </div>
-        <ul className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10">
+        <ul className="grid grid-cols-3 gap-2 sm:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10">
           {shown.map((h) => {
             const outFor = ([0, 1] as const).filter((c) => sides[c].unavailable.includes(h.id));
             const protectedBy = ([0, 1] as const).filter((c) => sides[c].protects.includes(h.id));
@@ -622,7 +716,7 @@ export function DraftSimulator({
                   {showRates && matrix && (
                     <span
                       aria-hidden="true"
-                      className="grid w-full grid-cols-2 gap-x-1 font-mono text-[0.6rem] leading-tight text-muted-foreground tabular-nums sm:text-[0.65rem]"
+                      className="grid w-full grid-cols-2 gap-x-1 font-mono text-xs leading-tight text-muted-foreground tabular-nums"
                     >
                       <span className="whitespace-nowrap">Pk {shareOrDash(rate?.pick)}</span>
                       <span className="whitespace-nowrap">B {shareOrDash(rate?.banned)}</span>
@@ -633,7 +727,7 @@ export function DraftSimulator({
                   {showRates && !matrix && (
                     <span
                       aria-hidden="true"
-                      className="font-mono text-[0.65rem] whitespace-nowrap text-muted-foreground tabular-nums"
+                      className="font-mono text-xs whitespace-nowrap text-muted-foreground tabular-nums"
                     >
                       {rate ? `B ${percent(rate.banned)}` : "–"}
                       {rate?.protected != null && (
