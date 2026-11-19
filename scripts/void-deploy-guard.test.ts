@@ -186,19 +186,29 @@ describe("verifyPublishedCloudflareOwner", () => {
   });
 });
 
+const PAUSE_TEST_TIMEOUT_MS = 2_000;
+
 describe("verifyPublishedCloudflareOwner with the real pause", () => {
-  it("waits on its own timer and succeeds when no sleep is injected", async () => {
-    const run = guard(staleThenCandidate(1), { intervalMs: 1, withoutSleep: true });
+  it(
+    "waits on its own timer and succeeds when no sleep is injected",
+    { timeout: PAUSE_TEST_TIMEOUT_MS },
+    async () => {
+      const run = guard(staleThenCandidate(1), { intervalMs: 1, withoutSleep: true });
+      const startedAt = Date.now();
 
-    await expect(run.verify()).resolves.toBeNull();
-    expect(run.scripted.calls).toHaveLength(2);
-    expect(run.trips).toEqual([]);
-  });
+      await expect(run.verify()).resolves.toBeNull();
 
-  it("waits through a stale window that lasts several seconds of reads", async () => {
+      expect(run.scripted.calls).toHaveLength(2);
+      expect(run.trips).toEqual([]);
+      expect(Date.now() - startedAt).toBeLessThan(PAUSE_TEST_TIMEOUT_MS / 2);
+    },
+  );
+
+  it("waits through six consecutive stale reads", { timeout: PAUSE_TEST_TIMEOUT_MS }, async () => {
     const run = guard(staleThenCandidate(6), { intervalMs: 1, withoutSleep: true });
 
     await expect(run.verify()).resolves.toBeNull();
+
     expect(run.scripted.calls).toHaveLength(7);
   });
 });
