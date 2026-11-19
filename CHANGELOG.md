@@ -4,6 +4,7 @@ Newest first. One line per change: the outcome first, then the PR.
 
 ## Unreleased
 
+- **Phone taps land more reliably:** the logo, Search, spoiler switch and See all have 44px touch areas (#63).
 - **Drafts says what is missing, in plain words:** a one-line note instead of a boxed "No cached maps" (#65).
 - **Draft simulator shows heroes on the first phone screen:** setup folds into one row and the teams into a compact summary (#66).
 - **Find an event by typing:** the Results event list has a search box and a scrollable list (#64).
