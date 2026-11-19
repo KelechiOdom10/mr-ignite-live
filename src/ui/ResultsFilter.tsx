@@ -17,7 +17,7 @@ import { TeamLogo } from "./TeamMark";
 
 const ANY = "__any";
 
-const RANGE_FILTERS: readonly { value: ResultRange; label: string }[] = [
+export const RANGE_FILTERS: readonly { value: ResultRange; label: string }[] = [
   { value: "any", label: "Any time" },
   { value: "7d", label: "Last 7 days" },
   { value: "30d", label: "Last 30 days" },

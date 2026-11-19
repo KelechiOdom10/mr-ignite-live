@@ -21,7 +21,8 @@ import { DayHeading, UNDATED_DAY_LABEL } from "@/ui/DayHeading";
 import { filterResults } from "@/ui/filterResults";
 import { MatchCard } from "@/ui/MatchCard";
 import { REGION_FILTERS, type RegionFilter, regionKey } from "@/ui/region";
-import { ResultsFilter, type ResultFilterChange } from "@/ui/ResultsFilter";
+import type { ResultFilterChange } from "@/ui/ResultsFilter";
+import { ResultsFilterDisclosure } from "@/ui/ResultsFilterDisclosure";
 import { groupByDay, useHydrated } from "@/ui/time";
 import { UnderlineTabsTrigger } from "@/ui/UnderlineTabsTrigger";
 import { useLiveSnapshot } from "@/ui/useLiveSnapshot";
@@ -184,7 +185,7 @@ export default function MatchesPage({
         </div>
 
         {tab === "results" && (
-          <ResultsFilter
+          <ResultsFilterDisclosure
             view={filters}
             events={eventOptions}
             teams={teamOptions}
