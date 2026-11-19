@@ -13,6 +13,7 @@ import {
   matchesViewSearch,
   smartDefaultTab,
   type ListTab,
+  splitBracketSlots,
   upcomingSeries,
   withListTab,
 } from "./matchesView";
@@ -160,6 +161,37 @@ describe("upcomingSeries", () => {
       "second",
       "bracket_final",
     ]);
+  });
+});
+
+describe("splitBracketSlots", () => {
+  const slot = (id: string, team1: boolean, team2: boolean) =>
+    aMatch({
+      id,
+      startsAt: null,
+      team1: team1 ? { name: "Liquid Citadel", short: "TLC" } : null,
+      team2: team2 ? { name: "Swamp Gaming", short: "SG" } : null,
+    });
+
+  it("puts series with both teams ahead of slots still waiting on a team, keeping each half's order", () => {
+    const series = [
+      slot("tbd_1", false, false),
+      slot("known_1", true, true),
+      slot("half", true, false),
+      slot("known_2", true, true),
+      slot("tbd_2", false, false),
+    ];
+    const { known, awaiting } = splitBracketSlots(series);
+
+    expect(known.map((m) => m.id)).toEqual(["known_1", "known_2"]);
+    expect(awaiting.map((m) => m.id)).toEqual(["tbd_1", "half", "tbd_2"]);
+  });
+
+  it("keeps every series, so regrouping cannot change what the page lists", () => {
+    const series = [slot("a", false, false), slot("b", true, true), slot("c", false, true)];
+    const { known, awaiting } = splitBracketSlots(series);
+
+    expect([...known, ...awaiting].toSorted((a, b) => a.id.localeCompare(b.id))).toEqual(series);
   });
 });
 

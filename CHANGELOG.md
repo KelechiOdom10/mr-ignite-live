@@ -4,6 +4,7 @@ Newest first. One line per change: the outcome first, then the PR.
 
 ## Unreleased
 
+- **Upcoming lists known matchups first:** series with both teams come before the empty bracket slots (#62).
 - **Results come first on phones:** filters sit behind a Filters button, with active ones as chips (#60).
 - **Home shows what is next:** the Events sidebar lists the next dated event when nothing is ongoing, and undated pages no longer fill it (#59).
 - **Results no longer disappear after 30 days:** home and the archive retain history (#57).

@@ -11,6 +11,7 @@ import {
   matchesViewSearch,
   type ResultRange,
   smartDefaultTab,
+  splitBracketSlots,
   upcomingSeries,
   withListTab,
 } from "@/domain/matchesView";
@@ -223,18 +224,39 @@ export default function MatchesPage({
                 : "No results in this region yet."}
             </p>
           )}
-          {groupByDay(shown, (m) => m.startsAt, hydrated).map((group) => (
-            <div key={group.key} className="space-y-3">
-              <DayHeading
-                date={group.date}
-                now={now}
-                undatedLabel={group.key === "tbd" ? UNDATED_DAY_LABEL : undefined}
-              />
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {group.items.map(card)}
+          {groupByDay(shown, (m) => m.startsAt, hydrated).map((group) => {
+            const slots =
+              tab === "upcoming" && group.key === "tbd" ? splitBracketSlots(group.items) : null;
+            const sections =
+              slots && slots.known.length > 0 && slots.awaiting.length > 0
+                ? [
+                    { label: "Known matchups", items: slots.known },
+                    { label: "Bracket slots awaiting teams", items: slots.awaiting },
+                  ]
+                : [{ label: null, items: group.items }];
+
+            return (
+              <div key={group.key} className="space-y-3">
+                <DayHeading
+                  date={group.date}
+                  now={now}
+                  undatedLabel={group.key === "tbd" ? UNDATED_DAY_LABEL : undefined}
+                />
+                {sections.map((section) => (
+                  <div key={section.label ?? "all"} className="space-y-3">
+                    {section.label && (
+                      <h4 className="text-xs font-medium text-muted-foreground">
+                        {section.label} ({section.items.length})
+                      </h4>
+                    )}
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                      {section.items.map(card)}
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </section>
 
         {tab === "results" && !narrower && nextUp && (
