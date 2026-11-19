@@ -4,6 +4,7 @@ Newest first. One line per change: the outcome first, then the PR.
 
 ## Unreleased
 
+- **A slow Cloudflare status no longer fails the deploy:** it waits for traffic to catch up instead (#pending).
 - **A slow traffic read no longer crashes the deploy:** it retries instead (#68).
 - **Events lists only real events:** the Grand Finals tabs, the series page and a page marked for deletion no longer appear as events (#61).
 - **Phone taps land more reliably:** the logo, Search, spoiler switch and See all have 44px touch areas (#63).

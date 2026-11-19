@@ -1,18 +1,21 @@
 diff --git a/dist/index.d.mts b/dist/index.d.mts
-index 5aceeef888abbae01a79ce4c9c2c36b9e2e662bb..985c57a0a2a70ba1a63a576acec4ca56c4eccf3d 100644
+index 5aceeef888abbae01a79ce4c9c2c36b9e2e662bb..c8551bb2168c54aee0f71a56b6f4afb4d368cf76 100644
 --- a/dist/index.d.mts
 +++ b/dist/index.d.mts
-@@ -512,6 +512,9 @@ type CloudflareVersionActivationOptions = {
+@@ -512,6 +512,12 @@ type CloudflareVersionActivationOptions = {
     * production; `secret_key` bindings cannot be replaced through this option.
     */
    candidateSecrets?: Readonly<Record<string, string>>;
-+  /** Bounded re-reads of production traffic while it still names the pre-publish version. */
++  /** Cap on re-reads while production traffic still names the pre-publish version. */
 +  publicationConfirmAttempts?: number;
-+  publicationConfirmDelayMs?: number;
++  /** Delay between those re-reads. */
++  publicationConfirmIntervalMs?: number;
++  /** Wall-clock budget for those re-reads once the first one still names the pre-publish version. */
++  publicationConfirmTimeoutMs?: number;
  };
  /** Upload, probe, and atomically activate a verified Worker Version. */
  export declare function activateCloudflareVersion(options: CloudflareVersionActivationOptions): Promise<CloudflareVersionActivation>;
-@@ -539,6 +542,11 @@ export declare function extractWorkersDevSubdomain(url: string): string | undefi
+@@ -539,6 +545,11 @@ export declare function extractWorkersDevSubdomain(url: string): string | undefi
   * Writes and unsupported commands use the pinned cf command adapter. Responses
   * keep its JSON contract so activation and concurrency checks remain unchanged.
   */
@@ -25,7 +28,7 @@ index 5aceeef888abbae01a79ce4c9c2c36b9e2e662bb..985c57a0a2a70ba1a63a576acec4ca56
    runWrangler: CloudflareCommandRunner;
    accountId: string;
 diff --git a/dist/index.mjs b/dist/index.mjs
-index c803fb63d8d1b71c795a8382f75f6e1adcc7a416..3f732c4256cad9216bcbea4c768b63380cd7044e 100644
+index c803fb63d8d1b71c795a8382f75f6e1adcc7a416..e000bd4acca120bf4493ee5aaf1d492a80f5f3bc 100644
 --- a/dist/index.mjs
 +++ b/dist/index.mjs
 @@ -2020,39 +2020,7 @@ async function bootstrapFirstDeployment(options, previousVersionId, atomic = fal
@@ -69,20 +72,66 @@ index c803fb63d8d1b71c795a8382f75f6e1adcc7a416..3f732c4256cad9216bcbea4c768b6338
  	const publishedOwnerFailure = await verifyPublishedOwner();
  	if (publishedOwnerFailure) return publishedOwnerFailure;
  	if (options.validateUploadedVersion || options.recordVerifiedCandidate) {
-@@ -2231,6 +2199,51 @@ async function readCurrentProductionVersion(options) {
+@@ -2079,7 +2047,15 @@ async function bootstrapFirstDeployment(options, previousVersionId, atomic = fal
+ 		if (checkpointOwnerFailure) return checkpointOwnerFailure;
+ 	}
+ 	options.onProgress?.("Updating routes and triggers...");
+-	const triggers = await stabilizeCloudflareVersionTriggers(triggerOptions);
++	let triggers = await stabilizeCloudflareVersionTriggers(triggerOptions);
++	if (!triggers.ok || !triggers.targetOwnsTraffic) {
++		const confirmedOwner = await verifyPublishedCloudflareOwner(options, versionId, previousVersionId);
++		if (confirmedOwner === null) triggers = {
++			ok: true,
++			activeVersionId: versionId,
++			targetOwnsTraffic: true
++		};
++	}
+ 	if (!triggers.ok || !triggers.targetOwnsTraffic) {
+ 		if (triggers.activeVersionId !== void 0 && triggers.activeVersionId !== null && triggers.activeVersionId !== versionId) return {
+ 			ok: false,
+@@ -2132,19 +2108,11 @@ async function bootstrapFirstDeployment(options, previousVersionId, atomic = fal
+ 		previousVersionId,
+ 		rollback: "unsafe"
+ 	};
+-	const ownerAfterReadiness = await readCurrentProductionVersion(options);
+-	if (ownerAfterReadiness.kind === "failed") return {
+-		ok: false,
+-		reason: "status-failed",
+-		status: ownerAfterReadiness.status,
+-		versionId,
+-		previousVersionId,
+-		rollback: "unsafe"
+-	};
+-	if (ownerAfterReadiness.kind !== "ok" || ownerAfterReadiness.versionId !== versionId) {
++	const ownerAfterReadinessFailure = await verifyPublishedCloudflareOwner(options, versionId, previousVersionId);
++	if (ownerAfterReadinessFailure) {
+ 		const repair = await stabilizeCloudflareVersionTriggers(triggerOptions);
+ 		return {
+-			ok: false,
++			...ownerAfterReadinessFailure,
+ 			reason: "deployment-changed",
+ 			versionId,
+ 			previousVersionId,
+@@ -2231,6 +2199,65 @@ async function readCurrentProductionVersion(options) {
  function productionVersionPercentagesEqual(actual, expected) {
  	return actual.length === expected.length && expected.every((entry) => actual.some((candidate) => candidate.versionId === entry.versionId && candidate.percentage === entry.percentage));
  }
 +
 +/**
-+* Confirm which Worker Version owns production traffic after publication. A deployment read taken
-+* immediately after an atomic publish can still report the version that served before it, so the
-+* known predecessor is re-read within a bound; any other owner still fails closed.
++* Confirm which Worker Version owns production traffic after publication.
++*
++* A deployment read taken just after an atomic publish can still report the version that served
++* before it, and a later read can regress to that same stale answer, so ownership is confirmed
++* within an explicit time budget instead of on a single read. A version that is neither the
++* candidate nor the known predecessor, split traffic, and an unreadable status all fail at once.
 +*/
 +async function verifyPublishedCloudflareOwner(options, versionId, previousVersionId) {
-+	const attempts = Math.max(1, options.publicationConfirmAttempts ?? 3);
-+	let status = await readCurrentProductionVersion(options);
-+	for (let attempt = 1; attempt <= attempts; attempt++) {
++	const intervalMs = Math.max(0, options.publicationConfirmIntervalMs ?? 1e3);
++	const timeoutMs = Math.max(0, options.publicationConfirmTimeoutMs ?? 2e4);
++	const maxAttempts = Math.max(1, options.publicationConfirmAttempts ?? 60);
++	let waitedMs = 0;
++	for (let attempt = 1; ; attempt++) {
++		const status = await readCurrentProductionVersion(options);
 +		if (status.kind === "failed") return {
 +			ok: false,
 +			reason: "status-failed",
@@ -103,7 +152,7 @@ index c803fb63d8d1b71c795a8382f75f6e1adcc7a416..3f732c4256cad9216bcbea4c768b6338
 +			versionId,
 +			percentage: 100
 +		}])) return null;
-+		if (!previousVersionId || status.versionId !== previousVersionId || attempt === attempts) return {
++		if (!previousVersionId || status.versionId !== previousVersionId) return {
 +			ok: false,
 +			reason: "deployment-changed",
 +			versionId,
@@ -111,8 +160,16 @@ index c803fb63d8d1b71c795a8382f75f6e1adcc7a416..3f732c4256cad9216bcbea4c768b6338
 +			activeVersionId: status.versionId,
 +			rollback: "not-needed"
 +		};
-+		await (options.sleep ?? pauseBeforeOwnerRecheck)(options.publicationConfirmDelayMs ?? 1e3);
-+		status = await readCurrentProductionVersion(options);
++		if (attempt >= maxAttempts || waitedMs + intervalMs > timeoutMs) return {
++			ok: false,
++			reason: "deployment-changed",
++			versionId,
++			previousVersionId,
++			activeVersionId: status.versionId,
++			rollback: "not-needed"
++		};
++		await (options.sleep ?? pauseBeforeOwnerRecheck)(intervalMs);
++		waitedMs += intervalMs;
 +	}
 +}
 +function pauseBeforeOwnerRecheck(milliseconds) {
@@ -121,7 +178,7 @@ index c803fb63d8d1b71c795a8382f75f6e1adcc7a416..3f732c4256cad9216bcbea4c768b6338
  function stagedVersionPercentages(previousVersionId, versionId) {
  	return previousVersionId ? [{
  		versionId: previousVersionId,
-@@ -2597,4 +2610,4 @@ function createCloudflareMetadataRunner(options) {
+@@ -2597,4 +2624,4 @@ function createCloudflareMetadataRunner(options) {
  		return fallback(operation, runOptions);
  	};
  }
