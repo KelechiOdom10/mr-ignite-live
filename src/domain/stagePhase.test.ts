@@ -112,11 +112,18 @@ describe("stagePhase with the group tables", () => {
     expect(stagePhase(whole, NOW, groupTables([group], whole, NOW))).toBe("between");
   });
 
-  it("does not wait on a group whose rules we don't apply", () => {
-    const odd = { ...group, tiebreakers: ["matchwins"] };
+  const odd = { ...group, tiebreakers: ["matchwins"] };
+
+  it("does not wait on a group whose rules we don't apply once its schedule is whole and played", () => {
     const done = [pair(1, "A", "B"), pair(2, "A", "C"), pair(3, "B", "C"), seeded];
 
     expect(stagePhase(done, NOW, groupTables([odd], done, NOW))).toBe("between");
+  });
+
+  it("still holds the groups for an unranked group with a fixture missing, so a seeded bracket cannot open early", () => {
+    const missing = [pair(1, "A", "B"), pair(2, "A", "C"), seeded];
+
+    expect(stagePhase(missing, NOW, groupTables([odd], missing, NOW))).toBe("groups");
   });
 });
 

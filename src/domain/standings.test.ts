@@ -352,6 +352,13 @@ describe("selectedGroup", () => {
 });
 
 describe("inRankedTable", () => {
+  it("is false for a series the table skips because an opponent is not on the roster", () => {
+    const tables = groupTables([aGroup({ teams: ["A", "B", "C"] })], played4, NOON);
+
+    expect(inRankedTable(series(1, "A", "B", 1), tables)).toBe(true);
+    expect(inRankedTable(series(3, "A", "D", 1), tables)).toBe(false);
+  });
+
   it("is true only for a series in a group whose table the page shows", () => {
     const shown = groupTables([aGroup()], played4, NOON);
     const refused = groupTables([aGroup({ tiebreakers: ["matchwins"] })], played4, NOON);

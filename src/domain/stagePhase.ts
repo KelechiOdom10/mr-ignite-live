@@ -33,8 +33,7 @@ export function stagePhase(
   if (matches.some((m) => playoffsStarted(m, now))) return "playoffs";
 
   const groupsLeft =
-    matches.some((m) => m.phase !== PLAYOFFS && !hasResult(m)) ||
-    tables.some((t) => t.supported && !t.complete);
+    matches.some((m) => m.phase !== PLAYOFFS && !hasResult(m)) || tables.some((t) => !t.complete);
 
   return groupsLeft ? "groups" : "between";
 }

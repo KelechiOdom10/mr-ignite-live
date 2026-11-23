@@ -38,8 +38,10 @@ export interface GroupTable {
   supported: boolean;
   /** True when teams level on every tiebreaker share the cutoff. */
   cutoffTied: boolean;
-  /** True when the schedule is whole and every series in it has a result. */
+  /** True when the schedule is whole and every series in it has a result, ranked or not. */
   complete: boolean;
+  /** Ids of the series the table reads; none when it can't rank the group. */
+  counted: string[];
   rows: StandingRow[];
 }
 
@@ -145,8 +147,6 @@ function tableFor(group: Group, matches: readonly Match[], now: number): GroupTa
     group.tiebreakers.length === SUPPORTED_TIEBREAKERS.length &&
     SUPPORTED_TIEBREAKERS.every((rule, i) => rule === group.tiebreakers[i]);
 
-  if (!supported) return { group, supported, cutoffTied: false, complete: false, rows: [] };
-
   const inGroup = matches.filter(
     (m) =>
       m.eventId === group.eventId &&
@@ -171,6 +171,7 @@ function tableFor(group: Group, matches: readonly Match[], now: number): GroupTa
   );
 
   const results: Result[] = [];
+  const counted: string[] = [];
   const remaining: [string, string][] = [];
   const pairs = new Set<string>();
   let schedule = tallies.size >= 2;
@@ -186,6 +187,7 @@ function tableFor(group: Group, matches: readonly Match[], now: number): GroupTa
 
     a.team = m.team1;
     b.team = m.team2;
+    counted.push(m.id);
     pairs.add([teamKey(m.team1.name), teamKey(m.team2.name)].toSorted().join("|"));
 
     const result = settled(m);
@@ -220,6 +222,17 @@ function tableFor(group: Group, matches: readonly Match[], now: number): GroupTa
   const covered = group.matchGroups.every((id) => inGroup.some((m) => containerOf(m) === id));
 
   const sound = schedule && covered && inGroup.length === roundRobin && pairs.size === roundRobin;
+
+  if (!supported) {
+    return {
+      group,
+      supported,
+      cutoffTied: false,
+      complete: sound && remaining.length === 0,
+      counted: [],
+      rows: [],
+    };
+  }
 
   const ordered = [...tallies.values()].toSorted((a, b) => standingsKey(b) - standingsKey(a));
   const decided = sound ? certainty(ordered, remaining, group.advance) : new Map();
@@ -315,7 +328,7 @@ function tableFor(group: Group, matches: readonly Match[], now: number): GroupTa
     rows[group.advance - 1] !== undefined &&
     rows[group.advance - 1]?.place === rows[group.advance]?.place;
 
-  return { group, supported, cutoffTied, complete: sound && remaining.length === 0, rows };
+  return { group, supported, cutoffTied, complete: sound && remaining.length === 0, counted, rows };
 }
 
 export function groupOf(match: Match, groups: readonly Group[]): Group | undefined {
@@ -351,9 +364,9 @@ export function selectedGroup(
   return tables.find((t) => t.group.title === picked)?.group.title ?? tables[0]?.group.title;
 }
 
-/** Whether a series counts in a table the page shows, which an unsupported or missing group does not. */
+/** Whether a shown table reads this series: not one of an unranked group, nor one the roster doesn't cover. */
 export function inRankedTable(match: Match, tables: readonly GroupTable[]): boolean {
-  return tables.some((t) => t.supported && groupOf(match, [t.group]) !== undefined);
+  return tables.some((t) => t.counted.includes(match.id));
 }
 
 /** The number of rows above the cutoff line, or null when no line can be drawn without splitting a tie. */
