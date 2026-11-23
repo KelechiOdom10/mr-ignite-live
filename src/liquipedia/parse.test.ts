@@ -148,6 +148,14 @@ describe("parseGroups on the recorded Grand Finals group stage", () => {
     expect(parseGroups(title, odd).map((g) => g.title)).toEqual(["Group B"]);
   });
 
+  it("reads a cutoff written as several ranges, and drops one with a gap rather than under-count it", () => {
+    const split = text.replace("bg=1-4=up, 5-6=down", "bg=1-2=up, 3-4=up, 5-6=down");
+    const gap = text.replace("bg=1-4=up, 5-6=down", "bg=1-2=up, 4-5=up");
+
+    expect(parseGroups(title, split).map((g) => g.advance)).toContain(4);
+    expect(parseGroups(title, gap).map((g) => g.title)).toEqual(["Group B"]);
+  });
+
   it("returns no groups for a page that has no standings", () => {
     expect(parseGroups(AMERICAS_GROUPS, recordedWikitext(AMERICAS_GROUPS))).toEqual([]);
   });

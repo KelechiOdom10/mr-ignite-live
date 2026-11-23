@@ -17,10 +17,10 @@
 
 ## Group standings (`src/domain/standings.ts`)
 
-- Liquipedia's `{{GroupStandings}}` holds no results, only the teams, the match lists (`matchgroups`), the tiebreaker order and the cutoff (`bg=1-4=up`), so the table is computed from the matches already in the snapshot. A match belongs to a group when its id starts with one of the group's match list ids, and its teams are matched to the page's roster ignoring case and punctuation.
+- Liquipedia's `{{GroupStandings}}` holds no results, only the teams, the match lists (`matchgroups`), the tiebreaker order and the cutoff (`bg=1-4=up`), so the table is computed from the matches already in the snapshot. A match belongs to a group when its id, up to the last underscore, is one of the group's match list ids, and its teams are matched to the page's roster ignoring case and punctuation.
 - A series counts when its maps decide it, or when the page marks it finished and names who it was awarded to (`winner=1|2`; the encoding is not in a recorded fixture). The card's 6-hour timeout, a walkover with no named winner and a series marked finished midway are not results: the series stays open.
 - Only settled series count; a series in progress marks both teams as live and changes nothing until it ends.
-- Order follows the template's tiebreakers: series wins, series losses, head-to-head series wins among the teams level on both, then map difference. Teams level on all four share a place. A group whose page lists the tiebreakers in another order, or whose cutoff does not start at first place, is not ranked: its table is left out.
+- Order follows the template's tiebreakers: series wins, series losses, head-to-head series wins among the teams level on both, then map difference. Teams level on all four share a place. A group whose page lists the tiebreakers in another order is not ranked: it has no rows and says so. A group whose cutoff does not run from first place without a gap is dropped when the page is read.
 - **Through** or **out** is set only when no combination of the remaining series can change it and the schedule is whole: every pair on the roster has exactly one series, with both sides known. A tie at the cutoff counts against the team, so early in the stage nobody is marked. Once a group has no series left its places are final, so places at or above the cutoff read Through and the rest Out, unless teams level on every tiebreaker share the cutoff.
 - A two-team tie names the round of their unplayed series; a bigger tie names none.
 

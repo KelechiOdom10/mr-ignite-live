@@ -216,10 +216,17 @@ export function parseGroups(title: string, text: string): Group[] {
       .map((id) => id.trim())
       .filter(Boolean);
 
-    const up = /(?:^|,)\s*1(?:-(\d+))?\s*=\s*up\b/.exec(tpl.params.bg ?? "");
-    const advance = Number(up?.[1] ?? (up ? 1 : Number.NaN));
+    const upRanges = [...(tpl.params.bg ?? "").matchAll(/(?:^|,)\s*(\d+)(?:-(\d+))?\s*=\s*up\b/g)];
+    let advance = 0;
+    let whole = upRanges.length > 0;
 
-    if (!groupTitle || matchGroups.length === 0 || !(advance > 0)) return [];
+    for (const [, from, to] of upRanges) {
+      if (Number(from) !== advance + 1) whole = false;
+
+      advance = Number(to ?? from);
+    }
+
+    if (!groupTitle || matchGroups.length === 0 || !whole) return [];
 
     const teams = positional(tpl).flatMap((raw) => {
       const name = stripMarkup(templateIn(raw, "TeamOpponent")?.params["1"] ?? "");
