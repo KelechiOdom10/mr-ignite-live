@@ -76,6 +76,22 @@ describe("runningGroupStages", () => {
     );
   });
 
+  it("keeps the block for a group the page ranks by rules we don't apply while its fixture is missing", () => {
+    const odd = groups.map((g) => ({ ...g, tiebreakers: ["matchwins"] }));
+
+    const missing = [
+      series("a", 1, "A1", "A2"),
+      series("a", 2, "A1", "A3"),
+      series("b", 1, "B1", "B2"),
+      series("b", 2, "B1", "B3"),
+      series("b", 3, "B2", "B3"),
+    ];
+
+    const next = { events: [event], groups: odd, matches: [...missing, seededBracket] };
+
+    expect(runningGroupStages(next, NOW, everyone)).toHaveLength(1);
+  });
+
   it("drops the block once the schedule is whole and every series has a result", () => {
     const done = roundOne.map((m) => ({ ...m, maps: [aMap(1, 1), aMap(2, 1)] }));
 
