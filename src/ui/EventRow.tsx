@@ -6,7 +6,7 @@ import { eventSlug } from "@/domain/scope";
 import { cn } from "@/lib/utils";
 
 import { proxiedImage } from "./images";
-import { REGION_SHORT, REGION_TEXT, regionKey } from "./region";
+import { RegionLead } from "./RegionTag";
 import { LiveDot } from "./StatusLabel";
 import { formatShortRange } from "./time";
 
@@ -39,7 +39,6 @@ export function EventRow({
   matches: Match[];
   now: number;
 }) {
-  const region = regionKey(event.region);
   const live = matches.some((m) => matchState(m, now).status === "live");
 
   return (
@@ -63,8 +62,7 @@ export function EventRow({
           )}
         </div>
         <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-          <span className={cn("font-semibold", REGION_TEXT[region])}>{REGION_SHORT[region]}</span>
-          <span aria-hidden>·</span>
+          <RegionLead event={event} />
           <span>{formatShortRange(event.startDate, event.endDate)}</span>
         </div>
       </div>

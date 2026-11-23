@@ -1,7 +1,7 @@
 import type { IgniteEvent } from "@/domain/model";
 import { cn } from "@/lib/utils";
 
-import { REGION_SHORT, REGION_TEXT, regionKey } from "./region";
+import { REGION_SHORT, REGION_TEXT, taggedRegion } from "./region";
 
 export function RegionTag({
   event,
@@ -10,7 +10,9 @@ export function RegionTag({
   event: IgniteEvent | undefined;
   className?: string;
 }) {
-  const region = regionKey(event?.region);
+  const region = taggedRegion(event?.region);
+
+  if (!region) return null;
 
   return (
     <span
@@ -23,5 +25,18 @@ export function RegionTag({
     >
       {REGION_SHORT[region]}
     </span>
+  );
+}
+
+export function RegionLead({ event }: { event: IgniteEvent }) {
+  const region = taggedRegion(event.region);
+
+  if (!region) return null;
+
+  return (
+    <>
+      <span className={cn("font-semibold", REGION_TEXT[region])}>{REGION_SHORT[region]}</span>
+      <span aria-hidden>·</span>
+    </>
   );
 }
