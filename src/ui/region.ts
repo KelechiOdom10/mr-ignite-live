@@ -24,6 +24,12 @@ export function regionKey(region: string | undefined): RegionKey {
   return "global";
 }
 
+export function taggedRegion(region: string | undefined): Exclude<RegionKey, "global"> | null {
+  const key = regionKey(region);
+
+  return key === "global" ? null : key;
+}
+
 export const REGION_SHORT: Record<RegionKey, string> = {
   americas: "AMER",
   emea: "EMEA",

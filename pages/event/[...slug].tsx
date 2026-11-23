@@ -2,14 +2,13 @@ import { NotFoundGlitch } from "@/components/motion/not-found";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/motion/tabs";
 import { participantsOf } from "@/domain/participants";
 import { matchesOfEvent } from "@/domain/scope";
-import { cn } from "@/lib/utils";
 import { AppShell } from "@/ui/AppShell";
 import { Bracket } from "@/ui/Bracket";
 import { DayHeading, UNDATED_DAY_LABEL } from "@/ui/DayHeading";
 import { EventParticipants, PrizeDistribution } from "@/ui/EventPrizes";
 import { EventIcon } from "@/ui/EventRow";
 import { MatchCard } from "@/ui/MatchCard";
-import { REGION_SHORT, REGION_TEXT, regionKey } from "@/ui/region";
+import { RegionLead } from "@/ui/RegionTag";
 import { formatShortRange, groupByDay, useHydrated } from "@/ui/time";
 import { useLiveSnapshot } from "@/ui/useLiveSnapshot";
 
@@ -41,7 +40,6 @@ export default function EventPage({ snapshot: initial, eventId }: Props) {
   const lower = playoffs.filter((m) => /lower/i.test(m.round));
   const finals = playoffs.filter((m) => !/upper|lower/i.test(m.round));
   const defaultTab = playoffs.some((m) => m.team1 || m.team2) ? "playoffs" : "groups";
-  const region = regionKey(event.region);
 
   return (
     <AppShell snapshot={snapshot} connection={connection} now={now}>
@@ -50,8 +48,7 @@ export default function EventPage({ snapshot: initial, eventId }: Props) {
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight">{event.name}</h1>
           <p className="mt-1 flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
-            <span className={cn("font-semibold", REGION_TEXT[region])}>{REGION_SHORT[region]}</span>
-            <span aria-hidden>·</span>
+            <RegionLead event={event} />
             <span>{formatShortRange(event.startDate, event.endDate)}</span>
             {event.prizePoolUsd ? (
               <>

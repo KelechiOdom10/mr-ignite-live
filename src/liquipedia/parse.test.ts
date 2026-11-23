@@ -68,6 +68,27 @@ describe("parsePageMatches on a recorded group stage", () => {
   });
 });
 
+describe("parsePageMatches on the recorded Grand Finals pages", () => {
+  const file = "grand-finals-matches.json";
+  const title = "MR Ignite/2026/Grand Finals";
+  const groupTitle = "MR Ignite/2026/Grand Finals/Group Stage";
+
+  const playoffs = parsePageMatches(title, recordedWikitext(title, file));
+
+  const groups = parsePageMatches(groupTitle, recordedWikitext(groupTitle, file));
+
+  it('gives every match a start time, though the page writes dates as "November 23, 2026"', () => {
+    expect(playoffs).toHaveLength(14);
+    expect(groups).toHaveLength(30);
+    expect([...playoffs, ...groups].filter((m) => m.startsAt === null)).toEqual([]);
+  });
+
+  it("converts the CET kick-off to UTC", () => {
+    expect(groups[0]?.startsAt).toBe("2026-11-23T13:00:00.000Z");
+    expect(playoffs.find((m) => m.id.endsWith("_R1M1"))?.startsAt).toBe("2026-11-27T11:00:00.000Z");
+  });
+});
+
 describe("parseEventInfo", () => {
   it("reads the infobox", () => {
     const event = parseEventInfo(AMERICAS, recordedWikitext(AMERICAS), "2026-10-16T22:22:40Z");
