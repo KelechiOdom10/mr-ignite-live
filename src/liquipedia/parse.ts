@@ -1,5 +1,6 @@
 import {
   type Group,
+  GroupSchema,
   type IgniteEvent,
   type MapResult,
   type Match,
@@ -221,31 +222,32 @@ export function parseGroups(title: string, text: string): Group[] {
     let whole = upRanges.length > 0;
 
     for (const [, from, to] of upRanges) {
-      if (Number(from) !== advance + 1) whole = false;
+      const last = Number(to ?? from);
 
-      advance = Number(to ?? from);
+      if (Number(from) !== advance + 1 || last < Number(from)) whole = false;
+
+      advance = last;
     }
 
     if (!groupTitle || matchGroups.length === 0 || !whole) return [];
 
-    const teams = positional(tpl).flatMap((raw) => {
-      const name = stripMarkup(templateIn(raw, "TeamOpponent")?.params["1"] ?? "");
-
-      return name ? [name] : [];
-    });
+    const teams = positional(tpl).map((raw) =>
+      stripMarkup(templateIn(raw, "TeamOpponent")?.params["1"] ?? ""),
+    );
 
     const rules = templateIn(tpl.params.tiebreakers ?? "", "Json");
+    const written = rules ? positional(rules).map((rule) => rule.trim()) : [];
 
-    return [
-      {
-        eventId: eventIdFor(title),
-        title: groupTitle,
-        matchGroups,
-        advance,
-        teams,
-        tiebreakers: rules ? positional(rules).map((rule) => rule.trim()) : [],
-      },
-    ];
+    const group = GroupSchema.safeParse({
+      eventId: eventIdFor(title),
+      title: groupTitle,
+      matchGroups,
+      advance,
+      teams,
+      tiebreakers: written.includes("") ? [] : written,
+    });
+
+    return group.success ? [group.data] : [];
   });
 }
 

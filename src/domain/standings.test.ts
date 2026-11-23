@@ -199,3 +199,71 @@ describe("groupTables rules", () => {
     expect(rows.slice(1).map((r) => r.tiebreakRound)).toEqual([null, null, null]);
   });
 });
+
+describe("groupTables sources and roster", () => {
+  const early = (m: Match): Match => ({ ...m, maps: m.maps.map((x) => ({ ...x, early: true })) });
+
+  const rowOf = (matches: Match[], name: string, group = aGroup()) =>
+    groupTables([group], matches, NOON)[0]?.rows.find((r) => r.team.name === name);
+
+  it("never counts a result only mrvl has seen, so a courtesy map cannot settle a series", () => {
+    const mrvlOnly = early(series(5, "B", "D", 1));
+
+    expect(rowOf([...played4, mrvlOnly], "B")?.seriesWins).toBe(1);
+    expect(rowOf([...played4, mrvlOnly], "D")?.seriesLosses).toBe(1);
+  });
+
+  it("keeps an award the page names even when mrvl maps say the other side won", () => {
+    const awarded = {
+      ...series(5, "B", "D", 0, { markedFinished: true, awarded: 2 }),
+      maps: early(series(5, "B", "D", 1)).maps,
+    };
+
+    expect(rowOf([...played4, awarded], "D")?.seriesWins).toBe(1);
+    expect(rowOf([...played4, awarded], "B")?.seriesLosses).toBe(2);
+  });
+
+  it("leaves a series open when its maps give both sides a winning total", () => {
+    const stale = series(5, "B", "D", 0, { played: [1, 1, 2, 2] });
+
+    expect(rowOf([...played4, stale], "B")?.seriesWins).toBe(1);
+    expect(rowOf([...played4, stale], "D")?.seriesWins).toBe(0);
+  });
+
+  const whole = [series(1, "A", "B", 1), series(2, "A", "C", 1), series(3, "B", "C", 1)];
+
+  it("marks nobody when two roster slots name the same team", () => {
+    expect(statuses(whole, aGroup({ teams: ["A", "B", "C", "C"] }))).toEqual({
+      A: null,
+      B: null,
+      C: null,
+    });
+  });
+
+  it("marks nobody when the page leaves a roster slot blank", () => {
+    expect(Object.values(statuses(whole, aGroup({ teams: ["A", "B", "C", ""] })))).toEqual([
+      null,
+      null,
+      null,
+    ]);
+  });
+
+  it("marks nobody while a match list the page declares has no series at all", () => {
+    const complete = [...played4, series(5, "B", "D", 1), series(6, "C", "D", 1)];
+
+    expect(Object.values(statuses(complete, aGroup({ matchGroups: ["list", "day2"] })))).toEqual([
+      null,
+      null,
+      null,
+      null,
+    ]);
+  });
+
+  it("refuses tiebreakers packed into one rule, which only look like the supported order when joined", () => {
+    const packed = aGroup({
+      tiebreakers: ["matchwins,matchlosses", "h2hlegacy.matchwins", "gamediff"],
+    });
+
+    expect(groupTables([packed], played4, NOON)[0]).toMatchObject({ supported: false, rows: [] });
+  });
+});

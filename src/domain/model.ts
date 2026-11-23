@@ -18,6 +18,8 @@ export const MapResultSchema = z.object({
   score2: z.number().nullable(),
   winner: MapWinnerSchema,
   vod: z.string().nullable(),
+  /** Set on a result seen on mrvl before Liquipedia records it; standings never count it. */
+  early: z.literal(true).optional(),
 });
 
 export type MapResult = z.infer<typeof MapResultSchema>;
@@ -84,8 +86,8 @@ export const GroupSchema = z.object({
   matchGroups: z.array(z.string().min(1)),
   /** How many places from the top go through to the playoffs. */
   advance: z.number().int().positive(),
-  /** The teams the page lists in the group, under the page's spelling. */
-  teams: z.array(z.string().min(1)),
+  /** The teams the page lists in the group, under the page's spelling; "" is a slot it leaves blank. */
+  teams: z.array(z.string()),
   /** The page's tiebreakers in order, as it writes them. */
   tiebreakers: z.array(z.string().min(1)),
 });
@@ -102,7 +104,7 @@ export const PageDataSchema = z.object({
 
 export type PageData = z.infer<typeof PageDataSchema>;
 
-export const MapOverrideSchema = MapResultSchema.omit({ vod: true });
+export const MapOverrideSchema = MapResultSchema.omit({ vod: true, early: true });
 
 export type MapOverride = z.infer<typeof MapOverrideSchema>;
 

@@ -1,4 +1,4 @@
-import { matchState, type MatchState } from "./matchState";
+import { matchState } from "./matchState";
 import type { Group, Match, Team } from "./model";
 import { teamKey } from "./teamIdentity";
 import { teamShortName } from "./teams";
@@ -66,21 +66,29 @@ export function containerOf(match: Match): string {
 }
 
 /**
- * A series is settled by its maps, or by an award the page names. The card's own timeout, a
- * walkover with no named winner and a series marked finished midway are not results.
+ * A series is settled by Liquipedia's own maps, or by an award the page names. The card's
+ * timeout, a walkover with no named winner, a series marked finished midway, a result seen only
+ * on mrvl and maps that give both sides a winning total are not results.
  */
-function settled(match: Match, state: MatchState): Settled | null {
-  if (state.winner !== 0) return { side: state.winner, wins1: state.wins1, wins2: state.wins2 };
+function settled(match: Match): Settled | null {
+  const played = match.maps.filter((m) => m.winner !== 0 && !m.early);
+  const wins1 = played.filter((m) => m.winner === 1).length;
+  const wins2 = played.filter((m) => m.winner === 2).length;
+  const needed = Math.ceil(match.bestOf / 2);
 
-  if (match.markedFinished && match.awarded) {
-    return { side: match.awarded, wins1: state.wins1, wins2: state.wins2 };
-  }
+  if (wins1 >= needed && wins2 >= needed) return null;
+
+  if (wins1 >= needed) return { side: 1, wins1, wins2 };
+
+  if (wins2 >= needed) return { side: 2, wins1, wins2 };
+
+  if (match.markedFinished && match.awarded) return { side: match.awarded, wins1, wins2 };
 
   return null;
 }
 
-export function hasResult(match: Match, now: number): boolean {
-  return settled(match, matchState(match, now)) !== null;
+export function hasResult(match: Match): boolean {
+  return settled(match) !== null;
 }
 
 function standingsKey(t: Tally): number {
@@ -131,7 +139,9 @@ function certainty(
 }
 
 function tableFor(group: Group, matches: readonly Match[], now: number): GroupTable {
-  const supported = SUPPORTED_TIEBREAKERS.join() === group.tiebreakers.join();
+  const supported =
+    group.tiebreakers.length === SUPPORTED_TIEBREAKERS.length &&
+    SUPPORTED_TIEBREAKERS.every((rule, i) => rule === group.tiebreakers[i]);
 
   if (!supported) return { group, supported, cutoffTied: false, rows: [] };
 
@@ -143,17 +153,19 @@ function tableFor(group: Group, matches: readonly Match[], now: number): GroupTa
   );
 
   const tallies = new Map<string, Tally>(
-    group.teams.map((name) => [
-      teamKey(name),
-      {
-        team: { name, short: teamShortName(name) },
-        seriesWins: 0,
-        seriesLosses: 0,
-        mapWins: 0,
-        mapLosses: 0,
-        live: false,
-      },
-    ]),
+    group.teams
+      .flatMap((name) => (teamKey(name) === "" ? [] : [name]))
+      .map((name) => [
+        teamKey(name),
+        {
+          team: { name, short: teamShortName(name) },
+          seriesWins: 0,
+          seriesLosses: 0,
+          mapWins: 0,
+          mapLosses: 0,
+          live: false,
+        },
+      ]),
   );
 
   const results: Result[] = [];
@@ -174,13 +186,12 @@ function tableFor(group: Group, matches: readonly Match[], now: number): GroupTa
     b.team = m.team2;
     pairs.add([teamKey(m.team1.name), teamKey(m.team2.name)].toSorted().join("|"));
 
-    const state = matchState(m, now);
-    const result = settled(m, state);
+    const result = settled(m);
 
     if (!result) {
       remaining.push([teamKey(m.team1.name), teamKey(m.team2.name)]);
 
-      if (state.status === "live") {
+      if (matchState(m, now).status === "live") {
         a.live = true;
         b.live = true;
       }
@@ -202,8 +213,12 @@ function tableFor(group: Group, matches: readonly Match[], now: number): GroupTa
     results.push({ winner: teamKey(won.team.name), loser: teamKey(lost.team.name) });
   }
 
-  const roundRobin = (tallies.size * (tallies.size - 1)) / 2;
-  const sound = schedule && inGroup.length === roundRobin && pairs.size === roundRobin;
+  const slots = group.teams.length;
+  const roundRobin = (slots * (slots - 1)) / 2;
+  const covered = group.matchGroups.every((id) => inGroup.some((m) => containerOf(m) === id));
+
+  const sound = schedule && covered && inGroup.length === roundRobin && pairs.size === roundRobin;
+
   const ordered = [...tallies.values()].toSorted((a, b) => standingsKey(b) - standingsKey(a));
   const decided = sound ? certainty(ordered, remaining, group.advance) : new Map();
   const rows: StandingRow[] = [];
@@ -281,7 +296,7 @@ function tableFor(group: Group, matches: readonly Match[], now: number): GroupTa
         m.team2 &&
         keys.has(teamKey(m.team1.name)) &&
         keys.has(teamKey(m.team2.name)) &&
-        !hasResult(m, now),
+        !hasResult(m),
     );
 
     row.tiebreakRound = meeting?.round ?? null;

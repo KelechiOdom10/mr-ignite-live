@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
+import { STORED_SNAPSHOT_VERSION } from "@/domain/model";
 import { groupTables } from "@/domain/standings";
 import { parseGroups, parsePageMatches } from "@/liquipedia/parse";
 
 import { recordedWikitext } from "../../test/fixtures";
+import { toSnapshot } from "./plan";
 
 const TITLE = "MR Ignite/2026/Grand Finals/Group Stage";
 const NOW = Date.parse("2026-11-23T19:55:00Z");
@@ -71,6 +73,39 @@ describe("groupTables on the recorded Grand Finals group stage", () => {
     expect([...(a?.rows ?? []), ...(b?.rows ?? [])].map((r) => r.status)).toEqual(
       Array(12).fill(null),
     );
+  });
+
+  it("does not let an mrvl map finish the live series before Liquipedia records it", () => {
+    const live = matches.find(
+      (m) => m.team1?.name === "Aconyx" && m.team2?.name === "Swamp Gaming",
+    );
+
+    const win = (index: number) => ({
+      index,
+      map: "",
+      score1: null,
+      score2: null,
+      winner: 1 as const,
+    });
+
+    const snapshot = toSnapshot(
+      {
+        version: STORED_SNAPSHOT_VERSION,
+        pages: {
+          [TITLE]: { revid: 1, updatedAt: "2026-11-23T19:55:00Z", event: null, matches, groups },
+        },
+        teams: {},
+        mapOverrides: { [live?.id ?? ""]: [win(2), win(3)] },
+        builtAt: "2026-11-23T19:55:00Z",
+      },
+      new Date(NOW),
+    );
+
+    const [table] = groupTables(snapshot.groups, snapshot.matches, NOW);
+    const aconyx = table?.rows.find((r) => r.team.name === "Aconyx");
+
+    expect(aconyx?.seriesWins).toBe(0);
+    expect(aconyx?.seriesLosses).toBe(1);
   });
 
   it("marks no team three days on, when the display timeout has closed every unplayed series", () => {

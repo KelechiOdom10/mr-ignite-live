@@ -84,7 +84,12 @@ export function mergeMapOverrides(maps: MapResult[], overrides: MapOverride[]): 
     const existing = byIndex.get(o.index);
 
     if (existing && existing.winner !== 0) continue;
-    byIndex.set(o.index, { ...o, map: existing?.map || o.map, vod: existing?.vod ?? null });
+    byIndex.set(o.index, {
+      ...o,
+      map: existing?.map || o.map,
+      vod: existing?.vod ?? null,
+      early: true,
+    });
   }
 
   return [...byIndex.values()].sort((a, b) => a.index - b.index);

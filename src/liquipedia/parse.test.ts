@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { GroupSchema } from "@/domain/model";
+
 import { liquipediaFixture, recordedWikitext } from "../../test/fixtures";
 import {
   eventIdFor,
@@ -152,8 +154,36 @@ describe("parseGroups on the recorded Grand Finals group stage", () => {
     const split = text.replace("bg=1-4=up, 5-6=down", "bg=1-2=up, 3-4=up, 5-6=down");
     const gap = text.replace("bg=1-4=up, 5-6=down", "bg=1-2=up, 4-5=up");
 
-    expect(parseGroups(title, split).map((g) => g.advance)).toContain(4);
+    expect(parseGroups(title, split).find((g) => g.title === "Group A")?.advance).toBe(4);
     expect(parseGroups(title, gap).map((g) => g.title)).toEqual(["Group B"]);
+  });
+
+  it("keeps a roster slot the page leaves blank, so a shorter roster cannot look complete", () => {
+    const blank = text.replace("|{{TeamOpponent|Swamp Gaming}}\n", "|\n");
+    const teams = parseGroups(title, blank).find((g) => g.title === "Group A")?.teams;
+
+    expect(teams).toHaveLength(6);
+    expect(teams).toContain("");
+  });
+
+  it("drops only the group whose cutoff range runs backwards, and never writes an invalid one", () => {
+    const reversed = text.replace("bg=1-4=up, 5-6=down", "bg=1-0=up, 5-6=down");
+    const groups = parseGroups(title, reversed);
+
+    expect(groups.map((g) => g.title)).toEqual(["Group B"]);
+    expect(groups.every((g) => GroupSchema.safeParse(g).success)).toBe(true);
+  });
+
+  it("reads a blank tiebreaker as no rules at all, which the table then refuses", () => {
+    const blankRule = text.replace(
+      "{{Json|matchwins|matchlosses|h2hlegacy.matchwins|gamediff}}",
+      "{{Json|matchwins||h2hlegacy.matchwins|gamediff}}",
+    );
+
+    const groups = parseGroups(title, blankRule);
+
+    expect(groups.find((g) => g.title === "Group A")?.tiebreakers).toEqual([]);
+    expect(groups.every((g) => GroupSchema.safeParse(g).success)).toBe(true);
   });
 
   it("returns no groups for a page that has no standings", () => {
