@@ -90,6 +90,7 @@ describe("fetchStatsChanges with draft-order backfills waiting", () => {
       liquipediaUpdatedAt: null,
       events: [],
       matches: series,
+      groups: [],
       teams: {},
     };
 
@@ -170,6 +171,7 @@ describe("fetchStatsChanges on a fresh store", () => {
       liquipediaUpdatedAt: null,
       events: [],
       matches: [old, oldIndexed, recent],
+      groups: [],
       teams: {},
     };
 
@@ -207,6 +209,7 @@ describe("fetchStatsChanges backfill limits", () => {
     liquipediaUpdatedAt: null,
     events: [],
     matches,
+    groups: [],
     teams: {},
   });
 

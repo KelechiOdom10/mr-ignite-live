@@ -5,6 +5,7 @@ import { liquipediaFixture, recordedWikitext } from "../../test/fixtures";
 import {
   eventIdFor,
   parseEventInfo,
+  parseGroups,
   parsePageMatches,
   parsePrizePool,
   parseTeamShortExpansion,
@@ -86,6 +87,38 @@ describe("parsePageMatches on the recorded Grand Finals pages", () => {
   it("converts the CET kick-off to UTC", () => {
     expect(groups[0]?.startsAt).toBe("2026-11-23T13:00:00.000Z");
     expect(playoffs.find((m) => m.id.endsWith("_R1M1"))?.startsAt).toBe("2026-11-27T11:00:00.000Z");
+  });
+});
+
+describe("parseGroups on the recorded Grand Finals group stage", () => {
+  const title = "MR Ignite/2026/Grand Finals/Group Stage";
+  const text = recordedWikitext(title, "grand-finals-matches.json");
+
+  it("reads each group's match lists and how many places advance, filed under the parent event", () => {
+    expect(parseGroups(title, text)).toEqual([
+      {
+        eventId: "MR Ignite/2026/Grand Finals",
+        title: "Group A",
+        matchGroups: ["fotbOpL194", "urVIIppQbo", "u22gnFC1Hy"],
+        advance: 4,
+      },
+      {
+        eventId: "MR Ignite/2026/Grand Finals",
+        title: "Group B",
+        matchGroups: ["FzNxVpYvsF", "OiUobQFvdc", "k0E5UklMYk"],
+        advance: 4,
+      },
+    ]);
+  });
+
+  it("finds every group's match lists among the parsed matches", () => {
+    const ids = new Set(parseGroups(title, text).flatMap((g) => g.matchGroups));
+    const lists = parsePageMatches(title, text).map((m) => m.id.slice(0, m.id.indexOf("_")));
+    expect(lists.every((list) => ids.has(list))).toBe(true);
+  });
+
+  it("returns no groups for a page that has no standings", () => {
+    expect(parseGroups(AMERICAS_GROUPS, recordedWikitext(AMERICAS_GROUPS))).toEqual([]);
   });
 });
 

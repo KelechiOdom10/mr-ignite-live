@@ -75,11 +75,23 @@ export const TeamInfoSchema = z.object({
 
 export type TeamInfo = z.infer<typeof TeamInfoSchema>;
 
+export const GroupSchema = z.object({
+  eventId: z.string().min(1),
+  title: z.string().min(1),
+  /** Ids of the match lists that make up the group; a match id starts with its list's id. */
+  matchGroups: z.array(z.string().min(1)),
+  /** How many places from the top go through to the playoffs. */
+  advance: z.number().int().positive(),
+});
+
+export type Group = z.infer<typeof GroupSchema>;
+
 export const PageDataSchema = z.object({
   revid: z.number().int(),
   updatedAt: z.iso.datetime(),
   event: IgniteEventSchema.nullable(),
   matches: z.array(MatchSchema),
+  groups: z.array(GroupSchema),
 });
 
 export type PageData = z.infer<typeof PageDataSchema>;
@@ -88,7 +100,7 @@ export const MapOverrideSchema = MapResultSchema.omit({ vod: true });
 
 export type MapOverride = z.infer<typeof MapOverrideSchema>;
 
-export const STORED_SNAPSHOT_VERSION = 9;
+export const STORED_SNAPSHOT_VERSION = 10;
 
 export const StoredSnapshotSchema = z.object({
   version: z.literal(STORED_SNAPSHOT_VERSION),
@@ -113,6 +125,7 @@ export const SnapshotSchema = z.object({
   liquipediaUpdatedAt: z.iso.datetime().nullable(),
   events: z.array(SnapshotEventSchema),
   matches: z.array(MatchSchema),
+  groups: z.array(GroupSchema),
   teams: z.record(z.string(), TeamInfoSchema),
 });
 

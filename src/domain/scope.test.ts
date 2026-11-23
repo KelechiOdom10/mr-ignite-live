@@ -35,13 +35,14 @@ function aSnapshot(events: SnapshotEvent[], matches: Snapshot["matches"]): Snaps
     liquipediaUpdatedAt: null,
     events,
     matches,
+    groups: [],
     teams: {},
   };
 }
 
 describe("scopeSnapshot", () => {
   it("does not lose recorded results when the clock crosses the event's 30-day cutoff", () => {
-    const archive = SnapshotSchema.parse(recorded);
+    const archive = SnapshotSchema.parse({ ...recorded, groups: [] });
 
     for (const date of ["2026-11-16T23:59:59Z", "2026-11-17T00:00:00Z", "2026-11-18T12:00:00Z"]) {
       const now = Date.parse(date);
@@ -79,6 +80,23 @@ describe("scopeSnapshot", () => {
       }),
     ],
   );
+
+  it("keeps a group stage's standings only for events in scope", () => {
+    const group = (eventId: string) => ({
+      eventId,
+      title: "Group A",
+      matchGroups: ["l"],
+      advance: 4,
+    });
+
+    const withGroups = {
+      ...aSnapshot([anEvent("current", "2026-10-18"), anEvent("other", "2026-10-18")], []),
+      groups: [group("current"), group("other")],
+    };
+
+    const scoped = scopeSnapshot(withGroups, { kind: "event", eventId: "current" }, NOW);
+    expect(scoped.groups.map((g) => g.eventId)).toEqual(["current"]);
+  });
 
   it("keeps the home archive even when events ended more than 30 days ago", () => {
     const scoped = scopeSnapshot(snapshot, { kind: "recent" }, NOW);

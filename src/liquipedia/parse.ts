@@ -1,10 +1,12 @@
 import {
+  type Group,
   type IgniteEvent,
   type MapResult,
   type Match,
   type PrizePlacement,
   type Team,
 } from "@/domain/model";
+import { GROUP_STAGE } from "@/domain/standings";
 import { teamShortName } from "@/domain/teams";
 
 import { parseLiquipediaDate } from "./dates";
@@ -125,7 +127,7 @@ export function parsePrizePool(text: string): PrizePlacement[] {
 }
 
 function phaseFor(title: string, kind: ContainerKind): string {
-  if (title.endsWith(GROUP_STAGE_SUFFIX)) return "Group Stage";
+  if (title.endsWith(GROUP_STAGE_SUFFIX)) return GROUP_STAGE;
 
   return kind === "bracket" ? "Playoffs" : "Matches";
 }
@@ -184,6 +186,24 @@ export function parsePageMatches(title: string, text: string): Match[] {
   }
 
   return matches;
+}
+
+export function parseGroups(title: string, text: string): Group[] {
+  return findTemplates(text, "GroupStandings").flatMap((tpl) => {
+    const groupTitle = stripMarkup(tpl.params.title ?? "");
+
+    const matchGroups = (tpl.params.matchgroups ?? "")
+      .split(",")
+      .map((id) => id.trim())
+      .filter(Boolean);
+
+    const [, from, to] = /(\d+)(?:-(\d+))?\s*=\s*up/.exec(tpl.params.bg ?? "") ?? [];
+    const advance = Number(to ?? from);
+
+    if (!groupTitle || matchGroups.length === 0 || !(advance > 0)) return [];
+
+    return [{ eventId: eventIdFor(title), title: groupTitle, matchGroups, advance }];
+  });
 }
 
 export function parseEventInfo(title: string, text: string, updatedAt: string): IgniteEvent | null {

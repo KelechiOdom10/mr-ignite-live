@@ -90,6 +90,7 @@ export async function shellSnapshot(): Promise<Snapshot> {
       liquipediaUpdatedAt: null,
       events: [],
       matches: [],
+      groups: [],
       teams: {},
     };
   }
