@@ -10,7 +10,7 @@ import { useSpoilersHidden } from "./spoilers";
 import { LiveDot } from "./StatusLabel";
 import { TeamLogo } from "./TeamMark";
 
-function domId(...parts: string[]): string {
+export function domId(...parts: string[]): string {
   return parts.join("-").replace(/\W+/g, "-");
 }
 
@@ -100,10 +100,12 @@ export function GroupTableCard({
   table,
   snapshot,
   compact = false,
+  idPrefix = "standings",
 }: {
   table: GroupTable;
   snapshot: Snapshot;
   compact?: boolean;
+  idPrefix?: string;
 }) {
   const { group, rows } = table;
   const cutoff = cutoffAfter(table);
@@ -121,10 +123,10 @@ export function GroupTableCard({
   if (!table.supported) {
     return (
       <section
-        aria-labelledby={domId("standings", group.title)}
+        aria-labelledby={domId(idPrefix, group.title)}
         className="rounded-xl border bg-card px-3 py-3"
       >
-        <h3 id={domId("standings", group.title)} className="text-base font-semibold">
+        <h3 id={domId(idPrefix, group.title)} className="text-base font-semibold">
           {group.title}
         </h3>
         <p className="mt-1 text-xs text-muted-foreground">No table for this group.</p>
@@ -133,12 +135,9 @@ export function GroupTableCard({
   }
 
   return (
-    <section
-      aria-labelledby={domId("standings", group.title)}
-      className="rounded-xl border bg-card"
-    >
+    <section aria-labelledby={domId(idPrefix, group.title)} className="rounded-xl border bg-card">
       <div className="flex items-baseline justify-between gap-3 px-3 pt-3 pb-2">
-        <h3 id={domId("standings", group.title)} className="text-base font-semibold">
+        <h3 id={domId(idPrefix, group.title)} className="text-base font-semibold">
           {group.title}
         </h3>
       </div>
@@ -192,14 +191,14 @@ export function GroupTableCard({
           ])}
         </tbody>
       </table>
-      {(level.length > 0 || levelAtCutoff || !compact) && (
+      {(!compact || levelAtCutoff) && (
         <div className="space-y-2 border-t px-3 py-3 text-xs text-muted-foreground">
           {levelAtCutoff && (
             <p className="text-foreground">
               Top {group.advance} go through; {levelAtCutoff} are level for the last place.
             </p>
           )}
-          {level.length > 0 && <p>Level on series and maps: {level.join(", ")}.</p>}
+          {!compact && level.length > 0 && <p>Level on series and maps: {level.join(", ")}.</p>}
           {!compact && (
             <details className="group">
               <summary className="-mx-3 flex min-h-11 cursor-pointer list-none items-center px-3 text-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring">
@@ -227,11 +226,13 @@ export function StandingsPanel({
   tables,
   snapshot,
   compact = false,
+  idPrefix,
   className,
 }: {
   tables: GroupTable[];
   snapshot: Snapshot;
   compact?: boolean;
+  idPrefix?: string;
   className?: string;
 }) {
   const hidden = useSpoilersHidden();
@@ -273,7 +274,7 @@ export function StandingsPanel({
       </Tabs>
       {tables.map((t) => (
         <div key={t.group.title} className={cn(t.group.title !== selected && "hidden lg:block")}>
-          <GroupTableCard table={t} snapshot={snapshot} compact={compact} />
+          <GroupTableCard table={t} snapshot={snapshot} compact={compact} idPrefix={idPrefix} />
         </div>
       ))}
     </div>

@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/motion/tabs";
 import { eventPhase, nextEvent } from "@/domain/eventPhase";
+import { runningGroupStages } from "@/domain/homeStandings";
 import {
   type EventPhase,
   isEventPhase,
@@ -15,6 +16,7 @@ import { matchState } from "@/domain/matchState";
 import type { IgniteEvent, Match } from "@/domain/model";
 import { AppShell } from "@/ui/AppShell";
 import { EventRow } from "@/ui/EventRow";
+import { HomeStandings } from "@/ui/HomeStandings";
 import { MatchCard } from "@/ui/MatchCard";
 import { REGION_FILTERS, regionKey, type RegionFilter } from "@/ui/region";
 import { UnderlineTabsTrigger } from "@/ui/UnderlineTabsTrigger";
@@ -87,6 +89,11 @@ export default function HomePage({ snapshot: initial, view }: Props) {
     };
   }, [snapshot.matches, events, region, now]);
 
+  const standings = useMemo(
+    () => runningGroupStages(snapshot, now, (event) => inRegion(event, region)),
+    [snapshot, region, now],
+  );
+
   const regionEvents = snapshot.events.filter((e) => inRegion(e, region));
   const sidebarEvents = regionEvents.filter((e) => eventPhase(e, now) === eventTab);
 
@@ -156,6 +163,13 @@ export default function HomePage({ snapshot: initial, view }: Props) {
             </section>
           )}
 
+          <HomeStandings
+            standings={standings}
+            snapshot={snapshot}
+            idPrefix="home-standings"
+            className="lg:hidden"
+          />
+
           {upcoming.length > 0 && (
             <section aria-labelledby="next-heading" className="space-y-3">
               <div className="flex items-baseline justify-between gap-3">
@@ -195,47 +209,58 @@ export default function HomePage({ snapshot: initial, view }: Props) {
           )}
         </div>
 
-        <aside aria-labelledby="events-heading" className="space-y-3">
-          <h2 id="events-heading" className="text-lg font-semibold">
-            Events
-          </h2>
-          <Tabs
-            value={eventTab}
-            onValueChange={(v) => {
-              if (!isEventPhase(v)) return;
-              setEventTab(v);
-              rememberView({ ...view, region, events: v });
-            }}
-            variant="segment"
-          >
-            <TabsList
-              aria-label="Event status"
-              className="rounded-xl p-1 ring-1 ring-border ring-inset"
+        <aside className="space-y-8">
+          <HomeStandings
+            standings={standings}
+            snapshot={snapshot}
+            idPrefix="side-standings"
+            className="hidden lg:block"
+          />
+
+          <section aria-labelledby="events-heading" className="space-y-3">
+            <h2 id="events-heading" className="text-lg font-semibold">
+              Events
+            </h2>
+            <Tabs
+              value={eventTab}
+              onValueChange={(v) => {
+                if (!isEventPhase(v)) return;
+                setEventTab(v);
+                rememberView({ ...view, region, events: v });
+              }}
+              variant="segment"
             >
-              <TabsTrigger value="ongoing">Ongoing</TabsTrigger>
-              <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-              <TabsTrigger value="completed">Completed</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <div className="space-y-2">
-            {sidebarEvents.length === 0 && (
-              <p className="px-1 text-sm text-muted-foreground">No {eventTab} events.</p>
-            )}
-            {sidebarEvents.map((e) => (
-              <EventRow
-                key={e.id}
-                event={e}
-                matches={snapshot.matches.filter((m) => m.eventId === e.id)}
-                now={now}
-              />
-            ))}
-            {upNext && (
-              <>
-                <h3 className="px-1 pt-2 text-xs font-medium text-muted-foreground">Next event</h3>
-                <EventRow event={upNext} matches={[]} now={now} />
-              </>
-            )}
-          </div>
+              <TabsList
+                aria-label="Event status"
+                className="rounded-xl p-1 ring-1 ring-border ring-inset"
+              >
+                <TabsTrigger value="ongoing">Ongoing</TabsTrigger>
+                <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+                <TabsTrigger value="completed">Completed</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <div className="space-y-2">
+              {sidebarEvents.length === 0 && (
+                <p className="px-1 text-sm text-muted-foreground">No {eventTab} events.</p>
+              )}
+              {sidebarEvents.map((e) => (
+                <EventRow
+                  key={e.id}
+                  event={e}
+                  matches={snapshot.matches.filter((m) => m.eventId === e.id)}
+                  now={now}
+                />
+              ))}
+              {upNext && (
+                <>
+                  <h3 className="px-1 pt-2 text-xs font-medium text-muted-foreground">
+                    Next event
+                  </h3>
+                  <EventRow event={upNext} matches={[]} now={now} />
+                </>
+              )}
+            </div>
+          </section>
         </aside>
       </div>
     </AppShell>
