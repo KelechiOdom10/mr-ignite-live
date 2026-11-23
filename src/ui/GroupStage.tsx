@@ -4,8 +4,8 @@ import { Tabs, TabsList } from "@/components/motion/tabs";
 import { PLAYOFFS } from "@/domain/bracket";
 import { matchState } from "@/domain/matchState";
 import type { Group, IgniteEvent, Match, Snapshot } from "@/domain/model";
-import { groupDays, type StagePhase, visibleTab } from "@/domain/stagePhase";
-import { GROUP_STAGE, groupTables, splitByGroup } from "@/domain/standings";
+import { byKickoff, groupDays, type StagePhase, visibleTab } from "@/domain/stagePhase";
+import { groupTables, splitByGroup } from "@/domain/standings";
 
 import { MatchCard } from "./MatchCard";
 import { useMatchView } from "./spoilers";
@@ -55,7 +55,7 @@ export function GroupStage({
   phase: StagePhase;
 }) {
   const hydrated = useHydrated();
-  const stage = matches.filter((m) => m.phase === GROUP_STAGE);
+  const stage = matches.filter((m) => m.phase !== PLAYOFFS);
   const { days, current, today } = groupDays(stage, now, hydrated ? dayKey : undefined);
   const [picked, setPicked] = useState<string | null>(null);
   const day = current ? visibleTab(picked, days, current) : null;
@@ -66,9 +66,6 @@ export function GroupStage({
     groups,
     stage.filter((m) => m.round === day),
   );
-
-  const inOrder = (list: Match[]) =>
-    list.toSorted((a, b) => (a.startsAt ?? "").localeCompare(b.startsAt ?? ""));
 
   const card = (m: Match) => (
     <MatchCard key={m.id} match={m} event={event} snapshot={snapshot} now={now} footer="time" />
@@ -147,14 +144,14 @@ export function GroupStage({
             list.length === 0 ? null : (
               <div key={group.title} className="min-w-0 space-y-3">
                 <h3 className="text-sm font-semibold">{group.title}</h3>
-                <div className="grid gap-3">{inOrder(list).map(card)}</div>
+                <div className="grid gap-3">{list.toSorted(byKickoff).map(card)}</div>
               </div>
             ),
           )}
           {byDay.other.length > 0 && (
             <div className="min-w-0 space-y-3">
               {byDay.groups.length > 0 && <h3 className="text-sm font-semibold">Other matches</h3>}
-              <div className="grid gap-3">{inOrder(byDay.other).map(card)}</div>
+              <div className="grid gap-3">{byDay.other.toSorted(byKickoff).map(card)}</div>
             </div>
           )}
         </div>

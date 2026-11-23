@@ -61,11 +61,7 @@ export default function EventPage({ snapshot: initial, eventId }: Props) {
     tabs.includes(wanted) ? wanted : (tabs[0] ?? wanted),
   );
 
-  const { days, current } = groupDays(
-    matches.filter((m) => m.phase === "Group Stage"),
-    now,
-    hydrated ? dayKey : undefined,
-  );
+  const { days, current } = groupDays(groups, now, hydrated ? dayKey : undefined);
 
   const dayNumber =
     phase === "groups" && /^Day \d+$/.test(current ?? "") ? current?.toLowerCase() : null;

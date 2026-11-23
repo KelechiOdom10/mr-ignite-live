@@ -128,6 +128,21 @@ describe("groupDays on the reader's calendar", () => {
   });
 });
 
+describe("a series with no kickoff yet", () => {
+  it("does not make its round the current one while dated rounds are still to come", () => {
+    const stage = [
+      { ...coming("g_M3", "Day 3", "2026-11-25T13:00:00Z"), startsAt: null },
+      played("g_M1", "Day 1", "2026-11-23T13:00:00Z"),
+      coming("g_M2", "Day 2", "2026-11-24T13:00:00Z"),
+    ];
+
+    expect(groupDays(stage, NOW)).toMatchObject({
+      days: ["Day 1", "Day 2", "Day 3"],
+      current: "Day 2",
+    });
+  });
+});
+
 describe("groupDays", () => {
   const matches = [
     coming("g_M3", "Day 2", "2026-11-24T13:00:00Z"),

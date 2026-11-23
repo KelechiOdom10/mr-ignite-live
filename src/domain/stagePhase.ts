@@ -35,6 +35,13 @@ export function visibleTab<T extends string>(
   return picked !== null && available.includes(picked) ? picked : fallback;
 }
 
+/** Earliest first; a series with no kickoff yet sorts last. */
+export function byKickoff(a: Match, b: Match): number {
+  if (!a.startsAt || !b.startsAt) return Number(!a.startsAt) - Number(!b.startsAt);
+
+  return a.startsAt.localeCompare(b.startsAt);
+}
+
 export interface GroupDays {
   /** Rounds such as "Day 1", in the order they are played. */
   days: string[];
@@ -50,7 +57,7 @@ export function groupDays(
   now: number,
   dateOf?: (iso: string) => string,
 ): GroupDays {
-  const ordered = matches.toSorted((a, b) => (a.startsAt ?? "").localeCompare(b.startsAt ?? ""));
+  const ordered = matches.toSorted(byKickoff);
   const days = [...new Set(ordered.map((m) => m.round))];
   const open = ordered.find((m) => matchState(m, now).status !== "finished");
   const date = dateOf?.(new Date(now).toISOString());

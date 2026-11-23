@@ -121,11 +121,12 @@ export function GroupTableCard({
   const { group, rows } = table;
   const cutoff = cutoffAfter(table);
 
-  const levelAtCutoff = table.cutoffTied
-    ? listNames(
-        rows.filter((r) => r.place === rows[group.advance - 1]?.place).map((r) => r.team.name),
-      )
-    : null;
+  const levelAtCutoff =
+    table.cutoffTied && rows.some((r) => r.seriesWins + r.seriesLosses > 0)
+      ? listNames(
+          rows.filter((r) => r.place === rows[group.advance - 1]?.place).map((r) => r.team.name),
+        )
+      : null;
 
   const decided = rows.some((r) => r.status);
   const live = liveSeries(table, snapshot.matches, now);
