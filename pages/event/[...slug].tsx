@@ -2,11 +2,13 @@ import { NotFoundGlitch } from "@/components/motion/not-found";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/motion/tabs";
 import { participantsOf } from "@/domain/participants";
 import { matchesOfEvent } from "@/domain/scope";
+import { groupDays, stagePhase } from "@/domain/stagePhase";
 import { AppShell } from "@/ui/AppShell";
 import { Bracket } from "@/ui/Bracket";
 import { DayHeading, UNDATED_DAY_LABEL } from "@/ui/DayHeading";
 import { EventParticipants, PrizeDistribution } from "@/ui/EventPrizes";
 import { EventIcon } from "@/ui/EventRow";
+import { GroupStage } from "@/ui/GroupStage";
 import { MatchCard } from "@/ui/MatchCard";
 import { RegionLead } from "@/ui/RegionTag";
 import { formatShortRange, groupByDay, useHydrated } from "@/ui/time";
@@ -39,7 +41,20 @@ export default function EventPage({ snapshot: initial, eventId }: Props) {
   const upper = playoffs.filter((m) => /upper/i.test(m.round));
   const lower = playoffs.filter((m) => /lower/i.test(m.round));
   const finals = playoffs.filter((m) => !/upper|lower/i.test(m.round));
-  const defaultTab = playoffs.some((m) => m.team1 || m.team2) ? "playoffs" : "groups";
+  const eventGroups = snapshot.groups.filter((g) => g.eventId === event.id);
+  const phase = stagePhase(matches, now);
+  const seeded = playoffs.some((m) => m.team1 || m.team2);
+
+  const defaultTab =
+    phase === "playoffs" || (phase === "between" && seeded) ? "playoffs" : "groups";
+
+  const { days, current } = groupDays(
+    matches.filter((m) => m.phase === "Group Stage"),
+    now,
+  );
+
+  const dayNumber =
+    phase === "groups" && /^Day \d+$/.test(current ?? "") ? current?.toLowerCase() : null;
 
   return (
     <AppShell snapshot={snapshot} connection={connection} now={now}>
@@ -49,6 +64,14 @@ export default function EventPage({ snapshot: initial, eventId }: Props) {
           <h1 className="text-2xl font-semibold tracking-tight">{event.name}</h1>
           <p className="mt-1 flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
             <RegionLead event={event} />
+            {eventGroups.length > 0 && dayNumber && (
+              <>
+                <span>
+                  Group stage, {dayNumber} of {days.length}
+                </span>
+                <span aria-hidden>·</span>
+              </>
+            )}
             <span>{formatShortRange(event.startDate, event.endDate)}</span>
             {event.prizePoolUsd ? (
               <>
@@ -96,29 +119,40 @@ export default function EventPage({ snapshot: initial, eventId }: Props) {
         </TabsContent>
 
         <TabsContent value="groups">
-          <div className="space-y-6">
-            {groupByDay(groups, (m) => m.startsAt, hydrated).map((group) => (
-              <div key={group.key} className="space-y-3">
-                <DayHeading
-                  date={group.date}
-                  now={now}
-                  undatedLabel={group.key === "tbd" ? UNDATED_DAY_LABEL : undefined}
-                />
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  {group.items.map((m) => (
-                    <MatchCard
-                      key={m.id}
-                      match={m}
-                      event={event}
-                      snapshot={snapshot}
-                      now={now}
-                      footer="round"
-                    />
-                  ))}
+          {eventGroups.length > 0 ? (
+            <GroupStage
+              event={event}
+              groups={eventGroups}
+              matches={matches}
+              snapshot={snapshot}
+              now={now}
+              phase={phase}
+            />
+          ) : (
+            <div className="space-y-6">
+              {groupByDay(groups, (m) => m.startsAt, hydrated).map((group) => (
+                <div key={group.key} className="space-y-3">
+                  <DayHeading
+                    date={group.date}
+                    now={now}
+                    undatedLabel={group.key === "tbd" ? UNDATED_DAY_LABEL : undefined}
+                  />
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {group.items.map((m) => (
+                      <MatchCard
+                        key={m.id}
+                        match={m}
+                        event={event}
+                        snapshot={snapshot}
+                        now={now}
+                        footer="round"
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 
