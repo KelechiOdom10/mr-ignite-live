@@ -316,6 +316,42 @@ function tableFor(group: Group, matches: readonly Match[], now: number): GroupTa
   return { group, supported, cutoffTied, rows };
 }
 
+export function groupOf(match: Match, groups: readonly Group[]): Group | undefined {
+  return groups.find(
+    (g) =>
+      g.eventId === match.eventId &&
+      match.phase === GROUP_STAGE &&
+      g.matchGroups.includes(containerOf(match)),
+  );
+}
+
+export interface GroupSplit {
+  groups: { group: Group; matches: Match[] }[];
+  other: Match[];
+}
+
+/** Each group with its series; series no group claims are returned apart so none disappears. */
+export function splitByGroup(groups: readonly Group[], matches: readonly Match[]): GroupSplit {
+  return {
+    groups: groups.map((group) => ({
+      group,
+      matches: matches.filter((m) => groupOf(m, [group]) !== undefined),
+    })),
+    other: matches.filter((m) => groupOf(m, groups) === undefined),
+  };
+}
+
+/** The number of rows above the cutoff line, or null when no line can be drawn without splitting a tie. */
+export function cutoffAfter(table: GroupTable): number | null {
+  const { advance } = table.group;
+
+  if (!table.supported || table.cutoffTied || advance < 1 || advance >= table.rows.length) {
+    return null;
+  }
+
+  return advance;
+}
+
 export function groupTables(
   groups: readonly Group[],
   matches: readonly Match[],

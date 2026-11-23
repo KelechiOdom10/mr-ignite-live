@@ -98,7 +98,9 @@ export function MatchCard({
               ? formatTime(match.startsAt)
               : match.round}
           </span>
-          {footer === "event" && <RegionTag event={event} className="ml-auto" />}
+          {footer === "event" && (
+            <RegionTag event={event} match={match} groups={snapshot.groups} className="ml-auto" />
+          )}
         </div>
       )}
     </Card>

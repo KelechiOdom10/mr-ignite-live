@@ -1,8 +1,10 @@
+import { useState } from "react";
+
 import { NotFoundGlitch } from "@/components/motion/not-found";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/motion/tabs";
 import { participantsOf } from "@/domain/participants";
 import { matchesOfEvent } from "@/domain/scope";
-import { groupDays, stagePhase } from "@/domain/stagePhase";
+import { defaultStageTab, groupDays, stagePhase, visibleTab } from "@/domain/stagePhase";
 import { AppShell } from "@/ui/AppShell";
 import { Bracket } from "@/ui/Bracket";
 import { DayHeading, UNDATED_DAY_LABEL } from "@/ui/DayHeading";
@@ -11,7 +13,7 @@ import { EventIcon } from "@/ui/EventRow";
 import { GroupStage } from "@/ui/GroupStage";
 import { MatchCard } from "@/ui/MatchCard";
 import { RegionLead } from "@/ui/RegionTag";
-import { formatShortRange, groupByDay, useHydrated } from "@/ui/time";
+import { dayKey, formatShortRange, groupByDay, useHydrated } from "@/ui/time";
 import { useLiveSnapshot } from "@/ui/useLiveSnapshot";
 
 import type { Props } from "./[...slug].server";
@@ -19,6 +21,7 @@ import type { Props } from "./[...slug].server";
 export default function EventPage({ snapshot: initial, eventId }: Props) {
   const { snapshot, connection, now } = useLiveSnapshot(initial, { event: eventId ?? undefined });
   const hydrated = useHydrated();
+  const [picked, setPicked] = useState<{ eventId: string | null; tab: string } | null>(null);
   const event = snapshot.events.find((e) => e.id === eventId);
 
   if (!event) {
@@ -45,12 +48,23 @@ export default function EventPage({ snapshot: initial, eventId }: Props) {
   const phase = stagePhase(matches, now);
   const seeded = playoffs.some((m) => m.team1 || m.team2);
 
-  const defaultTab =
-    phase === "playoffs" || (phase === "between" && seeded) ? "playoffs" : "groups";
+  const tabs = [
+    ...(playoffs.length > 0 ? ["playoffs"] : []),
+    ...(groups.length > 0 ? ["groups"] : []),
+  ];
+
+  const wanted = defaultStageTab(phase, seeded);
+
+  const tab = visibleTab(
+    picked?.eventId === event.id ? picked.tab : null,
+    tabs,
+    tabs.includes(wanted) ? wanted : (tabs[0] ?? wanted),
+  );
 
   const { days, current } = groupDays(
     matches.filter((m) => m.phase === "Group Stage"),
     now,
+    hydrated ? dayKey : undefined,
   );
 
   const dayNumber =
@@ -92,7 +106,11 @@ export default function EventPage({ snapshot: initial, eventId }: Props) {
         </div>
       </div>
 
-      <Tabs defaultValue={defaultTab} variant="segment">
+      <Tabs
+        value={tab}
+        onValueChange={(value) => setPicked({ eventId: event.id, tab: value })}
+        variant="segment"
+      >
         <TabsList aria-label="Phase" className="mb-6">
           {playoffs.length > 0 && <TabsTrigger value="playoffs">Playoffs</TabsTrigger>}
           {groups.length > 0 && <TabsTrigger value="groups">Group stage</TabsTrigger>}
@@ -121,6 +139,7 @@ export default function EventPage({ snapshot: initial, eventId }: Props) {
         <TabsContent value="groups">
           {eventGroups.length > 0 ? (
             <GroupStage
+              key={event.id}
               event={event}
               groups={eventGroups}
               matches={matches}

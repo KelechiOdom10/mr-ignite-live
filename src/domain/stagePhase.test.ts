@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { aMap, aMatch } from "../../test/builders";
-import { groupDays, stagePhase } from "./stagePhase";
+import { defaultStageTab, groupDays, stagePhase, visibleTab } from "./stagePhase";
 
 const NOW = Date.parse("2026-11-23T19:55:00Z");
 
@@ -53,6 +53,81 @@ describe("stagePhase", () => {
   });
 });
 
+describe("stagePhase and the card timeout", () => {
+  it("stays on the groups when an unplayed series was only closed by the six-hour timeout", () => {
+    const stalled = [
+      played("g_M1", "Day 1", "2026-11-23T13:00:00Z"),
+      coming("g_M2", "Day 1", "2026-11-23T13:00:00Z"),
+      bracket("2026-11-27T11:00:00Z", []),
+    ];
+
+    expect(stagePhase(stalled, Date.parse("2026-11-26T03:00:00Z"))).toBe("groups");
+  });
+
+  it("does not count a walkover the page left without a winner as the end of the group stage", () => {
+    const walkover = aMatch({
+      id: "g_M2",
+      phase: "Group Stage",
+      round: "Day 1",
+      startsAt: "2026-11-23T13:00:00Z",
+      markedFinished: true,
+    });
+
+    const first = played("g_M1", "Day 1", "2026-11-23T13:00:00Z");
+
+    expect(stagePhase([first, walkover], NOW)).toBe("groups");
+    expect(stagePhase([first, { ...walkover, awarded: 1 }], NOW)).toBe("between");
+  });
+});
+
+describe("the event tab", () => {
+  it("opens on the playoffs once they have started, or the bracket is seeded between the stages", () => {
+    expect(defaultStageTab("groups", true)).toBe("groups");
+    expect(defaultStageTab("between", true)).toBe("playoffs");
+    expect(defaultStageTab("between", false)).toBe("groups");
+    expect(defaultStageTab("playoffs", false)).toBe("playoffs");
+  });
+
+  it("follows the phase until the reader picks a tab, and drops a pick that no longer exists", () => {
+    expect(visibleTab(null, ["groups", "playoffs"], "playoffs")).toBe("playoffs");
+    expect(visibleTab("groups", ["groups", "playoffs"], "playoffs")).toBe("groups");
+    expect(visibleTab("playoffs", ["groups"], "groups")).toBe("groups");
+  });
+});
+
+describe("groupDays on the reader's calendar", () => {
+  const dateIn = (timeZone: string) => (iso: string) =>
+    new Intl.DateTimeFormat("en-CA", { timeZone }).format(new Date(iso));
+
+  const stage = [
+    played("a_M1", "Day 1", "2026-11-23T13:00:00Z"),
+    played("a_M2", "Day 1", "2026-11-23T19:00:00Z"),
+    coming("b_M1", "Day 2", "2026-11-25T13:00:00Z"),
+  ];
+
+  it("stays on today's day after its last series, until the reader's date turns over", () => {
+    const evening = Date.parse("2026-11-23T20:30:00Z");
+
+    expect(groupDays(stage, evening).current).toBe("Day 2");
+    expect(groupDays(stage, evening, dateIn("Europe/London"))).toMatchObject({
+      current: "Day 1",
+      today: ["Day 1"],
+    });
+  });
+
+  it("finds a round with a kickoff on the reader's date even when it crosses their midnight", () => {
+    const lateTokyo = Date.parse("2026-11-23T16:00:00Z");
+
+    expect(groupDays(stage, lateTokyo, dateIn("Asia/Tokyo")).today).toEqual(["Day 1"]);
+  });
+
+  it("falls back to the first unfinished day when nothing is on the reader's date", () => {
+    expect(
+      groupDays(stage, Date.parse("2026-11-24T12:00:00Z"), dateIn("Europe/London")).current,
+    ).toBe("Day 2");
+  });
+});
+
 describe("groupDays", () => {
   const matches = [
     coming("g_M3", "Day 2", "2026-11-24T13:00:00Z"),
@@ -79,6 +154,6 @@ describe("groupDays", () => {
   });
 
   it("has no current day without matches", () => {
-    expect(groupDays([], NOW)).toEqual({ days: [], current: null });
+    expect(groupDays([], NOW)).toEqual({ days: [], current: null, today: [] });
   });
 });

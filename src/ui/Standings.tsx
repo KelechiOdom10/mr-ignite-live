@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/motion/tabs";
 import { matchState } from "@/domain/matchState";
 import type { Match, Snapshot } from "@/domain/model";
-import { containerOf, type GroupTable, type StandingRow } from "@/domain/standings";
+import { containerOf, cutoffAfter, type GroupTable, type StandingRow } from "@/domain/standings";
 import { cn } from "@/lib/utils";
 
 import { useSpoilersHidden } from "./spoilers";
@@ -43,11 +43,8 @@ function liveSeries(table: GroupTable, matches: readonly Match[], now: number): 
     if (m.phase !== "Group Stage" || m.eventId !== table.group.eventId) return [];
 
     if (!table.group.matchGroups.includes(containerOf(m)) || !m.team1 || !m.team2) return [];
-    const state = matchState(m, now);
 
-    return state.status === "live"
-      ? [`${m.team1.name} ${state.wins1}-${state.wins2} ${m.team2.name}`]
-      : [];
+    return matchState(m, now).status === "live" ? [m.team1.name + " vs " + m.team2.name] : [];
   });
 }
 
@@ -122,10 +119,35 @@ export function GroupTableCard({
   compact?: boolean;
 }) {
   const { group, rows } = table;
+  const cutoff = cutoffAfter(table);
+
+  const levelAtCutoff = table.cutoffTied
+    ? listNames(
+        rows.filter((r) => r.place === rows[group.advance - 1]?.place).map((r) => r.team.name),
+      )
+    : null;
+
   const decided = rows.some((r) => r.status);
   const live = liveSeries(table, snapshot.matches, now);
   const level = levelTeams(rows);
   const columns = compact ? 4 : 5;
+
+  if (!table.supported) {
+    return (
+      <section
+        aria-labelledby={domId("standings", group.title)}
+        className="rounded-xl border bg-card px-3 py-3"
+      >
+        <h3 id={domId("standings", group.title)} className="text-base font-semibold">
+          {group.title}
+        </h3>
+        <p className="mt-1 text-xs text-muted-foreground">
+          This group is ranked by rules we don't follow, so there is no table. Its results are in
+          the match list.
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section
@@ -178,7 +200,7 @@ export function GroupTableCard({
         <tbody>
           {rows.flatMap((row, i) => [
             <Row key={row.team.name} row={row} snapshot={snapshot} compact={compact} />,
-            i === group.advance - 1 && i < rows.length - 1 ? (
+            i === (cutoff ?? 0) - 1 ? (
               <tr key="cut" className="border-t border-dashed">
                 <td colSpan={columns} className="py-1.5 text-center text-xs text-muted-foreground">
                   Top {group.advance} go through
@@ -188,8 +210,14 @@ export function GroupTableCard({
           ])}
         </tbody>
       </table>
-      {(live.length > 0 || level.length > 0 || !compact) && (
+      {(live.length > 0 || level.length > 0 || levelAtCutoff || !compact) && (
         <div className="space-y-2 border-t px-3 py-3 text-xs text-muted-foreground">
+          {levelAtCutoff && (
+            <p className="text-foreground">
+              Top {group.advance} go through, but {levelAtCutoff} are level for the last place, so
+              there is no line yet.
+            </p>
+          )}
           {live.length > 0 && (
             <p className="flex items-start gap-2 text-foreground">
               <LiveDot className="mt-1 shrink-0" />

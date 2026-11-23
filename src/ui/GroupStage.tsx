@@ -4,24 +4,30 @@ import { Tabs, TabsList } from "@/components/motion/tabs";
 import { PLAYOFFS } from "@/domain/bracket";
 import { matchState } from "@/domain/matchState";
 import type { Group, IgniteEvent, Match, Snapshot } from "@/domain/model";
-import { groupDays, type StagePhase } from "@/domain/stagePhase";
-import { containerOf, GROUP_STAGE, groupTables } from "@/domain/standings";
-import { cn } from "@/lib/utils";
+import { groupDays, type StagePhase, visibleTab } from "@/domain/stagePhase";
+import { GROUP_STAGE, groupTables, splitByGroup } from "@/domain/standings";
 
 import { MatchCard } from "./MatchCard";
-import { useSpoilersHidden } from "./spoilers";
+import { useMatchView } from "./spoilers";
 import { StandingsPanel } from "./Standings";
 import { dayKey, formatDate, formatTime, useHydrated } from "./time";
 import { UnderlineTabsTrigger } from "./UnderlineTabsTrigger";
 
-function LiveNote({ match, now }: { match: Match; now: number }) {
-  const hidden = useSpoilersHidden();
-  const state = matchState(match, now);
+function LiveNote({
+  match,
+  now,
+  matches,
+}: {
+  match: Match;
+  now: number;
+  matches: readonly Match[];
+}) {
+  const { side1, side2, revealed } = useMatchView(match, now, matches);
 
-  if (hidden || !match.team1 || !match.team2) return null;
+  if (!revealed || !match.team1 || !match.team2) return null;
 
-  const [a, b] = [state.wins1, state.wins2];
-  const leader = a > b ? match.team1.name : b > a ? match.team2.name : null;
+  const [a, b] = [side1.score ?? 0, side2.score ?? 0];
+  const leader = a > b ? side1.name : b > a ? side2.name : null;
 
   return (
     <p className="mt-2 text-xs text-muted-foreground">
@@ -50,17 +56,19 @@ export function GroupStage({
 }) {
   const hydrated = useHydrated();
   const stage = matches.filter((m) => m.phase === GROUP_STAGE);
-  const { days, current } = groupDays(stage, now);
+  const { days, current, today } = groupDays(stage, now, hydrated ? dayKey : undefined);
   const [picked, setPicked] = useState<string | null>(null);
-  const day = picked ?? current;
+  const day = current ? visibleTab(picked, days, current) : null;
   const live = stage.filter((m) => matchState(m, now).status === "live");
   const tables = groupTables(groups, matches, now);
 
-  const dayMatches = stage.filter((m) => m.round === day);
-  const first = dayMatches.flatMap((m) => (m.startsAt ? [m.startsAt] : [])).sort()[0];
+  const byDay = splitByGroup(
+    groups,
+    stage.filter((m) => m.round === day),
+  );
 
-  const isToday =
-    hydrated && first !== undefined && dayKey(first) === dayKey(new Date(now).toISOString());
+  const inOrder = (list: Match[]) =>
+    list.toSorted((a, b) => (a.startsAt ?? "").localeCompare(b.startsAt ?? ""));
 
   const card = (m: Match) => (
     <MatchCard key={m.id} match={m} event={event} snapshot={snapshot} now={now} footer="time" />
@@ -83,7 +91,7 @@ export function GroupStage({
             {live.map((m) => (
               <div key={m.id}>
                 {card(m)}
-                <LiveNote match={m} now={now} />
+                <LiveNote match={m} now={now} matches={snapshot.matches} />
               </div>
             ))}
           </div>
@@ -115,7 +123,7 @@ export function GroupStage({
       <section aria-labelledby="group-matches" className="min-w-0 space-y-4 lg:col-start-1">
         <h2 id="group-matches" className="flex items-center gap-2 text-base font-semibold">
           Matches
-          {isToday && (
+          {day && today.includes(day) && (
             <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
               Today
             </span>
@@ -135,18 +143,20 @@ export function GroupStage({
           </div>
         )}
         <div className="grid gap-6 sm:grid-cols-2">
-          {groups.map((g) => {
-            const list = dayMatches
-              .filter((m) => g.matchGroups.includes(containerOf(m)))
-              .toSorted((a, b) => (a.startsAt ?? "").localeCompare(b.startsAt ?? ""));
-
-            return (
-              <div key={g.title} className={cn("min-w-0 space-y-3", list.length === 0 && "hidden")}>
-                <h3 className="text-sm font-semibold">{g.title}</h3>
-                <div className="grid gap-3">{list.map(card)}</div>
+          {byDay.groups.map(({ group, matches: list }) =>
+            list.length === 0 ? null : (
+              <div key={group.title} className="min-w-0 space-y-3">
+                <h3 className="text-sm font-semibold">{group.title}</h3>
+                <div className="grid gap-3">{inOrder(list).map(card)}</div>
               </div>
-            );
-          })}
+            ),
+          )}
+          {byDay.other.length > 0 && (
+            <div className="min-w-0 space-y-3">
+              {byDay.groups.length > 0 && <h3 className="text-sm font-semibold">Other matches</h3>}
+              <div className="grid gap-3">{inOrder(byDay.other).map(card)}</div>
+            </div>
+          )}
         </div>
       </section>
     </div>

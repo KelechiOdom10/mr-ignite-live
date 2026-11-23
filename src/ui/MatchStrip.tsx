@@ -62,7 +62,7 @@ function Chip({ match, snapshot, now }: { match: Match; snapshot: Snapshot; now:
     >
       <div className="flex items-center justify-between gap-2">
         <StatusLabel match={match} view={view} now={now} className="text-[0.7rem]" />
-        <RegionTag event={event} />
+        <RegionTag event={event} match={match} groups={snapshot.groups} />
       </div>
       {row(view.side1)}
       {row(view.side2)}

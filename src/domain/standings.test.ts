@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { type Group, type MapWinner, type Match } from "./model";
-import { GROUP_STAGE, groupTables } from "./standings";
+import { cutoffAfter, GROUP_STAGE, groupOf, groupTables, splitByGroup } from "./standings";
 
 const TIEBREAKERS = ["matchwins", "matchlosses", "h2hlegacy.matchwins", "gamediff"];
 const NOON = Date.parse("2026-11-23T10:30:00Z");
@@ -265,5 +265,61 @@ describe("groupTables sources and roster", () => {
     });
 
     expect(groupTables([packed], played4, NOON)[0]).toMatchObject({ supported: false, rows: [] });
+
+describe("cutoffAfter", () => {
+  it("draws the line under the last team that goes through", () => {
+    const table = groupTables(
+      [aGroup()],
+      [...played4, series(5, "B", "D", 1), series(6, "C", "D", 1)],
+      NOON,
+    )[0];
+
+    expect(table && cutoffAfter(table)).toBe(2);
+  });
+
+  it("draws no line through teams that are level at the cutoff", () => {
+    const level = [
+      series(1, "A", "B", 1),
+      series(2, "A", "C", 1),
+      series(3, "A", "D", 1),
+      series(4, "B", "C", 1),
+      series(5, "C", "D", 1),
+      series(6, "D", "B", 1),
+    ];
+
+    const table = groupTables([aGroup()], level, NOON)[0];
+
+    expect(table?.cutoffTied).toBe(true);
+    expect(table && cutoffAfter(table)).toBeNull();
+  });
+
+  it("draws no line on a table the page ranks by rules we do not apply", () => {
+    const table = groupTables([aGroup({ tiebreakers: ["matchwins"] })], played4, NOON)[0];
+
+    expect(table && cutoffAfter(table)).toBeNull();
+  });
+});
+
+describe("splitByGroup", () => {
+  it("keeps a group's series with their group and sets the rest apart, so none disappears", () => {
+    const a = aGroup({ title: "Group A", matchGroups: ["a"] });
+    const inA = { ...series(1, "A", "B", 1), id: "a_M1" };
+    const inB = { ...series(2, "C", "D", 1), id: "b_M1" };
+
+    const split = splitByGroup([a], [inA, inB]);
+
+    expect(split.groups.map((g) => [g.group.title, g.matches.map((m) => m.id)])).toEqual([
+      ["Group A", ["a_M1"]],
+    ]);
+    expect(split.other.map((m) => m.id)).toEqual(["b_M1"]);
+  });
+});
+
+describe("groupOf", () => {
+  it("names the group of a group-stage series and none for a playoff one", () => {
+    const groups = [aGroup({ title: "Group A" })];
+
+    expect(groupOf(series(1, "A", "B", 1), groups)?.title).toBe("Group A");
+    expect(groupOf({ ...series(1, "A", "B", 1), phase: "Playoffs" }, groups)).toBeUndefined();
   });
 });
