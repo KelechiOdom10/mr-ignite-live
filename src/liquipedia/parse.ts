@@ -142,6 +142,14 @@ function lastCommentBefore(text: string, end: number): string | null {
   return comments.at(-1)?.[1]?.trim() ?? null;
 }
 
+function awardedTo(params: Record<string, string>): 1 | 2 | undefined {
+  if (params.finished !== "true") return undefined;
+
+  if (params.winner === "1") return 1;
+
+  return params.winner === "2" ? 2 : undefined;
+}
+
 export function parsePageMatches(title: string, text: string): Match[] {
   const eventId = eventIdFor(title);
 
@@ -179,6 +187,7 @@ export function parsePageMatches(title: string, text: string): Match[] {
         team2: parseTeam(p.opponent2),
         maps: parseMaps(p),
         markedFinished: p.finished === "true" || Boolean(p.walkover),
+        ...(awardedTo(p) && { awarded: awardedTo(p) }),
         twitch: p.twitch || null,
         youtube: p.youtube || null,
       });
@@ -186,6 +195,16 @@ export function parsePageMatches(title: string, text: string): Match[] {
   }
 
   return matches;
+}
+
+function positional(tpl: Template): string[] {
+  const values: string[] = [];
+
+  for (let index = 1; tpl.params[String(index)] !== undefined; index++) {
+    values.push(tpl.params[String(index)] ?? "");
+  }
+
+  return values;
 }
 
 export function parseGroups(title: string, text: string): Group[] {
@@ -197,12 +216,29 @@ export function parseGroups(title: string, text: string): Group[] {
       .map((id) => id.trim())
       .filter(Boolean);
 
-    const [, from, to] = /(\d+)(?:-(\d+))?\s*=\s*up/.exec(tpl.params.bg ?? "") ?? [];
-    const advance = Number(to ?? from);
+    const up = /(?:^|,)\s*1(?:-(\d+))?\s*=\s*up\b/.exec(tpl.params.bg ?? "");
+    const advance = Number(up?.[1] ?? (up ? 1 : Number.NaN));
 
     if (!groupTitle || matchGroups.length === 0 || !(advance > 0)) return [];
 
-    return [{ eventId: eventIdFor(title), title: groupTitle, matchGroups, advance }];
+    const teams = positional(tpl).flatMap((raw) => {
+      const name = stripMarkup(templateIn(raw, "TeamOpponent")?.params["1"] ?? "");
+
+      return name ? [name] : [];
+    });
+
+    const rules = templateIn(tpl.params.tiebreakers ?? "", "Json");
+
+    return [
+      {
+        eventId: eventIdFor(title),
+        title: groupTitle,
+        matchGroups,
+        advance,
+        teams,
+        tiebreakers: rules ? positional(rules).map((rule) => rule.trim()) : [],
+      },
+    ];
   });
 }
 

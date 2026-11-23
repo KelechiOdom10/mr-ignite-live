@@ -33,6 +33,8 @@ export const MatchSchema = z.object({
   team2: TeamSchema.nullable(),
   maps: z.array(MapResultSchema),
   markedFinished: z.boolean(),
+  /** Who a series the page marks finished was awarded to, when it says; maps alone don't decide it. */
+  awarded: z.union([z.literal(1), z.literal(2)]).optional(),
   twitch: z.string().nullable(),
   youtube: z.string().nullable(),
 });
@@ -82,6 +84,10 @@ export const GroupSchema = z.object({
   matchGroups: z.array(z.string().min(1)),
   /** How many places from the top go through to the playoffs. */
   advance: z.number().int().positive(),
+  /** The teams the page lists in the group, under the page's spelling. */
+  teams: z.array(z.string().min(1)),
+  /** The page's tiebreakers in order, as it writes them. */
+  tiebreakers: z.array(z.string().min(1)),
 });
 
 export type Group = z.infer<typeof GroupSchema>;

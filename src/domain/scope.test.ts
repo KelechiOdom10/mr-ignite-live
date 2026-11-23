@@ -87,6 +87,8 @@ describe("scopeSnapshot", () => {
       title: "Group A",
       matchGroups: ["l"],
       advance: 4,
+      teams: [],
+      tiebreakers: [],
     });
 
     const withGroups = {

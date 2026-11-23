@@ -43,8 +43,8 @@ describe("groupTables on the recorded Grand Finals group stage", () => {
       [2, "100 Thieves", "1-0", "2-0", 2],
       [2, "RAD", "1-0", "2-0", 2],
       [4, "Virtus.pro", "1-1", "2-2", 0],
-      [5, "REJECT", "0-2", "0-4", -4],
       [5, "Monarch", "0-2", "0-4", -4],
+      [5, "REJECT", "0-2", "0-4", -4],
     ]);
   });
 
@@ -71,6 +71,12 @@ describe("groupTables on the recorded Grand Finals group stage", () => {
     expect([...(a?.rows ?? []), ...(b?.rows ?? [])].map((r) => r.status)).toEqual(
       Array(12).fill(null),
     );
+  });
+
+  it("marks no team three days on, when the display timeout has closed every unplayed series", () => {
+    const later = groupTables(groups, matches, Date.parse("2026-11-26T03:00:00Z"));
+
+    expect(later.flatMap((t) => t.rows.map((r) => r.status))).toEqual(Array(12).fill(null));
   });
 
   it("keeps the two groups apart", () => {

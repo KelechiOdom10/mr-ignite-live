@@ -108,6 +108,8 @@ describe("toSnapshot", () => {
       title: "Group A",
       matchGroups: ["list"],
       advance: 4,
+      teams: [],
+      tiebreakers: [],
     };
 
     const stored: StoredSnapshot = {

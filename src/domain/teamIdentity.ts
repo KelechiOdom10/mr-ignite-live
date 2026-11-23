@@ -8,7 +8,7 @@ export interface TeamIdentity {
 }
 
 /** Case, punctuation and spacing carry no meaning in a team name, so identity drops them. */
-function teamKey(name: string): string {
+export function teamKey(name: string): string {
   return name.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
 }
 
