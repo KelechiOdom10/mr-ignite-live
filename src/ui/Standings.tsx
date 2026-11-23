@@ -267,7 +267,11 @@ export function StandingsPanel({
           className="w-full rounded-xl p-1 ring-1 ring-border ring-inset"
         >
           {tables.map((t) => (
-            <TabsTrigger key={t.group.title} value={t.group.title} className="min-h-11 flex-1">
+            <TabsTrigger
+              key={t.group.title}
+              value={t.group.title}
+              className="min-h-11 flex-1 rounded-lg focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+            >
               {t.group.title}
             </TabsTrigger>
           ))}
