@@ -11,6 +11,10 @@ import { useSpoilersHidden } from "./spoilers";
 import { LiveDot } from "./StatusLabel";
 import { TeamLogo } from "./TeamMark";
 
+function domId(...parts: string[]): string {
+  return parts.join("-").replace(/\W+/g, "-");
+}
+
 function signed(n: number): string {
   if (n === 0) return "0";
 
@@ -124,9 +128,12 @@ export function GroupTableCard({
   const columns = compact ? 4 : 5;
 
   return (
-    <section aria-labelledby={`standings-${group.title}`} className="rounded-xl border bg-card">
+    <section
+      aria-labelledby={domId("standings", group.title)}
+      className="rounded-xl border bg-card"
+    >
       <div className="flex items-baseline justify-between gap-3 px-3 pt-3 pb-2">
-        <h3 id={`standings-${group.title}`} className="text-base font-semibold">
+        <h3 id={domId("standings", group.title)} className="text-base font-semibold">
           {group.title}
         </h3>
         {!decided && <p className="text-xs text-muted-foreground">Nobody is through or out yet</p>}
