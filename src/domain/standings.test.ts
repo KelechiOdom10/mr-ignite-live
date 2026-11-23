@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import { type Group, type MapWinner, type Match } from "./model";
-import { cutoffAfter, GROUP_STAGE, groupOf, groupTables, splitByGroup } from "./standings";
+import {
+  cutoffAfter,
+  GROUP_STAGE,
+  groupOf,
+  groupTables,
+  inRankedTable,
+  selectedGroup,
+  splitByGroup,
+} from "./standings";
 
 const TIEBREAKERS = ["matchwins", "matchlosses", "h2hlegacy.matchwins", "gamediff"];
 const NOON = Date.parse("2026-11-23T10:30:00Z");
@@ -265,6 +273,8 @@ describe("groupTables sources and roster", () => {
     });
 
     expect(groupTables([packed], played4, NOON)[0]).toMatchObject({ supported: false, rows: [] });
+  });
+});
 
 describe("cutoffAfter", () => {
   it("draws the line under the last team that goes through", () => {
@@ -321,5 +331,34 @@ describe("groupOf", () => {
 
     expect(groupOf(series(1, "A", "B", 1), groups)?.title).toBe("Group A");
     expect(groupOf({ ...series(1, "A", "B", 1), phase: "Playoffs" }, groups)).toBeUndefined();
+  });
+});
+
+describe("selectedGroup", () => {
+  const tables = groupTables(
+    [aGroup({ title: "Group A" }), aGroup({ title: "Group B" })],
+    played4,
+    NOON,
+  );
+
+  it("keeps the reader's pick while that group still has a table", () => {
+    expect(selectedGroup("Group B", tables)).toBe("Group B");
+  });
+
+  it("falls back to the first group once the picked one is gone, so a phone never shows none", () => {
+    expect(selectedGroup("Group B", tables.slice(0, 1))).toBe("Group A");
+    expect(selectedGroup(null, tables)).toBe("Group A");
+  });
+});
+
+describe("inRankedTable", () => {
+  it("is true only for a series in a group whose table the page shows", () => {
+    const shown = groupTables([aGroup()], played4, NOON);
+    const refused = groupTables([aGroup({ tiebreakers: ["matchwins"] })], played4, NOON);
+    const stray = { ...series(9, "A", "B", 0), id: "elsewhere_M1" };
+
+    expect(inRankedTable(series(1, "A", "B", 1), shown)).toBe(true);
+    expect(inRankedTable(series(1, "A", "B", 1), refused)).toBe(false);
+    expect(inRankedTable(stray, shown)).toBe(false);
   });
 });

@@ -3,9 +3,9 @@ import { useState } from "react";
 import { Tabs, TabsList } from "@/components/motion/tabs";
 import { PLAYOFFS } from "@/domain/bracket";
 import { matchState } from "@/domain/matchState";
-import type { Group, IgniteEvent, Match, Snapshot } from "@/domain/model";
+import type { IgniteEvent, Match, Snapshot } from "@/domain/model";
 import { byKickoff, groupDays, type StagePhase, visibleTab } from "@/domain/stagePhase";
-import { groupTables, splitByGroup } from "@/domain/standings";
+import { type GroupTable, inRankedTable, splitByGroup } from "@/domain/standings";
 
 import { MatchCard } from "./MatchCard";
 import { useMatchView } from "./spoilers";
@@ -17,10 +17,12 @@ function LiveNote({
   match,
   now,
   matches,
+  counts,
 }: {
   match: Match;
   now: number;
   matches: readonly Match[];
+  counts: boolean;
 }) {
   const { side1, side2, revealed } = useMatchView(match, now, matches);
 
@@ -34,21 +36,21 @@ function LiveNote({
       {leader
         ? `${leader} lead ${Math.max(a, b)}-${Math.min(a, b)} on maps.`
         : `Level at ${a}-${b} on maps.`}{" "}
-      It counts in the table when the series ends.
+      {counts && "It counts in the table when the series ends."}
     </p>
   );
 }
 
 export function GroupStage({
   event,
-  groups,
+  tables,
   matches,
   snapshot,
   now,
   phase,
 }: {
   event: IgniteEvent;
-  groups: Group[];
+  tables: GroupTable[];
   matches: Match[];
   snapshot: Snapshot;
   now: number;
@@ -60,10 +62,9 @@ export function GroupStage({
   const [picked, setPicked] = useState<string | null>(null);
   const day = current ? visibleTab(picked, days, current) : null;
   const live = stage.filter((m) => matchState(m, now).status === "live");
-  const tables = groupTables(groups, matches, now);
 
   const byDay = splitByGroup(
-    groups,
+    tables.map((t) => t.group),
     stage.filter((m) => m.round === day),
   );
 
@@ -88,7 +89,12 @@ export function GroupStage({
             {live.map((m) => (
               <div key={m.id}>
                 {card(m)}
-                <LiveNote match={m} now={now} matches={snapshot.matches} />
+                <LiveNote
+                  match={m}
+                  now={now}
+                  matches={snapshot.matches}
+                  counts={inRankedTable(m, tables)}
+                />
               </div>
             ))}
           </div>
@@ -113,7 +119,7 @@ export function GroupStage({
               )}
             </div>
           )}
-          <StandingsPanel tables={tables} snapshot={snapshot} now={now} />
+          <StandingsPanel tables={tables} snapshot={snapshot} />
         </section>
       )}
 

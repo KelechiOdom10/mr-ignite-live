@@ -15,6 +15,8 @@ export function RegionTag({
   groups?: readonly Group[];
   className?: string;
 }) {
+  if (!event) return null;
+
   const { key, text } = regionLabel(
     event?.region,
     match && groups ? (groupOf(match, groups)?.title ?? null) : null,

@@ -38,6 +38,8 @@ export interface GroupTable {
   supported: boolean;
   /** True when teams level on every tiebreaker share the cutoff. */
   cutoffTied: boolean;
+  /** True when the schedule is whole and every series in it has a result. */
+  complete: boolean;
   rows: StandingRow[];
 }
 
@@ -143,7 +145,7 @@ function tableFor(group: Group, matches: readonly Match[], now: number): GroupTa
     group.tiebreakers.length === SUPPORTED_TIEBREAKERS.length &&
     SUPPORTED_TIEBREAKERS.every((rule, i) => rule === group.tiebreakers[i]);
 
-  if (!supported) return { group, supported, cutoffTied: false, rows: [] };
+  if (!supported) return { group, supported, cutoffTied: false, complete: false, rows: [] };
 
   const inGroup = matches.filter(
     (m) =>
@@ -313,7 +315,7 @@ function tableFor(group: Group, matches: readonly Match[], now: number): GroupTa
     rows[group.advance - 1] !== undefined &&
     rows[group.advance - 1]?.place === rows[group.advance]?.place;
 
-  return { group, supported, cutoffTied, rows };
+  return { group, supported, cutoffTied, complete: sound && remaining.length === 0, rows };
 }
 
 export function groupOf(match: Match, groups: readonly Group[]): Group | undefined {
@@ -339,6 +341,19 @@ export function splitByGroup(groups: readonly Group[], matches: readonly Match[]
     })),
     other: matches.filter((m) => groupOf(m, groups) === undefined),
   };
+}
+
+/** The group tab to show: the reader's pick while that group still has a table, else the first. */
+export function selectedGroup(
+  picked: string | null,
+  tables: readonly GroupTable[],
+): string | undefined {
+  return tables.find((t) => t.group.title === picked)?.group.title ?? tables[0]?.group.title;
+}
+
+/** Whether a series counts in a table the page shows, which an unsupported or missing group does not. */
+export function inRankedTable(match: Match, tables: readonly GroupTable[]): boolean {
+  return tables.some((t) => t.supported && groupOf(match, [t.group]) !== undefined);
 }
 
 /** The number of rows above the cutoff line, or null when no line can be drawn without splitting a tie. */

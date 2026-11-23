@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { aMap, aMatch } from "../../test/builders";
 import { defaultStageTab, groupDays, stagePhase, visibleTab } from "./stagePhase";
+import { groupTables } from "./standings";
 
 const NOW = Date.parse("2026-11-23T19:55:00Z");
 
@@ -77,6 +78,66 @@ describe("stagePhase and the card timeout", () => {
 
     expect(stagePhase([first, walkover], NOW)).toBe("groups");
     expect(stagePhase([first, { ...walkover, awarded: 1 }], NOW)).toBe("between");
+  });
+});
+
+describe("stagePhase with the group tables", () => {
+  const group = {
+    eventId: "MR Ignite/2026/Stage 2/Americas",
+    title: "Group A",
+    matchGroups: ["g"],
+    advance: 1,
+    teams: ["A", "B", "C"],
+    tiebreakers: ["matchwins", "matchlosses", "h2hlegacy.matchwins", "gamediff"],
+  };
+
+  const pair = (n: number, a: string, b: string) => ({
+    ...played("g_M" + n, "Day 1", "2026-11-23T13:00:00Z"),
+    team1: { name: a, short: a },
+    team2: { name: b, short: b },
+  });
+
+  const seeded = bracket("2026-11-27T11:00:00Z", []);
+
+  it("stays on the groups while a fixture the page lists is missing, though every series shown is done", () => {
+    const missing = [pair(1, "A", "B"), pair(2, "A", "C"), seeded];
+
+    expect(stagePhase(missing, NOW)).toBe("between");
+    expect(stagePhase(missing, NOW, groupTables([group], missing, NOW))).toBe("groups");
+  });
+
+  it("is between the stages once the schedule is whole and every series has a result", () => {
+    const whole = [pair(1, "A", "B"), pair(2, "A", "C"), pair(3, "B", "C"), seeded];
+
+    expect(stagePhase(whole, NOW, groupTables([group], whole, NOW))).toBe("between");
+  });
+
+  it("does not wait on a group whose rules we don't apply", () => {
+    const odd = { ...group, tiebreakers: ["matchwins"] };
+    const done = [pair(1, "A", "B"), pair(2, "A", "C"), pair(3, "B", "C"), seeded];
+
+    expect(stagePhase(done, NOW, groupTables([odd], done, NOW))).toBe("between");
+  });
+});
+
+describe("what starts the playoffs", () => {
+  const settled = [played("g_M1", "Day 1", "2026-11-23T13:00:00Z")];
+
+  const walkover = aMatch({
+    id: "b_R1M1",
+    phase: "Playoffs",
+    startsAt: "2026-11-30T11:00:00Z",
+    team1: null,
+    team2: null,
+    markedFinished: true,
+  });
+
+  it("is not a future walkover the page marks finished without naming a winner", () => {
+    expect(stagePhase([...settled, walkover], NOW)).toBe("between");
+  });
+
+  it("is a walkover the page awards to a named side", () => {
+    expect(stagePhase([...settled, { ...walkover, awarded: 1 }], NOW)).toBe("playoffs");
   });
 });
 

@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/motion/ta
 import { participantsOf } from "@/domain/participants";
 import { matchesOfEvent } from "@/domain/scope";
 import { defaultStageTab, groupDays, stagePhase, visibleTab } from "@/domain/stagePhase";
+import { groupTables } from "@/domain/standings";
 import { AppShell } from "@/ui/AppShell";
 import { Bracket } from "@/ui/Bracket";
 import { DayHeading, UNDATED_DAY_LABEL } from "@/ui/DayHeading";
@@ -45,7 +46,8 @@ export default function EventPage({ snapshot: initial, eventId }: Props) {
   const lower = playoffs.filter((m) => /lower/i.test(m.round));
   const finals = playoffs.filter((m) => !/upper|lower/i.test(m.round));
   const eventGroups = snapshot.groups.filter((g) => g.eventId === event.id);
-  const phase = stagePhase(matches, now);
+  const tables = groupTables(eventGroups, matches, now);
+  const phase = stagePhase(matches, now, tables);
   const seeded = playoffs.some((m) => m.team1 || m.team2);
 
   const tabs = [
@@ -137,7 +139,7 @@ export default function EventPage({ snapshot: initial, eventId }: Props) {
             <GroupStage
               key={event.id}
               event={event}
-              groups={eventGroups}
+              tables={tables}
               matches={matches}
               snapshot={snapshot}
               now={now}

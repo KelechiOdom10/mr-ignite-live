@@ -1,23 +1,40 @@
 import { PLAYOFFS } from "./bracket";
 import { matchState } from "./matchState";
 import type { Match } from "./model";
-import { hasResult } from "./standings";
+import { type GroupTable, hasResult } from "./standings";
 
 export type StagePhase = "groups" | "between" | "playoffs";
 
 export type StageTab = "groups" | "playoffs";
 
+function playoffsStarted(match: Match, now: number): boolean {
+  const state = matchState(match, now);
+
+  return (
+    match.phase === PLAYOFFS &&
+    (state.playedMaps.length > 0 ||
+      hasResult(match) ||
+      (state.status === "live" && !!match.team1 && !!match.team2))
+  );
+}
+
 /**
  * Where an event is: still in its group stage, waiting between the stages, or in the playoffs.
- * A group series counts as done only on a real result, never because the card timed out, and
- * seeding a playoff slot early doesn't count; only a playoff series that has started does.
+ * The groups are over only when every group series has a real result and every table the page
+ * gives is whole, never because a card timed out or a fixture is missing. The playoffs have
+ * started only when a series has maps, a result or two teams on a live card; a seeded slot or
+ * a walkover with no winner doesn't count.
  */
-export function stagePhase(matches: readonly Match[], now: number): StagePhase {
-  const started = (m: Match) => matchState(m, now).status !== "upcoming";
+export function stagePhase(
+  matches: readonly Match[],
+  now: number,
+  tables: readonly GroupTable[] = [],
+): StagePhase {
+  if (matches.some((m) => playoffsStarted(m, now))) return "playoffs";
 
-  if (matches.some((m) => m.phase === PLAYOFFS && started(m))) return "playoffs";
-
-  const groupsLeft = matches.some((m) => m.phase !== PLAYOFFS && !hasResult(m, now));
+  const groupsLeft =
+    matches.some((m) => m.phase !== PLAYOFFS && !hasResult(m)) ||
+    tables.some((t) => t.supported && !t.complete);
 
   return groupsLeft ? "groups" : "between";
 }

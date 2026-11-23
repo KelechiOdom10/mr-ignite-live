@@ -2,9 +2,8 @@ import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/motion/tabs";
-import { matchState } from "@/domain/matchState";
-import type { Match, Snapshot } from "@/domain/model";
-import { containerOf, cutoffAfter, type GroupTable, type StandingRow } from "@/domain/standings";
+import type { Snapshot } from "@/domain/model";
+import { cutoffAfter, type GroupTable, selectedGroup, type StandingRow } from "@/domain/standings";
 import { cn } from "@/lib/utils";
 
 import { useSpoilersHidden } from "./spoilers";
@@ -35,16 +34,6 @@ function levelTeams(rows: StandingRow[]): string[] {
     const round = level[0]?.tiebreakRound;
 
     return `${listNames(level.map((r) => r.team.name))}${round ? ` (meet on ${round})` : ""}`;
-  });
-}
-
-function liveSeries(table: GroupTable, matches: readonly Match[], now: number): string[] {
-  return matches.flatMap((m) => {
-    if (m.phase !== "Group Stage" || m.eventId !== table.group.eventId) return [];
-
-    if (!table.group.matchGroups.includes(containerOf(m)) || !m.team1 || !m.team2) return [];
-
-    return matchState(m, now).status === "live" ? [m.team1.name + " vs " + m.team2.name] : [];
   });
 }
 
@@ -110,12 +99,10 @@ function Row({
 export function GroupTableCard({
   table,
   snapshot,
-  now,
   compact = false,
 }: {
   table: GroupTable;
   snapshot: Snapshot;
-  now: number;
   compact?: boolean;
 }) {
   const { group, rows } = table;
@@ -129,7 +116,6 @@ export function GroupTableCard({
       : null;
 
   const decided = rows.some((r) => r.status);
-  const live = liveSeries(table, snapshot.matches, now);
   const level = levelTeams(rows);
   const columns = compact ? 4 : 5;
 
@@ -211,18 +197,12 @@ export function GroupTableCard({
           ])}
         </tbody>
       </table>
-      {(live.length > 0 || level.length > 0 || levelAtCutoff || !compact) && (
+      {(level.length > 0 || levelAtCutoff || !compact) && (
         <div className="space-y-2 border-t px-3 py-3 text-xs text-muted-foreground">
           {levelAtCutoff && (
             <p className="text-foreground">
               Top {group.advance} go through, but {levelAtCutoff} are level for the last place, so
               there is no line yet.
-            </p>
-          )}
-          {live.length > 0 && (
-            <p className="flex items-start gap-2 text-foreground">
-              <LiveDot className="mt-1 shrink-0" />
-              <span>Live now: {listNames(live)}. It counts when the series ends.</span>
             </p>
           )}
           {level.length > 0 && <p>Level on series and maps: {level.join(", ")}.</p>}
@@ -252,19 +232,17 @@ export function GroupTableCard({
 export function StandingsPanel({
   tables,
   snapshot,
-  now,
   compact = false,
   className,
 }: {
   tables: GroupTable[];
   snapshot: Snapshot;
-  now: number;
   compact?: boolean;
   className?: string;
 }) {
   const hidden = useSpoilersHidden();
   const [picked, setPicked] = useState<string | null>(null);
-  const selected = picked ?? tables[0]?.group.title;
+  const selected = selectedGroup(picked, tables);
 
   if (tables.length === 0) return null;
 
@@ -297,7 +275,7 @@ export function StandingsPanel({
       </Tabs>
       {tables.map((t) => (
         <div key={t.group.title} className={cn(t.group.title !== selected && "hidden lg:block")}>
-          <GroupTableCard table={t} snapshot={snapshot} now={now} compact={compact} />
+          <GroupTableCard table={t} snapshot={snapshot} compact={compact} />
         </div>
       ))}
     </div>
