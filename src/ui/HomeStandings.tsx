@@ -34,7 +34,7 @@ export function HomeStandings({
               href={`/event/${eventSlug(event.id)}`}
               className="-mx-2.5 -my-3.5 px-2.5 py-3.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
             >
-              See all
+              See all<span className="sr-only"> {event.stage} standings</span>
             </Link>
           </div>
           <StandingsPanel

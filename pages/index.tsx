@@ -209,7 +209,7 @@ export default function HomePage({ snapshot: initial, view }: Props) {
           )}
         </div>
 
-        <aside className="space-y-8">
+        <aside aria-label="Standings and events" className="space-y-8">
           <HomeStandings
             standings={standings}
             snapshot={snapshot}
