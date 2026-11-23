@@ -110,8 +110,22 @@ export default function EventPage({ snapshot: initial, eventId }: Props) {
         variant="segment"
       >
         <TabsList aria-label="Phase" className="mb-6">
-          {playoffs.length > 0 && <TabsTrigger value="playoffs">Playoffs</TabsTrigger>}
-          {groups.length > 0 && <TabsTrigger value="groups">Group stage</TabsTrigger>}
+          {playoffs.length > 0 && (
+            <TabsTrigger
+              value="playoffs"
+              className="focus-visible:outline-solid focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+            >
+              Playoffs
+            </TabsTrigger>
+          )}
+          {groups.length > 0 && (
+            <TabsTrigger
+              value="groups"
+              className="focus-visible:outline-solid focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+            >
+              Group stage
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="playoffs">

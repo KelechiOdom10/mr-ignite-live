@@ -270,7 +270,7 @@ export function StandingsPanel({
             <TabsTrigger
               key={t.group.title}
               value={t.group.title}
-              className="min-h-11 flex-1 rounded-lg focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+              className="min-h-11 flex-1 rounded-lg focus-visible:outline-solid focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
             >
               {t.group.title}
             </TabsTrigger>
