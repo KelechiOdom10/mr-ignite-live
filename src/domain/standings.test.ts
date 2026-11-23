@@ -7,8 +7,14 @@ describe("groupTables certainty", () => {
   const group: Group = { eventId: "e", title: "Group X", matchGroups: ["list"], advance: 2 };
   const team = (name: string) => ({ name, short: name });
 
-  function series(n: number, t1: string, t2: string, winner: 0 | 1 | 2): Match {
-    const wins: MapWinner[] = winner === 0 ? [] : [winner, winner];
+  function series(
+    n: number,
+    t1: string,
+    t2: string,
+    winner: 0 | 1 | 2,
+    played: MapWinner[] = winner === 0 ? [] : [winner, winner],
+  ): Match {
+    const wins = played;
 
     return {
       id: `list_M${n}`,
@@ -63,5 +69,24 @@ describe("groupTables certainty", () => {
       C: null,
       D: null,
     });
+  });
+
+  it("settles the cutoff on map difference once every series is played, though the teams are level on series", () => {
+    const finished = [...fixtures, series(5, "D", "B", 1, [2, 1, 1]), series(6, "C", "D", 1)];
+
+    expect(status(finished)).toEqual({ A: "through", B: "through", C: "out", D: "out" });
+  });
+
+  it("leaves teams level on every tiebreaker across the cutoff unmarked after the last series", () => {
+    const level = [
+      series(1, "A", "B", 1),
+      series(2, "A", "C", 1),
+      series(3, "A", "D", 1),
+      series(4, "B", "C", 1),
+      series(5, "C", "D", 1),
+      series(6, "D", "B", 1),
+    ];
+
+    expect(status(level)).toEqual({ A: "through", B: null, C: null, D: null });
   });
 });

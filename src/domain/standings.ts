@@ -211,6 +211,13 @@ function tableFor(group: Group, matches: readonly Match[], now: number): GroupTa
       )?.round ?? null;
   }
 
+  if (remaining.length === 0) {
+    for (const row of rows) {
+      if (row.place + row.tiedWith.length <= group.advance) row.status = "through";
+      else if (row.place > group.advance) row.status = "out";
+    }
+  }
+
   return { group, rows };
 }
 
