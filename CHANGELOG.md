@@ -4,6 +4,8 @@ Newest first. One line per change: the outcome first, then the PR.
 
 ## Unreleased
 
+- **The Group A / Group B switch is compact on a phone:** it no longer stretches across the screen, and is a little shorter, like the Playoffs / Group stage switch (#79).
+- **The group standings show up on the live Grand Finals page and home:** they were missing because Liquipedia changed how it lists each day's matches (#77).
 - **Home shows the group standings while a group stage runs:** beside Events on a laptop, under Live now on a phone (#75).
 - **The Grand Finals page opens on the group standings:** live series first, both tables beside today's matches, and Through or Out once it is certain (#74).
 - **INTL is back on international events:** on cards, chips and event rows, and group matches show their group (Group A, Group B) in its place (#74).

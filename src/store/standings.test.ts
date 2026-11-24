@@ -26,6 +26,33 @@ function rows(table: ReturnType<typeof groupTables>[number]) {
   ]);
 }
 
+describe("groupTables on the Group Stage page as recorded on day 2", () => {
+  const title = "MR Ignite/2026/Grand Finals/Group Stage";
+  const text = recordedWikitext(title, "group-stage-day2.json");
+
+  const tables = groupTables(
+    parseGroups(title, text),
+    parsePageMatches(title, text),
+    Date.parse("2026-11-24T19:00:00Z"),
+  );
+
+  it("builds a table for both groups instead of showing none", () => {
+    expect(tables.map((t) => [t.group.title, t.supported, t.rows.length])).toEqual([
+      ["Group A", true, 6],
+      ["Group B", true, 6],
+    ]);
+  });
+
+  it("marks the teams the results already settle", () => {
+    const status = (name: string) =>
+      tables.flatMap((t) => t.rows).find((r) => r.team.name === name)?.status;
+
+    expect(status("Swamp Gaming")).toBe("through");
+    expect(status("Liquid Citadel")).toBe("through");
+    expect(status("Aconyx")).toBe("out");
+  });
+});
+
 describe("groupTables on the recorded Grand Finals group stage", () => {
   const { groups, matches } = recorded();
   const [a, b] = groupTables(groups, matches, NOW);

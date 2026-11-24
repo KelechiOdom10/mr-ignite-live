@@ -92,6 +92,56 @@ describe("parsePageMatches on the recorded Grand Finals pages", () => {
   });
 });
 
+describe("parseGroups on the Group Stage page as Liquipedia writes it on day 2", () => {
+  const title = "MR Ignite/2026/Grand Finals/Group Stage";
+  const text = recordedWikitext(title, "group-stage-day2.json");
+
+  it("reads each day's match list from its |roundN= template, which replaced the single |matchgroups= list", () => {
+    expect(text).not.toMatch(/\|matchgroups=\w+, /);
+    expect(parseGroups(title, text)).toEqual([
+      expect.objectContaining({
+        title: "Group A",
+        matchGroups: ["fotbOpL194", "urVIIppQbo", "u22gnFC1Hy"],
+        advance: 4,
+        teams: [
+          "Aconyx",
+          "FlyQuest",
+          "Gen.G Esports",
+          "Natus Vincere",
+          "aimerz Esports",
+          "Swamp Gaming",
+        ],
+      }),
+      expect.objectContaining({
+        title: "Group B",
+        matchGroups: ["FzNxVpYvsF", "OiUobQFvdc", "k0E5UklMYk"],
+        advance: 4,
+      }),
+    ]);
+  });
+
+  it("reads the days in order whatever order the page writes them", () => {
+    const swapped = text.replace(
+      "|round1={{Round|title=Day 1|matchgroups=fotbOpL194}}\n|round2={{Round|title=Day 2|matchgroups=urVIIppQbo}}",
+      "|round2={{Round|title=Day 2|matchgroups=urVIIppQbo}}\n|round1={{Round|title=Day 1|matchgroups=fotbOpL194}}",
+    );
+
+    expect(parseGroups(title, swapped)[0]?.matchGroups).toEqual([
+      "fotbOpL194",
+      "urVIIppQbo",
+      "u22gnFC1Hy",
+    ]);
+  });
+
+  it("covers every match list the page has, so no series falls outside a group", () => {
+    const ids = new Set(parseGroups(title, text).flatMap((g) => g.matchGroups));
+    const lists = parsePageMatches(title, text).map((m) => m.id.slice(0, m.id.indexOf("_")));
+
+    expect(lists).toHaveLength(30);
+    expect(lists.every((list) => ids.has(list))).toBe(true);
+  });
+});
+
 describe("parseGroups on the recorded Grand Finals group stage", () => {
   const title = "MR Ignite/2026/Grand Finals/Group Stage";
   const text = recordedWikitext(title, "grand-finals-matches.json");
