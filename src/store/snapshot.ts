@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { StoredSnapshotSchema, type PageData, type StoredSnapshot } from "@/domain/model";
 import { LiquipediaBudgetSpentError, type LiquipediaRun, type Revision } from "@/liquipedia/client";
-import { parseEventInfo, parsePageMatches } from "@/liquipedia/parse";
+import { parseEventInfo, parseGroups, parsePageMatches } from "@/liquipedia/parse";
 import { fetchTeamInfo } from "@/liquipedia/teams";
 
 import { kvKey, type KvStore } from "./kv";
@@ -77,6 +77,7 @@ async function fetchPages(
       updatedAt: rev.timestamp,
       event,
       matches: parsePageMatches(title, text),
+      groups: parseGroups(title, text),
     };
   }
 

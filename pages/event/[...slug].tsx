@@ -1,15 +1,20 @@
+import { useState } from "react";
+
 import { NotFoundGlitch } from "@/components/motion/not-found";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/motion/tabs";
 import { participantsOf } from "@/domain/participants";
 import { matchesOfEvent } from "@/domain/scope";
+import { defaultStageTab, groupDays, stagePhase, visibleTab } from "@/domain/stagePhase";
+import { groupTables } from "@/domain/standings";
 import { AppShell } from "@/ui/AppShell";
 import { Bracket } from "@/ui/Bracket";
 import { DayHeading, UNDATED_DAY_LABEL } from "@/ui/DayHeading";
 import { EventParticipants, PrizeDistribution } from "@/ui/EventPrizes";
 import { EventIcon } from "@/ui/EventRow";
+import { GroupStage } from "@/ui/GroupStage";
 import { MatchCard } from "@/ui/MatchCard";
 import { RegionLead } from "@/ui/RegionTag";
-import { formatShortRange, groupByDay, useHydrated } from "@/ui/time";
+import { dayKey, formatShortRange, groupByDay, useHydrated } from "@/ui/time";
 import { useLiveSnapshot } from "@/ui/useLiveSnapshot";
 
 import type { Props } from "./[...slug].server";
@@ -17,6 +22,7 @@ import type { Props } from "./[...slug].server";
 export default function EventPage({ snapshot: initial, eventId }: Props) {
   const { snapshot, connection, now } = useLiveSnapshot(initial, { event: eventId ?? undefined });
   const hydrated = useHydrated();
+  const [picked, setPicked] = useState<{ eventId: string | null; tab: string } | null>(null);
   const event = snapshot.events.find((e) => e.id === eventId);
 
   if (!event) {
@@ -39,7 +45,28 @@ export default function EventPage({ snapshot: initial, eventId }: Props) {
   const upper = playoffs.filter((m) => /upper/i.test(m.round));
   const lower = playoffs.filter((m) => /lower/i.test(m.round));
   const finals = playoffs.filter((m) => !/upper|lower/i.test(m.round));
-  const defaultTab = playoffs.some((m) => m.team1 || m.team2) ? "playoffs" : "groups";
+  const eventGroups = snapshot.groups.filter((g) => g.eventId === event.id);
+  const tables = groupTables(eventGroups, matches, now);
+  const phase = stagePhase(matches, now, tables);
+  const seeded = playoffs.some((m) => m.team1 || m.team2);
+
+  const tabs = [
+    ...(playoffs.length > 0 ? ["playoffs"] : []),
+    ...(groups.length > 0 ? ["groups"] : []),
+  ];
+
+  const wanted = defaultStageTab(phase, seeded);
+
+  const tab = visibleTab(
+    picked?.eventId === event.id ? picked.tab : null,
+    tabs,
+    tabs.includes(wanted) ? wanted : (tabs[0] ?? wanted),
+  );
+
+  const { days, current } = groupDays(groups, now, hydrated ? dayKey : undefined);
+
+  const dayNumber =
+    phase === "groups" && /^Day \d+$/.test(current ?? "") ? current?.toLowerCase() : null;
 
   return (
     <AppShell snapshot={snapshot} connection={connection} now={now}>
@@ -49,6 +76,14 @@ export default function EventPage({ snapshot: initial, eventId }: Props) {
           <h1 className="text-2xl font-semibold tracking-tight">{event.name}</h1>
           <p className="mt-1 flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
             <RegionLead event={event} />
+            {eventGroups.length > 0 && dayNumber && (
+              <>
+                <span>
+                  Group stage, {dayNumber} of {days.length}
+                </span>
+                <span aria-hidden>·</span>
+              </>
+            )}
             <span>{formatShortRange(event.startDate, event.endDate)}</span>
             {event.prizePoolUsd ? (
               <>
@@ -69,10 +104,28 @@ export default function EventPage({ snapshot: initial, eventId }: Props) {
         </div>
       </div>
 
-      <Tabs defaultValue={defaultTab} variant="segment">
+      <Tabs
+        value={tab}
+        onValueChange={(value) => setPicked({ eventId: event.id, tab: value })}
+        variant="segment"
+      >
         <TabsList aria-label="Phase" className="mb-6">
-          {playoffs.length > 0 && <TabsTrigger value="playoffs">Playoffs</TabsTrigger>}
-          {groups.length > 0 && <TabsTrigger value="groups">Group stage</TabsTrigger>}
+          {playoffs.length > 0 && (
+            <TabsTrigger
+              value="playoffs"
+              className="focus-visible:outline-solid focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+            >
+              Playoffs
+            </TabsTrigger>
+          )}
+          {groups.length > 0 && (
+            <TabsTrigger
+              value="groups"
+              className="focus-visible:outline-solid focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+            >
+              Group stage
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="playoffs">
@@ -96,29 +149,41 @@ export default function EventPage({ snapshot: initial, eventId }: Props) {
         </TabsContent>
 
         <TabsContent value="groups">
-          <div className="space-y-6">
-            {groupByDay(groups, (m) => m.startsAt, hydrated).map((group) => (
-              <div key={group.key} className="space-y-3">
-                <DayHeading
-                  date={group.date}
-                  now={now}
-                  undatedLabel={group.key === "tbd" ? UNDATED_DAY_LABEL : undefined}
-                />
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  {group.items.map((m) => (
-                    <MatchCard
-                      key={m.id}
-                      match={m}
-                      event={event}
-                      snapshot={snapshot}
-                      now={now}
-                      footer="round"
-                    />
-                  ))}
+          {eventGroups.length > 0 ? (
+            <GroupStage
+              key={event.id}
+              event={event}
+              tables={tables}
+              matches={matches}
+              snapshot={snapshot}
+              now={now}
+              phase={phase}
+            />
+          ) : (
+            <div className="space-y-6">
+              {groupByDay(groups, (m) => m.startsAt, hydrated).map((group) => (
+                <div key={group.key} className="space-y-3">
+                  <DayHeading
+                    date={group.date}
+                    now={now}
+                    undatedLabel={group.key === "tbd" ? UNDATED_DAY_LABEL : undefined}
+                  />
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {group.items.map((m) => (
+                      <MatchCard
+                        key={m.id}
+                        match={m}
+                        event={event}
+                        snapshot={snapshot}
+                        now={now}
+                        footer="round"
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 

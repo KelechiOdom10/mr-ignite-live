@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { GroupSchema } from "@/domain/model";
+
 import { liquipediaFixture, recordedWikitext } from "../../test/fixtures";
 import {
   eventIdFor,
   parseEventInfo,
+  parseGroups,
   parsePageMatches,
   parsePrizePool,
   parseTeamShortExpansion,
@@ -86,6 +89,127 @@ describe("parsePageMatches on the recorded Grand Finals pages", () => {
   it("converts the CET kick-off to UTC", () => {
     expect(groups[0]?.startsAt).toBe("2026-11-23T13:00:00.000Z");
     expect(playoffs.find((m) => m.id.endsWith("_R1M1"))?.startsAt).toBe("2026-11-27T11:00:00.000Z");
+  });
+});
+
+describe("parseGroups on the recorded Grand Finals group stage", () => {
+  const title = "MR Ignite/2026/Grand Finals/Group Stage";
+  const text = recordedWikitext(title, "grand-finals-matches.json");
+
+  it("reads each group's match lists and how many places advance, filed under the parent event", () => {
+    expect(parseGroups(title, text)).toEqual([
+      {
+        eventId: "MR Ignite/2026/Grand Finals",
+        title: "Group A",
+        matchGroups: ["fotbOpL194", "urVIIppQbo", "u22gnFC1Hy"],
+        advance: 4,
+        teams: [
+          "Aconyx",
+          "FlyQuest",
+          "Gen.G Esports",
+          "Natus Vincere",
+          "aimerz Esports",
+          "Swamp Gaming",
+        ],
+        tiebreakers: ["matchwins", "matchlosses", "h2hlegacy.matchwins", "gamediff"],
+      },
+      {
+        eventId: "MR Ignite/2026/Grand Finals",
+        title: "Group B",
+        matchGroups: ["FzNxVpYvsF", "OiUobQFvdc", "k0E5UklMYk"],
+        advance: 4,
+        teams: ["100 Thieves", "Monarch", "RAD", "Reject", "Liquid Citadel", "Virtus.pro"],
+        tiebreakers: ["matchwins", "matchlosses", "h2hlegacy.matchwins", "gamediff"],
+      },
+    ]);
+  });
+
+  it("finds every group's match lists among the parsed matches", () => {
+    const ids = new Set(parseGroups(title, text).flatMap((g) => g.matchGroups));
+    const lists = parsePageMatches(title, text).map((m) => m.id.slice(0, m.id.indexOf("_")));
+    expect(lists.every((list) => ids.has(list))).toBe(true);
+  });
+
+  it("keeps the order the page lists its tiebreakers in, so a different order can be refused", () => {
+    const swapped = text.replace(
+      "{{Json|matchwins|matchlosses|h2hlegacy.matchwins|gamediff}}",
+      "{{Json|matchwins|matchlosses|gamediff|h2hlegacy.matchwins}}",
+    );
+
+    expect(parseGroups(title, swapped)[0]?.tiebreakers).toEqual([
+      "matchwins",
+      "matchlosses",
+      "gamediff",
+      "h2hlegacy.matchwins",
+    ]);
+  });
+
+  it("drops a group whose cutoff does not start at first place", () => {
+    const odd = text.replace("bg=1-4=up, 5-6=down", "bg=2-4=up");
+
+    expect(parseGroups(title, odd).map((g) => g.title)).toEqual(["Group B"]);
+  });
+
+  it("reads a cutoff written as several ranges, and drops one with a gap rather than under-count it", () => {
+    const split = text.replace("bg=1-4=up, 5-6=down", "bg=1-2=up, 3-4=up, 5-6=down");
+    const gap = text.replace("bg=1-4=up, 5-6=down", "bg=1-2=up, 4-5=up");
+
+    expect(parseGroups(title, split).find((g) => g.title === "Group A")?.advance).toBe(4);
+    expect(parseGroups(title, gap).map((g) => g.title)).toEqual(["Group B"]);
+  });
+
+  it("keeps a roster slot the page leaves blank, so a shorter roster cannot look complete", () => {
+    const blank = text.replace("|{{TeamOpponent|Swamp Gaming}}\n", "|\n");
+    const teams = parseGroups(title, blank).find((g) => g.title === "Group A")?.teams;
+
+    expect(teams).toHaveLength(6);
+    expect(teams).toContain("");
+  });
+
+  it("drops only the group whose cutoff range runs backwards, and never writes an invalid one", () => {
+    const reversed = text.replace("bg=1-4=up, 5-6=down", "bg=1-0=up, 5-6=down");
+    const groups = parseGroups(title, reversed);
+
+    expect(groups.map((g) => g.title)).toEqual(["Group B"]);
+    expect(groups.every((g) => GroupSchema.safeParse(g).success)).toBe(true);
+  });
+
+  it("reads a blank tiebreaker as no rules at all, which the table then refuses", () => {
+    const blankRule = text.replace(
+      "{{Json|matchwins|matchlosses|h2hlegacy.matchwins|gamediff}}",
+      "{{Json|matchwins||h2hlegacy.matchwins|gamediff}}",
+    );
+
+    const groups = parseGroups(title, blankRule);
+
+    expect(groups.find((g) => g.title === "Group A")?.tiebreakers).toEqual([]);
+    expect(groups.every((g) => GroupSchema.safeParse(g).success)).toBe(true);
+  });
+
+  it("returns no groups for a page that has no standings", () => {
+    expect(parseGroups(AMERICAS_GROUPS, recordedWikitext(AMERICAS_GROUPS))).toEqual([]);
+  });
+});
+
+describe("parsePageMatches awards", () => {
+  const list = (match: string) =>
+    "{{Matchlist|id=abc|title=Day 1\n|M1={{Match|bestof=3|opponent1={{TeamOpponent|A}}|opponent2={{TeamOpponent|B}}" +
+    match +
+    "}}\n}}";
+
+  const parse = (match: string) =>
+    parsePageMatches("MR Ignite/2026/Grand Finals/Group Stage", list(match))[0];
+
+  it("keeps who a finished series was awarded to when no map was played", () => {
+    expect(parse("|finished=true|winner=2")?.awarded).toBe(2);
+  });
+
+  it("ignores a winner on a series the page does not mark finished", () => {
+    expect(parse("|winner=2")?.awarded).toBeUndefined();
+  });
+
+  it("leaves a finished series with no named winner unresolved", () => {
+    expect(parse("|finished=true")?.awarded).toBeUndefined();
   });
 });
 

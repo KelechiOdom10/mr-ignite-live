@@ -40,6 +40,7 @@ function aSnapshot(events: SnapshotEvent[], matches: Snapshot["matches"]): Snaps
     liquipediaUpdatedAt: null,
     events,
     matches,
+    groups: [],
     teams: {},
   };
 }

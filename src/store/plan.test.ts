@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { PageData, Snapshot, StoredSnapshot } from "@/domain/model";
 import type { MatchStats } from "@/domain/stats";
-import { parseEventInfo, parsePageMatches } from "@/liquipedia/parse";
+import { parseEventInfo, parseGroups, parsePageMatches } from "@/liquipedia/parse";
 
 import { aMap, aMatch } from "../../test/builders";
 import { recordedWikitext } from "../../test/fixtures";
@@ -19,7 +19,14 @@ import {
 } from "./plan";
 
 function aPage(revid: number, overrides: Partial<PageData> = {}): PageData {
-  return { revid, updatedAt: "2026-10-16T00:00:00Z", event: null, matches: [], ...overrides };
+  return {
+    revid,
+    updatedAt: "2026-10-16T00:00:00Z",
+    event: null,
+    matches: [],
+    groups: [],
+    ...overrides,
+  };
 }
 
 describe("planSync", () => {
@@ -94,6 +101,24 @@ describe("toSnapshot", () => {
     expect(snapshot.matches[0]?.eventId).toBe("MR Ignite/2026/Stage 2/Americas");
     expect(snapshot.liquipediaUpdatedAt).toBe("2026-10-16T23:00:00Z");
   });
+
+  it("carries every page's groups, so the standings reach the client", () => {
+    const group = {
+      eventId: "MR Ignite/2026/Grand Finals",
+      title: "Group A",
+      matchGroups: ["list"],
+      advance: 4,
+      teams: [],
+      tiebreakers: [],
+    };
+
+    const stored: StoredSnapshot = {
+      ...emptyStored(),
+      pages: { "MR Ignite/2026/Grand Finals/Group Stage": aPage(1, { groups: [group] }) },
+    };
+
+    expect(toSnapshot(stored, new Date("2026-11-23T00:00:00Z")).groups).toEqual([group]);
+  });
 });
 
 describe("toSnapshot prize placings", () => {
@@ -108,6 +133,7 @@ describe("toSnapshot prize placings", () => {
       updatedAt,
       event: parseEventInfo(title, text, updatedAt),
       matches: parsePageMatches(title, text),
+      groups: parseGroups(title, text),
     };
   }
 

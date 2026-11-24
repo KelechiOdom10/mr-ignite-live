@@ -11,6 +11,7 @@ function aSnapshot(servedAt: string): Snapshot {
     liquipediaUpdatedAt: null,
     events: [],
     matches: [],
+    groups: [],
     teams: {},
   };
 }

@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   type MapOverride,
   type MapResult,
+  type Group,
   type Match,
   type PageData,
   type Snapshot,
@@ -83,7 +84,12 @@ export function mergeMapOverrides(maps: MapResult[], overrides: MapOverride[]): 
     const existing = byIndex.get(o.index);
 
     if (existing && existing.winner !== 0) continue;
-    byIndex.set(o.index, { ...o, map: existing?.map || o.map, vod: existing?.vod ?? null });
+    byIndex.set(o.index, {
+      ...o,
+      map: existing?.map || o.map,
+      vod: existing?.vod ?? null,
+      early: true,
+    });
   }
 
   return [...byIndex.values()].sort((a, b) => a.index - b.index);
@@ -168,6 +174,7 @@ export function statsChanged(previous: MatchStats | null, next: MatchStats): boo
 export function toSnapshot(stored: StoredSnapshot, servedAt: Date): Snapshot {
   const events: SnapshotEvent[] = [];
   const matches: Match[] = [];
+  const allGroups: Group[] = [];
   let liquipediaUpdatedAt: string | null = null;
 
   const withShort = (team: Match["team1"]) =>
@@ -179,6 +186,8 @@ export function toSnapshot(stored: StoredSnapshot, servedAt: Date): Snapshot {
     if (!liquipediaUpdatedAt || page.updatedAt > liquipediaUpdatedAt) {
       liquipediaUpdatedAt = page.updatedAt;
     }
+
+    allGroups.push(...page.groups);
 
     for (const m of page.matches) {
       const overrides = stored.mapOverrides[m.id];
@@ -210,6 +219,7 @@ export function toSnapshot(stored: StoredSnapshot, servedAt: Date): Snapshot {
     liquipediaUpdatedAt,
     events: withPrizes.sort((a, b) => (b.startDate ?? "").localeCompare(a.startDate ?? "")),
     matches: matches.sort((a, b) => (a.startsAt ?? "").localeCompare(b.startsAt ?? "")),
+    groups: allGroups,
     teams: stored.teams,
   };
 }

@@ -72,6 +72,7 @@ export function scopeSnapshot(snapshot: Snapshot, scope: SnapshotScope, now: num
     ...snapshot,
     servedAt: new Date(now).toISOString(),
     events: snapshot.events.filter((e) => eventIds.has(e.id) || e.id === focusEventId),
+    groups: snapshot.groups.filter((g) => eventIds.has(g.eventId) || g.eventId === focusEventId),
     matches,
   };
 }

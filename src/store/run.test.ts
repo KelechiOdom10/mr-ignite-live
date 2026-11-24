@@ -82,6 +82,37 @@ function matchDay({ mrvl: mrvlOptions }: { mrvl?: MrvlFakeOptions } = {}) {
   };
 }
 
+describe("syncOnce on the Grand Finals group stage", () => {
+  it("keeps each group's standings through the sync, so the client receives them", async () => {
+    const main = "MR Ignite/2026/Grand Finals";
+    const groups = `${main}/Group Stage`;
+    const clock = fakeClock("2026-11-23T20:00:00Z");
+    const store = memoryKvStore({ "titles:v1": [main, groups] });
+
+    const liquipedia = fakeLiquipedia({
+      clock,
+      revids: { [main]: 62966, [groups]: 62972 },
+      contentsFile: "grand-finals-matches.json",
+    });
+
+    await syncOnce({
+      store,
+      liquipedia: createLiquipediaClient({
+        fetch: liquipedia.fetch,
+        now: clock.now,
+        wait: async (ms) => clock.advance(ms),
+      }),
+      mrvl: createMrvlClient({ fetch: fakeMrvl().fetch, timeoutMs: 20 }),
+      now: clock.now,
+    });
+
+    const stored = await readStored(store);
+
+    expect(stored?.pages[groups]?.groups.map((g) => g.title)).toEqual(["Group A", "Group B"]);
+    expect(stored?.pages[main]?.groups).toEqual([]);
+  });
+});
+
 describe("syncOnce on match day", () => {
   it("writes nothing and publishes nothing when neither Liquipedia nor mrvl changed", async () => {
     const day = matchDay();

@@ -1,10 +1,13 @@
 import {
+  type Group,
+  GroupSchema,
   type IgniteEvent,
   type MapResult,
   type Match,
   type PrizePlacement,
   type Team,
 } from "@/domain/model";
+import { GROUP_STAGE } from "@/domain/standings";
 import { teamShortName } from "@/domain/teams";
 
 import { parseLiquipediaDate } from "./dates";
@@ -125,7 +128,7 @@ export function parsePrizePool(text: string): PrizePlacement[] {
 }
 
 function phaseFor(title: string, kind: ContainerKind): string {
-  if (title.endsWith(GROUP_STAGE_SUFFIX)) return "Group Stage";
+  if (title.endsWith(GROUP_STAGE_SUFFIX)) return GROUP_STAGE;
 
   return kind === "bracket" ? "Playoffs" : "Matches";
 }
@@ -138,6 +141,14 @@ function lastCommentBefore(text: string, end: number): string | null {
   const comments = [...text.slice(0, end).matchAll(/<!--\s*([\s\S]*?)\s*-->/g)];
 
   return comments.at(-1)?.[1]?.trim() ?? null;
+}
+
+function awardedTo(params: Record<string, string>): 1 | 2 | undefined {
+  if (params.finished !== "true") return undefined;
+
+  if (params.winner === "1") return 1;
+
+  return params.winner === "2" ? 2 : undefined;
 }
 
 export function parsePageMatches(title: string, text: string): Match[] {
@@ -177,6 +188,7 @@ export function parsePageMatches(title: string, text: string): Match[] {
         team2: parseTeam(p.opponent2),
         maps: parseMaps(p),
         markedFinished: p.finished === "true" || Boolean(p.walkover),
+        ...(awardedTo(p) && { awarded: awardedTo(p) }),
         twitch: p.twitch || null,
         youtube: p.youtube || null,
       });
@@ -184,6 +196,59 @@ export function parsePageMatches(title: string, text: string): Match[] {
   }
 
   return matches;
+}
+
+function positional(tpl: Template): string[] {
+  const values: string[] = [];
+
+  for (let index = 1; tpl.params[String(index)] !== undefined; index++) {
+    values.push(tpl.params[String(index)] ?? "");
+  }
+
+  return values;
+}
+
+export function parseGroups(title: string, text: string): Group[] {
+  return findTemplates(text, "GroupStandings").flatMap((tpl) => {
+    const groupTitle = stripMarkup(tpl.params.title ?? "");
+
+    const matchGroups = (tpl.params.matchgroups ?? "")
+      .split(",")
+      .map((id) => id.trim())
+      .filter(Boolean);
+
+    const upRanges = [...(tpl.params.bg ?? "").matchAll(/(?:^|,)\s*(\d+)(?:-(\d+))?\s*=\s*up\b/g)];
+    let advance = 0;
+    let whole = upRanges.length > 0;
+
+    for (const [, from, to] of upRanges) {
+      const last = Number(to ?? from);
+
+      if (Number(from) !== advance + 1 || last < Number(from)) whole = false;
+
+      advance = last;
+    }
+
+    if (!groupTitle || matchGroups.length === 0 || !whole) return [];
+
+    const teams = positional(tpl).map((raw) =>
+      stripMarkup(templateIn(raw, "TeamOpponent")?.params["1"] ?? ""),
+    );
+
+    const rules = templateIn(tpl.params.tiebreakers ?? "", "Json");
+    const written = rules ? positional(rules).map((rule) => rule.trim()) : [];
+
+    const group = GroupSchema.safeParse({
+      eventId: eventIdFor(title),
+      title: groupTitle,
+      matchGroups,
+      advance,
+      teams,
+      tiebreakers: written.includes("") ? [] : written,
+    });
+
+    return group.success ? [group.data] : [];
+  });
 }
 
 export function parseEventInfo(title: string, text: string, updatedAt: string): IgniteEvent | null {

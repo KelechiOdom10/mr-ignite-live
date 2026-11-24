@@ -10,6 +10,7 @@ import { RegionTag } from "./RegionTag";
 import { useMatchView } from "./spoilers";
 import { StatusLabel } from "./StatusLabel";
 import { TeamLogo } from "./TeamMark";
+import { formatTime, useHydrated } from "./time";
 
 function TeamLine({ side, snapshot }: { side: SideView; snapshot: Snapshot }) {
   return (
@@ -54,10 +55,11 @@ export function MatchCard({
   event: IgniteEvent | undefined;
   snapshot: Snapshot;
   now: number;
-  footer?: "event" | "round" | "none";
+  footer?: "event" | "round" | "time" | "none";
   className?: string;
 }) {
   const view = useMatchView(match, now, snapshot.matches);
+  const hydrated = useHydrated();
 
   return (
     <Card
@@ -91,8 +93,14 @@ export function MatchCard({
               className="size-3.5 shrink-0 object-contain"
             />
           )}
-          <span className="truncate">{match.round}</span>
-          {footer === "event" && <RegionTag event={event} className="ml-auto" />}
+          <span className="truncate">
+            {footer === "time" && hydrated && match.startsAt
+              ? formatTime(match.startsAt)
+              : match.round}
+          </span>
+          {footer === "event" && (
+            <RegionTag event={event} match={match} groups={snapshot.groups} className="ml-auto" />
+          )}
         </div>
       )}
     </Card>

@@ -28,7 +28,17 @@ const RecordedContentsSchema = z.looseObject({
 const recordedRevisions = RecordedRevisionsSchema.parse(liquipediaFixture("revisions.json"));
 const recordedPage = recordedRevisions.query.pages.find((p) => p.revisions);
 const recordedMissing = recordedRevisions.query.pages.find((p) => !p.revisions);
-const recordedContents = RecordedContentsSchema.parse(liquipediaFixture("contents-stage2.json"));
+const contentsByFile = new Map<string, z.infer<typeof RecordedContentsSchema>>();
+
+function recordedContentsOf(file: string) {
+  const known = contentsByFile.get(file);
+
+  if (known) return known;
+  const parsed = RecordedContentsSchema.parse(liquipediaFixture(file));
+  contentsByFile.set(file, parsed);
+
+  return parsed;
+}
 
 export interface Clock {
   now(): number;
@@ -68,10 +78,15 @@ export interface LiquipediaRequest {
 export function fakeLiquipedia({
   clock,
   revids,
+  contentsFile = "contents-stage2.json",
 }: {
   clock: Clock;
   revids: Record<string, number>;
+  /** The recorded response that answers content requests. */
+  contentsFile?: string;
 }) {
+  const recordedContents = recordedContentsOf(contentsFile);
+
   const requests: LiquipediaRequest[] = [];
 
   const settings: FakeLiquipediaSettings = { latencyMs: 0, images: {} };
