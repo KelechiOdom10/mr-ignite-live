@@ -278,7 +278,6 @@ describe("toMatchStats on FlyQuest vs Natus Vincere, where Nightcrawler first pl
       m.teams.flatMap((t) => [...t.bans, ...t.players.flatMap((p) => p.heroes)]),
     );
 
-  // mrvl first sent him as hero-1068, "Hero 1068", Duelist, with no portrait.
   const firstSent = { id: "hero-1068", name: "Hero 1068", role: "Duelist", portraitUrl: "" };
 
   const asFirstSent = <T extends { id: string }>(hero: T): T =>

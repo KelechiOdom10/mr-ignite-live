@@ -196,9 +196,7 @@ export function isUnrecordedHero(hero: { id: string }): boolean {
 
 /**
  * mrvl sends `{ id: "hero-1068", name: "Hero 1068", role: "Duelist" }` with no portrait for a hero
- * it hasn't catalogued yet, and our stored copy of a finished series keeps it. A placeholder
- * whose game id is on the roster becomes that hero; any other becomes a typed unknown with no
- * name, role or art of its own. Heroes mrvl named itself pass through untouched.
+ * it hasn't catalogued yet, and our stored copy of a finished series keeps it.
  */
 export function resolveHero(raw: Hero): Hero {
   const gameId = PLACEHOLDER_ID.exec(raw.id)?.[1];
