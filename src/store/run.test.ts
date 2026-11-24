@@ -141,6 +141,51 @@ describe("syncOnce on the Grand Finals group stage", () => {
       ["Group B", 3],
     ]);
   });
+
+  it("re-reads a page stored without groups at the same revision, so the parser fix reaches production", async () => {
+    const groups = "MR Ignite/2026/Grand Finals/Group Stage";
+    const clock = fakeClock("2026-11-24T19:00:00Z");
+
+    const store = memoryKvStore({
+      "titles:v1": [groups],
+      snapshot: {
+        version: 10,
+        pages: {
+          [groups]: {
+            revid: 63030,
+            updatedAt: "2026-11-24T18:05:43Z",
+            event: null,
+            matches: [],
+            groups: [],
+          },
+        },
+        teams: {},
+        mapOverrides: {},
+        builtAt: "2026-11-24T18:15:31Z",
+      },
+    });
+
+    const liquipedia = fakeLiquipedia({
+      clock,
+      revids: { [groups]: 63030 },
+      contentsFile: "group-stage-day2.json",
+    });
+
+    await syncOnce({
+      store,
+      liquipedia: createLiquipediaClient({
+        fetch: liquipedia.fetch,
+        now: clock.now,
+        wait: async (ms) => clock.advance(ms),
+      }),
+      mrvl: createMrvlClient({ fetch: fakeMrvl().fetch, timeoutMs: 20 }),
+      now: clock.now,
+    });
+
+    const stored = await readStored(store);
+
+    expect(stored?.pages[groups]?.groups.map((g) => g.title)).toEqual(["Group A", "Group B"]);
+  });
 });
 
 describe("syncOnce on match day", () => {
