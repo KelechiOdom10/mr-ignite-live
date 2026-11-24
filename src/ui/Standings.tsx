@@ -128,10 +128,7 @@ export function GroupTableCard({
         <h3 id={domId("standings", group.title)} className="text-base font-semibold">
           {group.title}
         </h3>
-        <p className="mt-1 text-xs text-muted-foreground">
-          This group is ranked by rules we don't follow, so there is no table. Its results are in
-          the match list.
-        </p>
+        <p className="mt-1 text-xs text-muted-foreground">No table for this group.</p>
       </section>
     );
   }
@@ -201,8 +198,7 @@ export function GroupTableCard({
         <div className="space-y-2 border-t px-3 py-3 text-xs text-muted-foreground">
           {levelAtCutoff && (
             <p className="text-foreground">
-              Top {group.advance} go through, but {levelAtCutoff} are level for the last place, so
-              there is no line yet.
+              Top {group.advance} go through; {levelAtCutoff} are level for the last place.
             </p>
           )}
           {level.length > 0 && <p>Level on series and maps: {level.join(", ")}.</p>}

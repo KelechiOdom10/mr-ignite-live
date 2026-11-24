@@ -4,7 +4,7 @@ Newest first. One line per change: the outcome first, then the PR.
 
 ## Unreleased
 
-- **The Grand Finals page opens on the group standings:** live series first, both tables beside today's matches, and it stays on Group stage until a playoff series has started, on the reader's own date. Through and Out appear only once nothing left can change them (#74).
+- **The Grand Finals page opens on the group standings:** live series first, both tables beside today's matches, and Through or Out once it is certain (#74).
 - **INTL is back on international events:** on cards, chips and event rows, and group matches show their group (Group A, Group B) in its place (#74).
 - **Grand Finals matches sit under their real day:** nothing played today says "Date to be confirmed" (#72).
 - **Copy reads plainly:** stats notes, source panels and error messages drop internal wording such as "cached" and "budget" (#69).
