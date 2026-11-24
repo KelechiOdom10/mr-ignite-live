@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { createLiquipediaClient } from "@/liquipedia/client";
 import { createMrvlClient } from "@/mrvl/client";
@@ -110,6 +110,146 @@ describe("syncOnce on the Grand Finals group stage", () => {
 
     expect(stored?.pages[groups]?.groups.map((g) => g.title)).toEqual(["Group A", "Group B"]);
     expect(stored?.pages[main]?.groups).toEqual([]);
+  });
+
+  it("keeps both groups from the page as Liquipedia writes it on day 2, with a day list per round", async () => {
+    const groups = "MR Ignite/2026/Grand Finals/Group Stage";
+    const clock = fakeClock("2026-11-24T19:00:00Z");
+    const store = memoryKvStore({ "titles:v1": [groups] });
+
+    const liquipedia = fakeLiquipedia({
+      clock,
+      revids: { [groups]: 63030 },
+      contentsFile: "group-stage-day2.json",
+    });
+
+    await syncOnce({
+      store,
+      liquipedia: createLiquipediaClient({
+        fetch: liquipedia.fetch,
+        now: clock.now,
+        wait: async (ms) => clock.advance(ms),
+      }),
+      mrvl: createMrvlClient({ fetch: fakeMrvl().fetch, timeoutMs: 20 }),
+      now: clock.now,
+    });
+
+    const stored = await readStored(store);
+
+    expect(stored?.pages[groups]?.groups.map((g) => [g.title, g.matchGroups.length])).toEqual([
+      ["Group A", 3],
+      ["Group B", 3],
+    ]);
+  });
+
+  it("re-reads a page stored without groups at the same revision, so the parser fix reaches production", async () => {
+    const groups = "MR Ignite/2026/Grand Finals/Group Stage";
+    const clock = fakeClock("2026-11-24T19:00:00Z");
+
+    const store = memoryKvStore({
+      "titles:v1": [groups],
+      snapshot: {
+        version: 10,
+        pages: {
+          [groups]: {
+            revid: 63030,
+            updatedAt: "2026-11-24T18:05:43Z",
+            event: null,
+            matches: [],
+            groups: [],
+          },
+        },
+        teams: {},
+        mapOverrides: {},
+        builtAt: "2026-11-24T18:15:31Z",
+      },
+    });
+
+    const liquipedia = fakeLiquipedia({
+      clock,
+      revids: { [groups]: 63030 },
+      contentsFile: "group-stage-day2.json",
+    });
+
+    await syncOnce({
+      store,
+      liquipedia: createLiquipediaClient({
+        fetch: liquipedia.fetch,
+        now: clock.now,
+        wait: async (ms) => clock.advance(ms),
+      }),
+      mrvl: createMrvlClient({ fetch: fakeMrvl().fetch, timeoutMs: 20 }),
+      now: clock.now,
+    });
+
+    const stored = await readStored(store);
+
+    expect(stored?.pages[groups]?.groups.map((g) => g.title)).toEqual(["Group A", "Group B"]);
+  });
+});
+
+describe("syncOnce when Liquipedia changes how it lists a group's matches", () => {
+  const groups = "MR Ignite/2026/Grand Finals/Group Stage";
+
+  async function syncGroupPage(contentsFile: string, revid: number, rename: boolean) {
+    const clock = fakeClock("2026-11-24T19:00:00Z");
+    const store = memoryKvStore({ "titles:v1": [groups] });
+    const liquipedia = fakeLiquipedia({ clock, revids: { [groups]: revid }, contentsFile });
+
+    const answer: typeof fetch = async (input, init) => {
+      const response = await liquipedia.fetch(input, init);
+
+      if (!rename) return response;
+
+      return new Response((await response.text()).replaceAll("matchgroups=", "matchlists="), {
+        status: response.status,
+        headers: response.headers,
+      });
+    };
+
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    try {
+      await syncOnce({
+        store,
+        liquipedia: createLiquipediaClient({
+          fetch: answer,
+          now: clock.now,
+          wait: async (ms) => clock.advance(ms),
+        }),
+        mrvl: createMrvlClient({ fetch: fakeMrvl().fetch, timeoutMs: 20 }),
+        now: clock.now,
+      });
+
+      return {
+        stored: await readStored(store),
+        warnings: warn.mock.calls.filter(([message]) =>
+          String(message).startsWith("Dropping all the group standings"),
+        ),
+      };
+    } finally {
+      warn.mockRestore();
+    }
+  }
+
+  it.each([
+    ["the single list day 1 used", "grand-finals-matches.json", 62972],
+    ["the per-day lists from day 2", "group-stage-day2.json", 63030],
+  ])(
+    "logs the page, its revision and how many groups it listed when %s is renamed",
+    async (_layout, file, revid) => {
+      const { stored, warnings } = await syncGroupPage(file, revid, true);
+
+      expect(stored?.pages[groups]?.groups).toEqual([]);
+      expect(warnings).toEqual([[expect.any(String), { title: groups, revid, listed: 2 }]]);
+    },
+  );
+
+  it("logs nothing when the page's groups are read", async () => {
+    const { stored, warnings } = await syncGroupPage("group-stage-day2.json", 63030, false);
+
+    expect(stored?.pages[groups]?.groups).toHaveLength(2);
+    expect(warnings).toEqual([]);
   });
 });
 

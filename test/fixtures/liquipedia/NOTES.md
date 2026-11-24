@@ -8,12 +8,14 @@ Raw responses recorded from `https://liquipedia.net/marvelrivals/api.php` on 202
 | `americas-finished.json` | The same request for Stage 2 Americas once its playoffs finished, recorded 2026-11-09: a `{{TeamPrizePool}}` with no opponents and the final bracket |
 | `contents-grand-finals.json` | `action=query&prop=revisions&rvprop=content\|timestamp&rvslots=main` for the Ignite 2026 series page, Mid-Season Qualifiers/Oceania (a page marked `{{deletion}}`), Grand Finals/Additional Data and Grand Finals/Qualification, recorded 2026-11-19: none has an `Infobox league` or a match |
 | `grand-finals-matches.json` | `action=query&format=json&formatversion=2&prop=revisions&rvprop=content\|timestamp&rvslots=main` for Grand Finals and Grand Finals/Group Stage, recorded 2026-11-23 on day 1 (30 group matches, the 14-match playoff bracket) |
+| `group-stage-day2.json` | `action=query&format=json&formatversion=2&prop=revisions&rvprop=content\|timestamp\|ids&rvslots=main` for Grand Finals/Group Stage (revision 63030), recorded 2026-11-24 on day 2: each group lists its days in `round1`, `round2` and `round3` templates instead of one `matchgroups` list |
 | `revisions.json` | `action=query&prop=revisions&rvprop=ids\|timestamp` for Americas, EMEA and a missing page |
 | `teamshort.json` | `action=expandtemplates` of `{{TeamShort|…}}` for a known team, an unknown team and an allmode-only logo team |
 | `api-error.json` | an unknown `action`, which returns a top-level `error` object |
 
 ## Vendor quirks
 
+- A group's match lists moved on day 2 from one `|matchgroups=a, b, c` parameter to one `{{Round|title=Day 1|matchgroups=a}}` per day in `round1`, `round2`, …; the page also gained `r2status=` on team slots. See `group-stage-day2.json`.
 - Match times carry the caster's zone as a template: `2026-10-16 - 06:00 {{Abbr/AEST}}`.
 - Grand Finals writes match times as a long date, `November 23, 2026 - 14:00 {{Abbr/CET}}`, where the Stage 2 pages use ISO. Group matches there say `bestof3=3` instead of `bestof=3`.
 - A bracket's `|id=` value can be followed by a round comment (`<!-- Upper Bracket Quarterfinals -->`) before the next `|`.

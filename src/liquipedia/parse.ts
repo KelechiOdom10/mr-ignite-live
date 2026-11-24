@@ -212,10 +212,19 @@ export function parseGroups(title: string, text: string): Group[] {
   return findTemplates(text, "GroupStandings").flatMap((tpl) => {
     const groupTitle = stripMarkup(tpl.params.title ?? "");
 
-    const matchGroups = (tpl.params.matchgroups ?? "")
-      .split(",")
-      .map((id) => id.trim())
-      .filter(Boolean);
+    const days = Object.entries(tpl.params)
+      .flatMap(([key, raw]) => {
+        const day = /^round(\d+)$/.exec(key);
+
+        return day
+          ? [{ day: Number(day[1]), ids: templateIn(raw, "Round")?.params.matchgroups }]
+          : [];
+      })
+      .sort((a, b) => a.day - b.day);
+
+    const matchGroups = [tpl.params.matchgroups, ...days.map((d) => d.ids)].flatMap((ids) =>
+      (ids ?? "").split(",").flatMap((id) => id.trim() || []),
+    );
 
     const upRanges = [...(tpl.params.bg ?? "").matchAll(/(?:^|,)\s*(\d+)(?:-(\d+))?\s*=\s*up\b/g)];
     let advance = 0;
