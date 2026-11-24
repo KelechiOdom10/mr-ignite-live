@@ -77,7 +77,6 @@ const EDGE_MASKS = {
   both: "[mask-image:linear-gradient(to_right,transparent,black_3rem,black_calc(100%-3rem),transparent)]",
 } as const;
 
-/** Which edges have chips scrolled out of view, so only those edges fade. */
 function useOverflowEdges() {
   // A callback ref, so observers attach whenever the scroller mounts, including when the strip
   // starts empty and fills in from a live update.

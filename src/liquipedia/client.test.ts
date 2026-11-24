@@ -29,7 +29,6 @@ const json =
   () =>
     new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
-/** A fetch over a dead connection: it never settles unless its signal aborts. */
 const hangingFetch: typeof fetch = (_input, init) =>
   new Promise((_resolve, reject) => {
     init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
@@ -38,7 +37,6 @@ const hangingFetch: typeof fetch = (_input, init) =>
 const noWait = async () => {};
 const unlimited = { maxRequests: Infinity, deadlineAt: Infinity };
 
-/** A client on a fake clock starting at 1s, with a 2s gap; waiting advances the clock. */
 function pacedClient() {
   let clock = 1_000;
   const waits: number[] = [];

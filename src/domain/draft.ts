@@ -15,7 +15,6 @@ export interface DraftFormat {
   banBlocks: "opponent" | "both teams";
   sharedBans: boolean;
   steps: readonly DraftStep[];
-  /** False when the rules come from too few drafts to state as fact. */
   confirmed: boolean;
   basis: string;
 }
@@ -47,7 +46,6 @@ export const IGNITE_2026: DraftFormat = {
     "Draft order for Ignite 2026, taken from mrvl.net's draft timelines for Stage 2 maps in the Americas, EMEA and China, and checked step for step against the FlyQuest vs 100 Thieves broadcast on God Quarry.",
 };
 
-/** Seen in one recorded Season 10.5 Competitive match; kept for comparison with the tournament format. */
 export const RANKED_SEASON_10_OBSERVED: DraftFormat = {
   id: "ranked-s10-observed",
   name: "Ranked Competitive bans (one recorded match)",
@@ -63,7 +61,6 @@ function actsIn(step: DraftStep, camp: number): boolean {
   return step.actor === "both" || (step.actor === "first" ? camp === 0 : camp === 1);
 }
 
-/** Every way a map's recorded draft departs from the format; empty when it follows it exactly. */
 export function formatDeviations(draft: readonly DraftAction[], format: DraftFormat): string[] {
   const deviations: string[] = [];
 
@@ -99,7 +96,6 @@ function playedBy(map: MapStats, side: 1 | 2): Set<string> {
   );
 }
 
-/** Heroes a team banned that the other team still played; empty when bans only bind the opponent. */
 export function bansBroken(map: MapStats): string[] {
   return ([1, 2] as const).flatMap((side) => {
     const other = playedBy(map, side === 1 ? 2 : 1);
@@ -110,7 +106,6 @@ export function bansBroken(map: MapStats): string[] {
   });
 }
 
-/** One team's side of the draft on one map: the unit every pick, ban and protect count here uses. */
 export interface TeamDraft {
   matchId: string;
   mapIndex: number;
@@ -160,7 +155,6 @@ export interface HeroDraftRow {
   hero: Hero;
   played: number;
   banned: number;
-  /** Team drafts that protected the hero, out of those with protects known. */
   protected: number;
   presentMaps: number;
 }
@@ -169,7 +163,6 @@ export interface DraftSample {
   teamDrafts: number;
   maps: number;
   series: number;
-  /** Team drafts whose protects are known; the denominator for protect rates. */
   withProtects: number;
 }
 
@@ -258,7 +251,6 @@ export interface DraftCoverage {
   series: number;
   maps: number;
   mapsWithOrder: number;
-  /** Of the maps with draft order, how many follow the format exactly. */
   mapsFollowingFormat: number;
   bans: number;
   bansBroken: number;

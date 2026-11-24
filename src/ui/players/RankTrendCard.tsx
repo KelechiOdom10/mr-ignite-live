@@ -6,7 +6,6 @@ import { RESULT } from "./resultTone";
 const WIDTH = 600;
 const HEIGHT = 120;
 
-/** One polyline per unbroken run, so a reset shows as a gap rather than a cliff. */
 function runLines(points: readonly { ladder: number; continues: boolean }[]): string[] {
   const values = points.map((p) => p.ladder);
   const lo = Math.min(...values);
@@ -34,7 +33,6 @@ export function RankTrendCard({
   unavailable,
 }: {
   rows: readonly HistoryRow[];
-  /** Why there's no history to chart, when there isn't. */
   unavailable?: string;
 }) {
   const trend = rankTrend(rows);

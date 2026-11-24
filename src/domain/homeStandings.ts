@@ -8,9 +8,6 @@ export interface EventStandings {
   tables: GroupTable[];
 }
 
-/**
- * The events whose group stage is running and has begun, with their tables, under the shared phase.
- */
 export function runningGroupStages(
   snapshot: {
     events: readonly IgniteEvent[];

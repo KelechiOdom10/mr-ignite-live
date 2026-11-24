@@ -117,7 +117,6 @@ describe("scopeSnapshot", () => {
   });
 
   it("adds an old event's matches to the matches page when its filter is chosen", () => {
-    // Picking an event in the results filter showed no results: the recent scope had dropped it.
     const scoped = scopeSnapshot(snapshot, { kind: "matches", eventId: "old" }, NOW);
     expect(scoped.matches.map((m) => m.id).sort()).toEqual(["a", "b", "c"]);
     expect(scoped.events.map((e) => e.id).sort()).toEqual(["current", "old"]);
@@ -129,7 +128,6 @@ describe("scopeSnapshot", () => {
   });
 
   it("carries every spelling of the chosen team, so its older series reach the page", () => {
-    // The other spelling's series were outside the page's scope, so the filter could not show them.
     const spelled = aSnapshot(
       [current, old],
       [
@@ -168,7 +166,6 @@ describe("scopeSnapshot", () => {
   });
 
   it("keeps the requested event on its page before its bracket has any matches", () => {
-    // Announced stages showed "Event not found" because events without matches were dropped.
     const announced = anEvent("announced", null);
 
     const scoped = scopeSnapshot(
@@ -181,7 +178,6 @@ describe("scopeSnapshot", () => {
   });
 
   it("keeps every event, however old, for the events list, with only near-term matches", () => {
-    // The events page lost long-finished stages on its first live refresh.
     const scoped = scopeSnapshot(snapshot, { kind: "events" }, NOW);
     expect(scoped.events.map((e) => e.id)).toEqual(["current", "old"]);
     expect(scoped.matches.map((m) => m.id)).toEqual(["a"]);
@@ -249,7 +245,6 @@ describe("event slugs", () => {
   });
 
   it("returns null for a malformed escape instead of throwing", () => {
-    // /event/%E0%A4%A threw URIError and answered 500 instead of 404.
     expect(eventIdFromSlug("%E0%A4%A")).toBeNull();
   });
 });

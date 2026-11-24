@@ -25,7 +25,6 @@ export const DeathFactorSchema = z.enum([
 
 export type DeathFactor = z.infer<typeof DeathFactorSchema>;
 
-/** Kept apart from the factor: the in-game replay can confirm it, so it is answered separately. */
 export const HealerSightSchema = z.enum(["in_sight", "out_of_sight", "unclear", "not_checked"]);
 
 export type HealerSight = z.infer<typeof HealerSightSchema>;
@@ -171,7 +170,6 @@ export const ReviewSessionSchema = z.object({
 
 export type ReviewSession = z.infer<typeof ReviewSessionSchema>;
 
-/** One thing the player is practising, and the death factor it is meant to reduce, if any. */
 export const PracticeFocusSchema = z
   .object({
     id: IdSchema,

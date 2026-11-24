@@ -23,7 +23,6 @@ function summary(format: DraftFormat): string {
   return `In the one recorded match, bans kept the hero from ${who} and ${format.sharedBans ? "both teams banned the same hero" : "no hero was banned twice"}.`;
 }
 
-/** The draft order as compact numbered steps, so it fits beside the table. */
 export function DraftSteps({ steps }: { steps: readonly DraftStep[] }) {
   return (
     <ol className="grid grid-cols-2 gap-1.5 text-xs">

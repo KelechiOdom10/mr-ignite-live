@@ -5,4 +5,4 @@
 - Copied from: `skills/install-anti-slop/assets/anti-slop/` (identical to upstream `src/` without its `*.test.ts` files)
 - Installed at: `tools/oxlint/anti-slop/`, registered as `anti-slop` in `.oxlintrc.json`
 - Not registered: the Effect plugin (`effect/`); this repo doesn't depend on `effect`
-- Deviations: none
+- Deviations: doc comments that only restated a function's name or signature are removed (comment audit); no behaviour changed

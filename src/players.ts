@@ -125,7 +125,6 @@ export async function cachedPlayerCards(saved: readonly Favourite[]): Promise<Pl
   return loaded.ok ? loaded.value : saved.map((f) => toPlayerCard(f, null));
 }
 
-/** The top of the PC leaderboard if it's cached; nothing otherwise. */
 export async function cachedLeaderboardTop(count: number): Promise<LeaderboardRow[]> {
   const loaded = await loadPlayers(async (data) => {
     const board = await data.peek("leaderboard", { device: "pc" });

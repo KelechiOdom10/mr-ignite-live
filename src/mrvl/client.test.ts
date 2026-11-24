@@ -16,7 +16,6 @@ function respondWith(body: Json, status = 200) {
   return { fetchImpl, calls };
 }
 
-/** A fetch over a dead connection: it never settles unless its signal aborts. */
 const hangingFetch: typeof fetch = (_input, init) =>
   new Promise((_resolve, reject) => {
     init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));

@@ -137,7 +137,6 @@ describe("toMatchStats on a recorded series", () => {
   });
 
   it("keeps map 1's bans and protects in draft order, on Liquipedia's sides", () => {
-    // 100 Thieves (side 2) is lobby camp 0, so it protects first; both sides ban in steps 0, 5 and 10.
     const steps = stats.maps[0]?.draft?.map((a) => [a.phase, a.side, a.kind, a.hero.id]);
     expect(steps).toEqual([
       [0, 1, "ban", "devil-dinosaur"],

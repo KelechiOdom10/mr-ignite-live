@@ -84,11 +84,9 @@ export const GroupSchema = z.object({
   title: z.string().min(1),
   /** Ids of the match lists that make up the group; a match id starts with its list's id. */
   matchGroups: z.array(z.string().min(1)),
-  /** How many places from the top go through to the playoffs. */
   advance: z.number().int().positive(),
   /** The teams the page lists in the group, under the page's spelling; "" is a slot it leaves blank. */
   teams: z.array(z.string()),
-  /** The page's tiebreakers in order, as it writes them. */
   tiebreakers: z.array(z.string().min(1)),
 });
 

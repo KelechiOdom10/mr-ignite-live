@@ -345,7 +345,6 @@ export interface GroupSplit {
   other: Match[];
 }
 
-/** Each group with its series; series no group claims are returned apart so none disappears. */
 export function splitByGroup(groups: readonly Group[], matches: readonly Match[]): GroupSplit {
   return {
     groups: groups.map((group) => ({
@@ -356,7 +355,6 @@ export function splitByGroup(groups: readonly Group[], matches: readonly Match[]
   };
 }
 
-/** The group tab to show: the reader's pick while that group still has a table, else the first. */
 export function selectedGroup(
   picked: string | null,
   tables: readonly GroupTable[],
@@ -364,7 +362,6 @@ export function selectedGroup(
   return tables.find((t) => t.group.title === picked)?.group.title ?? tables[0]?.group.title;
 }
 
-/** Whether a shown table reads this series: not one of an unranked group, nor one the roster doesn't cover. */
 export function inRankedTable(match: Match, tables: readonly GroupTable[]): boolean {
   return tables.some((t) => t.counted.includes(match.id));
 }

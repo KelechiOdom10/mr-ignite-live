@@ -113,7 +113,6 @@ function collectTypeBindings(
 	}
 }
 
-/** Collect every lexical type alias and competing type binding in a program. */
 export function createTypeAliasEnvironment(
 	program: ESTree.Program,
 	visitorKeys: VisitorKeys,
@@ -160,7 +159,6 @@ function nearestTypeBindings(
 	return nearest;
 }
 
-/** Resolve the nearest visible alias with this name, respecting lexical shadowing. */
 export function visibleTypeAlias(
 	name: string,
 	use: ESTree.Node,

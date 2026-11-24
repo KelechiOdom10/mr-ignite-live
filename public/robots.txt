@@ -1,5 +1,4 @@
 User-agent: *
-# Player pages spend paid RivalsIsland credits on first load.
 Disallow: /player
 Disallow: /players
 Disallow: /leaderboard

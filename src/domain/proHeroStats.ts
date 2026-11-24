@@ -137,12 +137,10 @@ export function toProHeroStats(
 
 export const WIN_RATE_MIN_GAMES = 10;
 
-/** Below ten games the sample is too small to read as a rate, so the table shows "—". */
 export function shownWinRate(hero: ProHeroStat): number | null {
   return hero.games >= WIN_RATE_MIN_GAMES ? hero.winRate : null;
 }
 
-/** The group the page's map filter selects; no filter means the Overall group. */
 export function proHeroGroupFor(
   groups: readonly ProHeroGroup[],
   map: string | null | undefined,

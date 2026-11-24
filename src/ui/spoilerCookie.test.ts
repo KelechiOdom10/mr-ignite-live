@@ -4,7 +4,6 @@ import { SPOILER_COOKIE, spoilersHiddenIn, spoilerCookie } from "./spoilerCookie
 
 describe("spoilersHiddenIn", () => {
   it("reads the preference from a request with several cookies, so the server renders scores hidden", () => {
-    // Scores used to be server-rendered for everyone and flash before the client hid them.
     expect(spoilersHiddenIn(`theme=dark; ${SPOILER_COOKIE}=1; other=x`)).toBe(true);
   });
 

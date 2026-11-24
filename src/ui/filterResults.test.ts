@@ -98,7 +98,6 @@ describe("filterResults", () => {
   });
 
   it("narrows to one team's series, whichever side it is on", () => {
-    // Filtering by team also hid its wins when it was listed as team2.
     expect(ids(filterResults(matches, events, view({ team: "Bravo" }), NOW))).toEqual([
       "emea-now",
       "emea-old",
@@ -118,7 +117,6 @@ describe("filterResults", () => {
   });
 
   it("finds a team's series under every spelling it was recorded with", () => {
-    // Filtering by the canonical name dropped the series played as "100 thieves".
     const spelled = [
       aMatch({
         id: "other",

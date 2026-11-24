@@ -6,7 +6,6 @@ export const AMERICAS = "MR Ignite/2026/Stage 2/Americas";
 export const AMERICAS_GROUPS = "MR Ignite/2026/Stage 2/Americas/Group Stage";
 export const PACIFIC = "MR Ignite/2026/Stage 2/Pacific/Asia";
 
-/** The pages recorded in `contents-stage2.json`. */
 export const RECORDED_TITLES = [AMERICAS, PACIFIC, AMERICAS_GROUPS];
 
 const PageEntrySchema = z.looseObject({ title: z.string() });
@@ -57,9 +56,7 @@ export function fakeClock(startIso: string): Clock {
 }
 
 export interface FakeLiquipediaSettings {
-  /** How long each response takes on the fake clock. */
   latencyMs: number;
-  /** Image URLs Liquipedia has, by file name. */
   images: Record<string, string>;
 }
 
@@ -82,7 +79,6 @@ export function fakeLiquipedia({
 }: {
   clock: Clock;
   revids: Record<string, number>;
-  /** The recorded response that answers content requests. */
   contentsFile?: string;
 }) {
   const recordedContents = recordedContentsOf(contentsFile);

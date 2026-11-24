@@ -116,7 +116,6 @@ function heroSummary(hero: HeroUsage, share: number | null): string {
 const TRIGGER_CLASS =
   "group inline-flex cursor-pointer items-center gap-2 rounded-md outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary";
 
-// Brightens the portrait on hover so it reads as something to open.
 const TRIGGER_PORTRAIT_CLASS = "transition-[filter] duration-150 group-hover:brightness-125";
 
 /**
@@ -226,7 +225,6 @@ function HeroBreakdown({
   );
 }
 
-/** Every hero a player used, most played first; each opens its own breakdown. */
 function HeroesPlayed({ player, combined }: { player: Row; combined: boolean }) {
   const heroes = player.heroes.toSorted((a, b) => b.playSeconds - a.playSeconds);
   const totalSeconds = heroes.reduce((sum, h) => sum + h.playSeconds, 0);

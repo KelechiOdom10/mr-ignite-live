@@ -8,7 +8,6 @@ import type { DraftCoverage } from "@/domain/draft";
 
 import { formatRelative, useHydrated } from "../time";
 
-/** The one caveat everyone needs, up front; how the counts are made sits behind a toggle. */
 export function DraftSource({
   coverage,
   now,

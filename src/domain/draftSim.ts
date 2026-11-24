@@ -20,7 +20,6 @@ export interface Turn {
   waiting: Camp[];
 }
 
-/** Null once every step is done. */
 export function currentTurn(format: DraftFormat, moves: readonly SimMove[]): Turn | null {
   for (const [step, s] of format.steps.entries()) {
     const waiting = actors(s).filter(
@@ -91,7 +90,6 @@ export function applyMove(
 export interface CampOutcome {
   bans: string[];
   protects: string[];
-  /** Heroes the other team banned, which this team can't play. */
   unavailable: string[];
 }
 
@@ -122,7 +120,6 @@ export interface SlotPlan {
   protects: number;
 }
 
-/** How many bans and protects a team makes over the whole format: the slots its board shows. */
 export function slotPlan(format: DraftFormat, camp: Camp): SlotPlan {
   const mine = format.steps.filter((s) => actors(s).includes(camp));
 
@@ -140,7 +137,6 @@ export interface TimelineStep {
   state: "done" | "current" | "upcoming";
 }
 
-/** Every step of the format with what was picked in it, and which step is being played. */
 export function timeline(format: DraftFormat, moves: readonly SimMove[]): TimelineStep[] {
   const current = currentTurn(format, moves)?.step ?? null;
 
@@ -163,7 +159,6 @@ export interface ProRate {
   win?: number | null;
 }
 
-/** Pro ban and protect shares per hero, to show beside the pool while practising. */
 export function proRates(summary: DraftSummary): Record<string, ProRate> {
   const { teamDrafts, withProtects } = summary.sample;
 

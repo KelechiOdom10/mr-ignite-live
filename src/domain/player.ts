@@ -263,10 +263,6 @@ export const HeroCareerSchema = z.object({
 
 export type HeroCareer = z.infer<typeof HeroCareerSchema>;
 
-/**
- * Heroes a player used across matches we already hold, most played first. This only covers cached
- * matches and says how many, so it never implies a season-wide hero ranking.
- */
 export function recentHeroes(uid: Uid, matches: readonly MatchDetail[], limit = 3): HeroPlay[] {
   const byHero = new Map<number, HeroPlay>();
 
@@ -284,7 +280,6 @@ export function recentHeroes(uid: Uid, matches: readonly MatchDetail[], limit = 
   return [...byHero.values()].sort((a, b) => b.playSeconds - a.playSeconds).slice(0, limit);
 }
 
-/** Below this many matches a season win rate is noise, so it isn't shown. */
 export const MIN_MATCHES_FOR_WIN_RATE = 10;
 
 export type SeasonRecord =
@@ -304,7 +299,6 @@ export function seasonRecord(profile: PlayerProfile): SeasonRecord {
 
   if (matches === 0) return { kind: "none", season };
 
-  // A missing win count isn't zero wins.
   if (seasonWins === null) return { kind: "unknown", season };
   const wins = seasonWins;
 
@@ -318,7 +312,6 @@ export interface SeasonGroup {
   rows: HistoryRow[];
 }
 
-/** Consecutive history rows from the same season, newest first, so the list can mark each reset. */
 export function groupBySeason(rows: readonly HistoryRow[]): SeasonGroup[] {
   const groups: SeasonGroup[] = [];
 
@@ -359,7 +352,6 @@ export type RecentPlayer = z.infer<typeof RecentPlayerSchema>;
 
 export const RECENT_PLAYERS_LIMIT = 8;
 
-/** Players opened in this browser, newest first; anything malformed is dropped rather than trusted. */
 export function parseRecentPlayers(raw: string | null): RecentPlayer[] {
   if (!raw) return [];
 
@@ -418,7 +410,6 @@ export type RankTrend = {
   streak: { result: "win" | "loss"; count: number } | null;
 };
 
-/** The climb across ranked matches on a history page. Matches without rank data are skipped. */
 export function rankTrend(rows: readonly HistoryRow[]): RankTrend {
   const ranked = rows.flatMap((r) => (r.rankAfter ? [{ ...r, ladder: r.rankAfter.ladder }] : []));
 

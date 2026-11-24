@@ -23,8 +23,6 @@ import { syncOnce } from "./run";
 import { readStored } from "./snapshot";
 import { STATS_INDEX_KEY, statsKey } from "./stats";
 
-// Liquipedia ids from the recorded Americas bracket.
-/** A value the sync stored under `key`; fails the test when it's missing or off-schema. */
 async function read<T>(store: KvStore, key: KvKey<T>): Promise<T> {
   const parsed = await store.get(key);
 
@@ -36,10 +34,6 @@ async function read<T>(store: KvStore, key: KvKey<T>): Promise<T> {
 const FLY_100T = "kOKqgtPHq4_R2M1";
 const TLC_SWAMP = "kOKqgtPHq4_R2M2";
 
-/**
- * Match day as recorded on 2026-10-16: FlyQuest beat 100 Thieves at 20:00 UTC and Liquid
- * Citadel vs Swamp Gaming is live, so both are stats candidates.
- */
 function matchDay({ mrvl: mrvlOptions }: { mrvl?: MrvlFakeOptions } = {}) {
   const clock = fakeClock("2026-10-16T22:30:00Z");
   const store = memoryKvStore({ "titles:v1": RECORDED_TITLES });
@@ -67,7 +61,6 @@ function matchDay({ mrvl: mrvlOptions }: { mrvl?: MrvlFakeOptions } = {}) {
     liquipedia,
     mrvl,
     clock,
-    /** One cron run, a minute after the last. */
     sync: async () => {
       clock.advance(60_000);
 
@@ -363,7 +356,6 @@ describe("syncOnce on match day", () => {
   });
 
   it("rewrites neither stats nor the snapshot when mrvl re-saves a series with identical stats", async () => {
-    // mrvl bumps updatedAt on bulk edits, so the page is refetched; only the index records that.
     const day = matchDay();
     await day.settle();
     day.store.resetPuts();
@@ -386,7 +378,6 @@ describe("syncOnce on match day", () => {
     await day.sync();
     const key = statsKey(FLY_100T);
     const stored = await read(day.store, key);
-    // Entries saved without a draft read back as `draft: null`.
     await day.store.put(key, { ...stored, maps: stored.maps.map((m) => ({ ...m, draft: null })) });
     const index = await read(day.store, STATS_INDEX_KEY);
     const entry = index[FLY_100T];

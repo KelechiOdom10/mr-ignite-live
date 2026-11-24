@@ -2,10 +2,8 @@ import { z } from "zod";
 
 import { mrvlFixture } from "./fixtures";
 
-/** mrvl's id for FlyQuest vs 100 Thieves, the series recorded in `page-fly-100t.json`. */
 export const FLY_100T_MRVL_ID = "js72wqatvzmfw26ffhc1fynh4n8gcxsw";
 
-/** mrvl's id for the live Liquid Citadel vs Swamp Gaming series in `live.json`. */
 export const TLC_SWAMP_MRVL_ID = "js7d3e97gbkfsnm3fycnean4p58gd5sy";
 
 const SummarySchema = z.looseObject({ id: z.string(), updatedAt: z.unknown().optional() });
@@ -55,11 +53,8 @@ function pageFor(id: string, misnumbered: boolean): Response {
 }
 
 export interface MrvlFakeOptions {
-  /** Every request fails with HTTP 502. */
   down?: boolean;
-  /** Series ids whose page request fails with HTTP 502. */
   failingPages?: string[];
-  /** Series ids whose page request never answers, like a dead connection, until it is aborted. */
   hangingPages?: string[];
   /** mrvl re-saved these series: their `updatedAt` moves on with nothing else changed. */
   resaved?: string[];

@@ -15,7 +15,6 @@ export interface Hero extends z.infer<typeof RawHeroSchema> {
 
 export const HeroSchema = RawHeroSchema.transform(resolveHero);
 
-/** One hero's share of a player's map: mrvl splits a player's stats by hero. */
 export const HeroLineSchema = z.object({
   kills: z.number(),
   deaths: z.number(),

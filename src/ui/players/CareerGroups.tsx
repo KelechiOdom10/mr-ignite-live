@@ -18,7 +18,6 @@ function fixed(n: number | null): string {
   return n === null ? "–" : n.toFixed(2);
 }
 
-/** Career totals, grouped by what they say about the player rather than listed flat. */
 export function CareerGroups({ career }: { career: Career }) {
   const mvpRate =
     career.mvp !== null && career.matches > 0

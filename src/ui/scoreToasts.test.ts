@@ -17,8 +17,6 @@ describe("scoreToasts", () => {
   const twoNil = aMatch({ bestOf: 5, maps: [aMap(1, 1), aMap(2, 1)] });
 
   it("doesn't name the series winner while spoilers are hidden, even with no new map", () => {
-    // A bestOf correction (Bo5 → Bo3 at 2–0) finished the series without a new map and the
-    // \"TLC win the series, 2–0\" toast skipped the Hide spoilers check.
     const corrected = { ...twoNil, bestOf: 3 };
     const toasts = scoreToasts([corrected], states([twoNil]), states([corrected]), true, NOW);
     expect(toasts.map((t) => `${t.title} ${t.description}`).join(" ")).not.toMatch(/win|2–0/);

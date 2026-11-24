@@ -48,7 +48,6 @@ export const DEFAULT_MATCHES_VIEW: MatchesView = {
   range: "any",
 };
 
-/** Reads the tabs and results filters from the query, so browser back returns to what was shown. */
 export function matchesViewFromQuery(query: {
   region?: string;
   tab?: string;
@@ -109,7 +108,6 @@ export function splitBracketSlots(matches: readonly Match[]) {
   return { known, awaiting };
 }
 
-/** The query string for a view, leaving out defaults so the plain URLs stay clean. */
 export function matchesViewSearch(view: MatchesView): string {
   const entries = [
     ["tab", view.tab],

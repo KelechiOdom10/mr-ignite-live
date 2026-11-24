@@ -3,7 +3,6 @@ import type { KvStore } from "@/store/kv";
 import type { Json } from "./json";
 
 export interface MemoryKvStore extends KvStore {
-  /** Puts per key since creation or the last `resetPuts()`. */
   putCounts(): Record<string, number>;
   resetPuts(): void;
 }

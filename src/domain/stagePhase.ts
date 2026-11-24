@@ -42,7 +42,6 @@ export function defaultStageTab(phase: StagePhase, seeded: boolean): StageTab {
   return phase === "playoffs" || (phase === "between" && seeded) ? "playoffs" : "groups";
 }
 
-/** The reader's pick while it still exists; otherwise the tab the phase calls for. */
 export function visibleTab<T extends string>(
   picked: T | null,
   available: readonly T[],
@@ -51,7 +50,6 @@ export function visibleTab<T extends string>(
   return picked !== null && available.includes(picked) ? picked : fallback;
 }
 
-/** Earliest first; a series with no kickoff yet sorts last. */
 export function byKickoff(a: Match, b: Match): number {
   if (!a.startsAt || !b.startsAt) return Number(!a.startsAt) - Number(!b.startsAt);
 
@@ -59,9 +57,7 @@ export function byKickoff(a: Match, b: Match): number {
 }
 
 export interface GroupDays {
-  /** Rounds such as "Day 1", in the order they are played. */
   days: string[];
-  /** The day the stage is on: one with a kickoff on the reader's date, else the first with an unfinished series, else the last. */
   current: string | null;
   /** Every round with a kickoff on the reader's date; empty until a date key is given. */
   today: string[];

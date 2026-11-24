@@ -81,7 +81,6 @@ describe("draft simulator edges", () => {
       [0, "mantis"],
     ]);
 
-    // Step 3 is the second team's ban; it already banned Loki.
     expect(moveProblem(IGNITE_2026, moves, 1, "loki")).toEqual({ kind: "repeat" });
   });
 
