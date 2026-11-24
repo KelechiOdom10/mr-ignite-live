@@ -4,6 +4,7 @@ import { StoredSnapshotSchema, type PageData, type StoredSnapshot } from "@/doma
 import { LiquipediaBudgetSpentError, type LiquipediaRun, type Revision } from "@/liquipedia/client";
 import { parseEventInfo, parseGroups, parsePageMatches } from "@/liquipedia/parse";
 import { fetchTeamInfo } from "@/liquipedia/teams";
+import { findTemplates } from "@/liquipedia/wikitext";
 
 import { kvKey, type KvStore } from "./kv";
 import { applyPages, type LiquipediaChanges, planSync, teamsMissingInfo } from "./plan";
@@ -70,6 +71,16 @@ async function fetchPages(
     if (!rev) continue;
     const event = parseEventInfo(title, text, rev.timestamp);
     const known = prevPages[title]?.event;
+    const groups = parseGroups(title, text);
+    const listed = findTemplates(text, "GroupStandings").length;
+
+    if (groups.length < listed)
+      console.warn("Dropping group standings the page lists but we could not read", {
+        title,
+        revid: rev.revid,
+        listed,
+        read: groups.length,
+      });
 
     if (event && known?.iconUrl && known.iconFile === event.iconFile) event.iconUrl = known.iconUrl;
     updates[title] = {
@@ -77,7 +88,7 @@ async function fetchPages(
       updatedAt: rev.timestamp,
       event,
       matches: parsePageMatches(title, text),
-      groups: parseGroups(title, text),
+      groups,
     };
   }
 
