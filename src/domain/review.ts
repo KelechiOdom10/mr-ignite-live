@@ -246,7 +246,6 @@ export function blankBookmark(kind: BookmarkKind, id: string, at: number): Bookm
   }
 }
 
-/** Starts a focus and ends any still open, so "the thing you're practising" is always one. */
 export function startFocus(
   library: ReviewLibrary,
   focus: PracticeFocus,
