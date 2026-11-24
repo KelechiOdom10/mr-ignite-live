@@ -166,7 +166,6 @@ describe("focusProgress", () => {
           focusId: ids.focus,
           bookmarks: [death(ids.d3, 3, "cooldown")],
         }),
-        // Reviewed after the focus started but not linked to it: belongs to neither side.
         session(ids.c, { createdAt: 7_000, bookmarks: [death(ids.d1, 4, "positioning")] }),
       ],
       focuses: [focus],

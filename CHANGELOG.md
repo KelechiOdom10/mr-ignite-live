@@ -4,6 +4,7 @@ Newest first. One line per change: the outcome first, then the PR.
 
 ## Unreleased
 
+- **Nightcrawler shows up properly:** named and pictured in match stats, drafts and the simulator, and any future new hero reads "New hero" rather than a placeholder name (#78).
 - **The Group A / Group B switch is compact on a phone:** it no longer stretches across the screen, and is a little shorter, like the Playoffs / Group stage switch (#79).
 - **The group standings show up on the live Grand Finals page and home:** they were missing because Liquipedia changed how it lists each day's matches (#77).
 - **Home shows the group standings while a group stage runs:** beside Events on a laptop, under Live now on a phone (#75).

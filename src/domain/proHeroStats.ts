@@ -1,21 +1,24 @@
 import { z } from "zod";
 
+import { isUnrecordedHero, resolveHero } from "./heroRoster";
 import { knownMap } from "./maps";
 
-export const ProHeroStatSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  role: z.string().nullable(),
-  portraitUrl: z.string().nullable(),
-  games: z.number().int().nonnegative(),
-  /** Share of the play time the hero was available for; null when it was never available. */
-  pickRate: z.number().nullable(),
-  /** Of every team-game in the group. */
-  banRate: z.number().nullable(),
-  protectRate: z.number().nullable(),
-  /** Winning play time over total play time; null before the hero was played. */
-  winRate: z.number().nullable(),
-});
+export const ProHeroStatSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    role: z.string().nullable(),
+    portraitUrl: z.string().nullable(),
+    games: z.number().int().nonnegative(),
+    /** Share of the play time the hero was available for; null when it was never available. */
+    pickRate: z.number().nullable(),
+    /** Of every team-game in the group. */
+    banRate: z.number().nullable(),
+    protectRate: z.number().nullable(),
+    /** Winning play time over total play time; null before the hero was played. */
+    winRate: z.number().nullable(),
+  })
+  .transform((stat) => ({ ...stat, ...resolveHero(stat) }));
 
 export type ProHeroStat = z.infer<typeof ProHeroStatSchema>;
 
@@ -23,7 +26,9 @@ export const ProHeroGroupSchema = z.object({
   /** "overall" or the map catalogue key `knownMap` resolved. */
   map: z.string(),
   games: z.number().int().nonnegative(),
-  heroes: z.array(ProHeroStatSchema),
+  heroes: z
+    .array(ProHeroStatSchema)
+    .transform((heroes) => heroes.filter((hero) => !isUnrecordedHero(hero))),
 });
 
 export type ProHeroGroup = z.infer<typeof ProHeroGroupSchema>;
@@ -111,11 +116,13 @@ export function toProHeroStats(
   window: HeroMatrixWindow,
 ): ProHeroStats {
   const groups = response.rows.map((row) => {
-    const heroes = response.heroes.flatMap((hero) => {
-      const cell = row.cellsByHeroId[hero.heroId];
+    const heroes = ProHeroGroupSchema.shape.heroes.parse(
+      response.heroes.flatMap((hero) => {
+        const cell = row.cellsByHeroId[hero.heroId];
 
-      return cell ? [toHero(cell, hero, row)] : [];
-    });
+        return cell ? [toHero(cell, hero, row)] : [];
+      }),
+    );
 
     heroes.sort(
       (a, b) =>
@@ -130,12 +137,10 @@ export function toProHeroStats(
 
 export const WIN_RATE_MIN_GAMES = 10;
 
-/** Below ten games the sample is too small to read as a rate, so the table shows "—". */
 export function shownWinRate(hero: ProHeroStat): number | null {
   return hero.games >= WIN_RATE_MIN_GAMES ? hero.winRate : null;
 }
 
-/** The group the page's map filter selects; no filter means the Overall group. */
 export function proHeroGroupFor(
   groups: readonly ProHeroGroup[],
   map: string | null | undefined,

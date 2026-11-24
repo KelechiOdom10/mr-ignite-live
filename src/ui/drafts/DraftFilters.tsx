@@ -59,7 +59,6 @@ function Filter({
   );
 }
 
-/** Each choice applies straight away. */
 export function DraftFilters({
   options,
   selected,

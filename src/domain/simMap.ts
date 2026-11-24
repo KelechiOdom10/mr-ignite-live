@@ -17,7 +17,6 @@ export function simMapOptions(stats: ProHeroStats | null): string[] {
     .sort((a, b) => a.localeCompare(b));
 }
 
-/** One map as the picker draws it: the catalogue's name, its mode and its art, or none. */
 export interface SimMapTile {
   /** The value the picker reports and the URL carries. */
   name: string;

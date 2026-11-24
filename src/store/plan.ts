@@ -119,7 +119,6 @@ export interface LiquipediaChanges {
   updates: Record<string, PageData>;
   removed: string[];
   teams: Record<string, TeamInfo>;
-  /** Changed pages left for the next run. */
   deferred: string[];
 }
 

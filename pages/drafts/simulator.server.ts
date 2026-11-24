@@ -37,7 +37,7 @@ export const loader = defineHandler(async (c) => {
     heroMatrix,
     map: parseSimMap(c.req.query("map"), maps),
     maps,
-    heroes: HERO_ROSTER.map((h) => ({
+    heroes: HERO_ROSTER.map(({ gameId: _, ...h }) => ({
       ...h,
       portraitUrl: portraits.get(h.id) ?? ROSTER_ICONS.get(h.id) ?? null,
     })),

@@ -13,7 +13,6 @@ function matches(n: number): string {
   return `${n} match${n === 1 ? "" : "es"}`;
 }
 
-/** This season only: career covers every season, and history can span a reset. */
 function SeasonSummary({ record }: { record: SeasonRecord }) {
   if (record.kind === "unknown") return <span className="text-muted-foreground">Not known</span>;
 
@@ -36,7 +35,6 @@ function SeasonSummary({ record }: { record: SeasonRecord }) {
   );
 }
 
-/** The page's lead: this season's rank as the in-game badge, with the season record and peak. */
 export function RankCard({ profile }: { profile: PlayerProfile }) {
   const { rank, peakRank } = profile;
 

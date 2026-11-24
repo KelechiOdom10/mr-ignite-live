@@ -4,7 +4,6 @@ import { imageSource } from "./imageSource";
 
 describe("imageSource", () => {
   it("rejects an encoded dot-dot path that fetch would resolve outside the image folder", () => {
-    // fetch turns %2e%2e into "..", so this reached Liquipedia's API through the proxy.
     expect(
       imageSource("https://liquipedia.net/commons/images/%2e%2e/%2e%2e/marvelrivals/api.php"),
     ).toBeNull();

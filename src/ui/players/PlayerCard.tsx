@@ -9,7 +9,6 @@ import { rankTierClass } from "./RankBadge";
 import { RankIcon } from "./RankIcon";
 import { RESULT } from "./resultTone";
 
-/** One player in a list: who, their rank and platform, and how their last games went. */
 export function PlayerCard({ player }: { player: Card }) {
   const { rank, device, form } = player;
   const wins = form.filter((r) => r === "win").length;

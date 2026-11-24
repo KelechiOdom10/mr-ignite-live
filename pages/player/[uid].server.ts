@@ -90,7 +90,6 @@ async function heroesFromCache(
   return loaded.ok ? loaded.value : { recent: [], coveredMatches: 0, cards: [] };
 }
 
-/** A private history or career answering again is a successful refresh; anything else that failed isn't. */
 function refreshDidNotHappen(result: Loaded<{ refreshFailed: boolean }>): boolean {
   if (result.ok) return result.value.refreshFailed;
 

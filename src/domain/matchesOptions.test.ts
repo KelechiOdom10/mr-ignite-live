@@ -74,7 +74,6 @@ describe("eventOptions", () => {
   });
 
   it("leaves out an event with no finished series", () => {
-    // Choosing Grand Finals always landed on the empty state, because it had only unplayed series.
     const snapshot = aSnapshot(
       [anEvent("played", "Played Cup", "2026-10-01"), anEvent("ahead", "Ahead Cup", "2026-11-29")],
       [
@@ -99,7 +98,6 @@ describe("eventOptions", () => {
 
 describe("teamOptions", () => {
   it("offers only teams from finished series, sorted, without duplicates", () => {
-    // The team filter listed teams from unplayed series, which selected nothing.
     const snapshot = aSnapshot(
       [],
       [
@@ -122,7 +120,6 @@ describe("teamOptions", () => {
   });
 
   it("lists one row per team however its name was spelled", () => {
-    // "100 Thieves" and "100 thieves" were two rows, which read as unaggregated data.
     const snapshot = aSnapshot(
       [],
       [

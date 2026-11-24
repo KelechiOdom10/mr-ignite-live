@@ -41,7 +41,6 @@ describe("matchesViewFromQuery", () => {
   });
 
   it("falls back to defaults for missing or unknown values", () => {
-    // ?range=year and ?event= (an empty field) each rendered an empty list instead of all results.
     expect(matchesViewFromQuery({})).toEqual(DEFAULT_MATCHES_VIEW);
     expect(matchesViewFromQuery({ tab: "live", region: "mars", events: "soon" })).toEqual(
       DEFAULT_MATCHES_VIEW,
@@ -52,7 +51,6 @@ describe("matchesViewFromQuery", () => {
   });
 
   it("drops results filters from a URL that names Upcoming", () => {
-    // A bookmarked ?tab=upcoming&team=… described filters the page never applied.
     expect(
       matchesViewFromQuery({
         tab: "upcoming",
@@ -95,8 +93,6 @@ describe("matchesViewSearch", () => {
 
 describe("withListTab", () => {
   it("drops the results filters when the reader switches to Upcoming", () => {
-    // Upcoming ignored event, team and range while the URL kept them, describing a view the page
-    // was not showing.
     const onResults = {
       ...DEFAULT_MATCHES_VIEW,
       tab: "results",
@@ -131,8 +127,6 @@ describe("upcomingSeries", () => {
   const undated = (id: string) => aMatch({ id, startsAt: null });
 
   it("carries the undated series after the dated ones, soonest first", () => {
-    // Upcoming kept only series with a time, so a live Grand Finals bracket left it saying nothing
-    // was scheduled.
     const series = [
       undated("bracket_final"),
       dated("later", "2026-11-18T20:00:00.000Z"),

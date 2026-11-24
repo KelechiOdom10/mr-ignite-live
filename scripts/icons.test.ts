@@ -19,8 +19,6 @@ function pngSize(png: Buffer): [number, number] {
   return [png.readUInt32BE(16), png.readUInt32BE(20)];
 }
 
-// A missing or unreadable icon is a 404 in every reader's console and a blank tab, so assert the files
-// the head names and the sizes packed inside the ico.
 describe("icons", () => {
   it("names the SVG first, then the ico and the touch icon", () => {
     expect(iconLinks.map((entry) => [entry.rel, entry.href])).toEqual([

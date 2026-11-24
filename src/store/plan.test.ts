@@ -190,7 +190,6 @@ describe("toSnapshot prize placings", () => {
 
 describe("mergeMapOverrides", () => {
   it("fills maps Liquipedia hasn't recorded yet without overwriting ones it has", () => {
-    // mrvl showed TLC 2–0 while Liquipedia still had 1–0.
     const merged = mergeMapOverrides(
       [
         { index: 1, map: "Birnin T'Challa", score1: 2, score2: 0, winner: 1, vod: "v1" },
@@ -213,7 +212,6 @@ describe("withMapOverrides", () => {
   const override = { index: 1, map: "Midtown", score1: 3, score2: 1, winner: 1 } as const;
 
   it("returns null when mrvl repeats overrides already stored, so KV isn't rewritten", () => {
-    // mrvl bumps updatedAt on every bulk edit; each rewrite cost a KV write a minute while live.
     const stored = { ...emptyStored(), mapOverrides: { m1: [override] } };
     expect(withMapOverrides(stored, { m1: [{ ...override }] })).toBeNull();
   });

@@ -7,7 +7,6 @@ import {
   type ReviewLibrary,
 } from "@/domain/review";
 
-/** The browser storage a review library lives in. IndexedDB in the app; a Map in tests. */
 export interface KeyValueArea {
   /** null when nothing is stored under `key`. */
   get<T>(key: string, schema: z.ZodType<T>): Promise<z.ZodSafeParseResult<T> | null>;

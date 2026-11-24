@@ -74,6 +74,17 @@ export function HeroPortrait({
       loading="lazy"
       className={cn("shrink-0 rounded-md bg-muted object-cover", className)}
     />
+  ) : hero.unknown ? (
+    <span
+      title={hero.name}
+      style={{ ...box, fontSize: size * 0.55 }}
+      className={cn(
+        "inline-flex shrink-0 items-center justify-center rounded-md bg-muted leading-none text-muted-foreground ring-1 ring-border",
+        className,
+      )}
+    >
+      <span aria-hidden="true">?</span>
+    </span>
   ) : (
     <span
       title={hero.name}
@@ -105,7 +116,6 @@ function heroSummary(hero: HeroUsage, share: number | null): string {
 const TRIGGER_CLASS =
   "group inline-flex cursor-pointer items-center gap-2 rounded-md outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary";
 
-// Brightens the portrait on hover so it reads as something to open.
 const TRIGGER_PORTRAIT_CLASS = "transition-[filter] duration-150 group-hover:brightness-125";
 
 /**
@@ -215,7 +225,6 @@ function HeroBreakdown({
   );
 }
 
-/** Every hero a player used, most played first; each opens its own breakdown. */
 function HeroesPlayed({ player, combined }: { player: Row; combined: boolean }) {
   const heroes = player.heroes.toSorted((a, b) => b.playSeconds - a.playSeconds);
   const totalSeconds = heroes.reduce((sum, h) => sum + h.playSeconds, 0);

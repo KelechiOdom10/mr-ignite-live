@@ -4,7 +4,6 @@ export interface KvPutOptions {
   ttl?: number;
 }
 
-/** A KV key and the schema every value under it must satisfy. */
 export interface KvKey<T> {
   name: string;
   schema: z.ZodType<T>;

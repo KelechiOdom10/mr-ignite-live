@@ -1,4 +1,5 @@
 import { heroDisplayName } from "@/domain/heroes";
+import { UNKNOWN_HERO_NAME } from "@/domain/heroRoster";
 import { HeroRoleSchema, type Hero } from "@/domain/player";
 
 /** RivalsTracker payloads carry only hero ids, so this is the only place a name or role comes from. */
@@ -56,6 +57,7 @@ const CATALOGUE = new Map<number, { name: string; role: string }>([
   [1065, { name: "ROGUE", role: "Vanguard" }],
   [1066, { name: "THE HOOD", role: "Vanguard" }],
   [1067, { name: "GORR THE GOD BUTCHER", role: "Duelist" }],
+  [1068, { name: "NIGHTCRAWLER", role: "Strategist" }],
   [10571, { name: "Deadpool Vanguard", role: "Vanguard" }],
   [10572, { name: "Deadpool Duelist", role: "Duelist" }],
   [10573, { name: "Deadpool Strategist", role: "Strategist" }],
@@ -71,7 +73,7 @@ export function catalogueHero(id: number): Hero {
 
   return {
     id,
-    name: known ? heroDisplayName(known.name) : `Hero ${id}`,
+    name: known ? heroDisplayName(known.name) : UNKNOWN_HERO_NAME,
     role: known ? (HeroRoleSchema.safeParse(known.role).data ?? null) : null,
     iconUrl: known ? heroIconUrl(id) : null,
   };

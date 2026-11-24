@@ -4,7 +4,6 @@ import { describe, expect, it } from "vitest";
 
 import { GO_TO_ROUTES, NAV_SECTIONS } from "../src/ui/sections";
 
-/** The page file Void serves a static path from. */
 function pageFile(href: string): string {
   return href === "/" ? "pages/index.tsx" : `pages${href}.tsx`;
 }

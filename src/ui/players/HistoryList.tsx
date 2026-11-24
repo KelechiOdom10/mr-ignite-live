@@ -13,7 +13,6 @@ function seasonHeading(season: string | null, currentSeason: string | null): str
   return season === currentSeason ? `Season ${season} · this season` : `Season ${season}`;
 }
 
-/** Rows grouped by season, so matches from before a reset don't read as this season's. */
 export function HistoryList({
   rows,
   currentSeason,

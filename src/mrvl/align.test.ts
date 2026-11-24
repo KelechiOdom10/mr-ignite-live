@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { MatchStatsSchema } from "@/domain/stats";
+import { HERO_ROSTER } from "@/domain/heroRoster";
+import { MatchStatsSchema, type MatchStats } from "@/domain/stats";
 
 import { aMatch } from "../../test/builders";
 import { mrvlFixture } from "../../test/fixtures";
@@ -136,7 +137,6 @@ describe("toMatchStats on a recorded series", () => {
   });
 
   it("keeps map 1's bans and protects in draft order, on Liquipedia's sides", () => {
-    // 100 Thieves (side 2) is lobby camp 0, so it protects first; both sides ban in steps 0, 5 and 10.
     const steps = stats.maps[0]?.draft?.map((a) => [a.phase, a.side, a.kind, a.hero.id]);
     expect(steps).toEqual([
       [0, 1, "ban", "devil-dinosaur"],
@@ -253,6 +253,78 @@ describe("toMatchStats on a recorded series", () => {
       [3, 1, 3, 2],
       [4, 1, 3, 0],
     ]);
+  });
+});
+
+describe("toMatchStats on FlyQuest vs Natus Vincere, where Nightcrawler first played", () => {
+  const recorded = z
+    .object({ value: MrvlMatchPageSchema })
+    .parse(mrvlFixture("page-fly-navi.json")).value;
+
+  const flyVsNavi = aMatch({
+    id: "fotbOpL194_M1",
+    bestOf: 3,
+    startsAt: "2026-11-23T13:00:00.000Z",
+    team1: { name: "FlyQuest", short: "FLY" },
+    team2: { name: "Natus Vincere", short: "NAVI" },
+  });
+
+  const read = (series: MrvlMatchPage) =>
+    MatchStatsSchema.parse(toMatchStats(flyVsNavi, series, "u1", new Date("2026-11-24T00:00:00Z")));
+
+  const heroesOf = (stats: MatchStats) =>
+    stats.maps.flatMap((m) =>
+      m.teams.flatMap((t) => [...t.bans, ...t.players.flatMap((p) => p.heroes)]),
+    );
+
+  const firstSent = { id: "hero-1068", name: "Hero 1068", role: "Duelist", portraitUrl: "" };
+
+  const asFirstSent = <T extends { id: string }>(hero: T): T =>
+    hero.id === "nightcrawler" ? { ...hero, ...firstSent } : hero;
+
+  const withPlaceholder: MrvlMatchPage = {
+    match: {
+      ...recorded.match,
+      games: recorded.match.games.map((game) => ({
+        ...game,
+        scoreboard: game.scoreboard && {
+          ...game.scoreboard,
+          teams: game.scoreboard.teams.map((team) => ({
+            ...team,
+            bans: team.bans?.map((ban) => ({ ...ban, hero: asFirstSent(ban.hero) })),
+            draftTimeline: team.draftTimeline?.map((step) => ({
+              ...step,
+              hero: asFirstSent(step.hero),
+            })),
+            players: team.players.map((p) => ({
+              ...p,
+              hero: p.hero && asFirstSent(p.hero),
+              heroesPlayed: p.heroesPlayed?.map((h) => ({ ...h, hero: asFirstSent(h.hero) })),
+            })),
+          })),
+        },
+      })),
+    },
+  };
+
+  it("lists every hero it shows on the roster", () => {
+    const ids = new Set(HERO_ROSTER.map((h) => h.id));
+
+    expect(heroesOf(read(recorded)).filter((h) => !ids.has(h.id))).toEqual([]);
+  });
+
+  it("shows Nightcrawler under his own id, whichever way mrvl sent him", () => {
+    for (const series of [recorded, withPlaceholder]) {
+      const nightcrawler = heroesOf(read(series)).filter((h) => h.id === "nightcrawler");
+
+      expect(nightcrawler.length).toBeGreaterThan(0);
+
+      expect(nightcrawler.every((h) => h.name === "Nightcrawler" && h.role === "Strategist")).toBe(
+        true,
+      );
+    }
+
+    expect(JSON.stringify(read(withPlaceholder))).not.toMatch(/Hero 1068|hero-1068/);
   });
 });
 

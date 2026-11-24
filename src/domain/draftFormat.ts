@@ -13,7 +13,6 @@ export const SIM_FORMATS: Record<SimFormatId, DraftFormat> = {
 
 const SimFormatQuery = z.enum(SIM_FORMAT_IDS).catch("ignite-2026");
 
-/** The simulator format a `?format=` value names; absent, stale or unknown values fall back to Ignite. */
 export function parseSimFormatId(value: string | null | undefined): SimFormatId {
   return SimFormatQuery.parse(value);
 }

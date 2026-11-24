@@ -171,7 +171,6 @@ export const ReviewSessionSchema = z.object({
 
 export type ReviewSession = z.infer<typeof ReviewSessionSchema>;
 
-/** One thing the player is practising, and the death factor it is meant to reduce, if any. */
 export const PracticeFocusSchema = z
   .object({
     id: IdSchema,
@@ -247,7 +246,6 @@ export function blankBookmark(kind: BookmarkKind, id: string, at: number): Bookm
   }
 }
 
-/** Starts a focus and ends any still open, so "the thing you're practising" is always one. */
 export function startFocus(
   library: ReviewLibrary,
   focus: PracticeFocus,

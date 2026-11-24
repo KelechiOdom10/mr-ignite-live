@@ -16,7 +16,6 @@ export function TeamLogo({
 }: {
   team: Team | null;
   info?: TeamInfo;
-  /** A logo URL the caller already resolved, such as a filter option's team record. */
   logo?: string | null;
   size?: number;
   className?: string;

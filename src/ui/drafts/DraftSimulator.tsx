@@ -52,7 +52,6 @@ const PROBLEM: Record<MoveProblem["kind"], string> = {
   "protected-by-opponent": "The other team protected this hero, so it can't be banned.",
 };
 
-/** Keeps the chosen format and map in the URL, so a refresh or a shared link opens the same board. */
 function rememberQuery(key: "format" | "map", value: string | null) {
   const params = new URLSearchParams(window.location.search);
 
@@ -117,7 +116,6 @@ function Slot({ hero, kind }: { hero: Hero | undefined; kind: "ban" | "protect" 
   );
 }
 
-/** One team's side of the board: its ban and protect slots, filling in as it moves. */
 function TeamBoard({
   camp,
   format,
@@ -407,7 +405,6 @@ export function DraftSimulator({
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:gap-5">
-      {/* The board stays in view on wider screens, so picking never scrolls the result away. */}
       <div className="z-20 -mx-4 min-w-0 bg-background/95 px-4 pb-2 backdrop-blur [@media(min-width:768px)_and_(min-height:640px)]:sticky [@media(min-width:768px)_and_(min-height:640px)]:top-14 sm:mx-0 sm:px-0">
         <div className="grid min-w-0 grid-cols-1 gap-3 rounded-xl border bg-card p-3 sm:p-4">
           <div className="relative flex min-w-0 flex-wrap items-center gap-2">
