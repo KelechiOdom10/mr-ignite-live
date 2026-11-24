@@ -4,7 +4,7 @@ Newest first. One line per change: the outcome first, then the PR.
 
 ## Unreleased
 
-- **Nightcrawler shows up properly:** named and pictured in match stats, drafts and the simulator, and any future new hero reads "New hero" instead of "Hero 1068" (#78).
+- **Nightcrawler shows up properly:** named and pictured in match stats, drafts and the simulator, and any future new hero reads "New hero" rather than a placeholder name (#78).
 - **Home shows the group standings while a group stage runs:** beside Events on a laptop, under Live now on a phone (#75).
 - **The Grand Finals page opens on the group standings:** live series first, both tables beside today's matches, and Through or Out once it is certain (#74).
 - **INTL is back on international events:** on cards, chips and event rows, and group matches show their group (Group A, Group B) in its place (#74).

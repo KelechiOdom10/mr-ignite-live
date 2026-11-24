@@ -94,6 +94,12 @@ describe("a hero mrvl sent only as a placeholder", () => {
     expect(player?.heroes[0]).toMatchObject({ id: "nightcrawler", playSeconds: 120 });
   });
 
+  it("reads the same after the server's JSON is parsed again by the browser", () => {
+    const once = MatchStatsSchema.parse(stored);
+
+    expect(MatchStatsSchema.parse(JSON.parse(JSON.stringify(once)))).toEqual(once);
+  });
+
   it("reads as a typed unknown, without failing the parse or showing its id", () => {
     const team = MatchStatsSchema.parse(stored).maps[0]?.teams[0];
     const unknowns = [team?.bans[1], team?.players[0]?.heroes[1]];
