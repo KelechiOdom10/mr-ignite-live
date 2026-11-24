@@ -257,15 +257,12 @@ export function StandingsPanel({
   return (
     <div className={cn("space-y-3", className)}>
       <Tabs value={selected} onValueChange={setPicked} variant="segment" className="lg:hidden">
-        <TabsList
-          aria-label="Group"
-          className="w-full rounded-xl p-1 ring-1 ring-border ring-inset"
-        >
+        <TabsList aria-label="Group">
           {tables.map((t) => (
             <TabsTrigger
               key={t.group.title}
               value={t.group.title}
-              className="min-h-11 flex-1 rounded-lg focus-visible:outline-solid focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+              className="focus-visible:outline-solid focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
             >
               {t.group.title}
             </TabsTrigger>
