@@ -165,6 +165,7 @@ export function createPlayerData(options: PlayerDataOptions) {
       const status = negativeStatus(error);
 
       if (status === "broken" && fallback?.status === "ok") {
+        // Keep the last good copy readable, and hold off retrying a broken answer.
         await cache.put(key, name, { ...fallback, expiresAt: at + NEGATIVE_TTL_MS });
 
         return fromCache(name, fallback, true);

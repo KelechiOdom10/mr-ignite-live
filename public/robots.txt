@@ -1,4 +1,5 @@
 User-agent: *
+# Player pages spend the daily request budget on first load.
 Disallow: /player
 Disallow: /players
 Disallow: /leaderboard

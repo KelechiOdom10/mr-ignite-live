@@ -163,6 +163,7 @@ export interface DraftSample {
   teamDrafts: number;
   maps: number;
   series: number;
+  /** Team drafts whose protects are known; the denominator for protect rates. */
   withProtects: number;
 }
 
