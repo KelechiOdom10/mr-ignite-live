@@ -6,14 +6,13 @@ export interface RosterHero {
   id: string;
   name: string;
   role: NonNullable<Hero["role"]>;
-  /** The game's own id, the number mrvl puts in a placeholder id (`hero-1068`) before it names a hero. */
   gameId: number;
 }
 
 /**
- * Every playable hero, from RivalsIsland's catalogue recorded 2026-10-17 plus Nightcrawler (season
- * 11), named and keyed the way mrvl.net scoreboards are so cached portraits line up. Ids for
- * heroes mrvl hasn't shown yet are slugs of the name.
+ * Every playable hero, from RivalsIsland's catalogue recorded 2026-10-17, named and keyed the way
+ * mrvl.net scoreboards are so cached portraits line up. Ids for heroes mrvl hasn't shown yet are
+ * slugs of the name.
  */
 export const HERO_ROSTER: readonly RosterHero[] = [
   { id: "adam-warlock", name: "Adam Warlock", role: "Strategist", gameId: 1046 },

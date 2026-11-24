@@ -9,7 +9,6 @@ const RawHeroSchema = z.object({
   portraitUrl: z.string().nullable(),
 });
 
-/** `unknown` marks a hero mrvl sent only as a placeholder; its name, role and art are not real. */
 export interface Hero extends z.infer<typeof RawHeroSchema> {
   unknown?: true;
 }
