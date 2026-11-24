@@ -115,7 +115,6 @@ export function GroupTableCard({
         )
       : null;
 
-  const decided = rows.some((r) => r.status);
   const level = levelTeams(rows);
   const columns = compact ? 4 : 5;
 
@@ -142,7 +141,6 @@ export function GroupTableCard({
         <h3 id={domId("standings", group.title)} className="text-base font-semibold">
           {group.title}
         </h3>
-        {!decided && <p className="text-xs text-muted-foreground">Nobody is through or out yet</p>}
       </div>
       <table className="w-full table-fixed text-sm">
         <caption className="sr-only">{group.title} standings</caption>
