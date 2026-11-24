@@ -1,3 +1,4 @@
+import { isUnrecordedHero } from "@/domain/heroRoster";
 import type { MapOverride, MapWinner, Match, Team } from "@/domain/model";
 import type {
   DraftAction,
@@ -118,11 +119,6 @@ function alignTeams(game: MrvlGame, match: Match): [MrvlScoreboardTeam, MrvlScor
   if (sideA === 1 || sideB === 2) return [a, b];
 
   return [b, a];
-}
-
-/** mrvl sends "hero-0", with no portrait, for a ban its feed didn't capture. */
-function isUnrecordedHero(hero: { id: string }): boolean {
-  return hero.id === "hero-0";
 }
 
 function toHero(hero: {

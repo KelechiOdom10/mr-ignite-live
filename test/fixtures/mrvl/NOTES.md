@@ -7,6 +7,7 @@ Raw responses from mrvl.net's public Convex backend (`POST https://bold-walrus-4
 | `recent.json` | `matches:listSummary {"status":"recent","limit":20}` |
 | `live.json` | `matches:listSummary {"status":"live","limit":20}` (TLC vs SWAMP live, mrvl 2–0 while Liquipedia showed 1–0) |
 | `page-fly-100t.json` | `matches:getPageData` for FlyQuest vs 100 Thieves, Ignite 2026 Stage 2 Americas UB semifinal |
+| `page-fly-navi.json` | `matches:getPageData` for FlyQuest vs Natus Vincere (Ignite 2026 Stage 3), recorded 2026-11-24: the first series with Nightcrawler |
 | `hero-matrix.json` | `analytics:getHeroMatrix {"startDate":"2026-10-11","endDate":"2026-11-09","dimension":"map","metric":"pickRate"}`, recorded 2026-11-09 |
 
 ## Vendor quirks

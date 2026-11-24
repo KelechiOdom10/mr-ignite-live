@@ -200,7 +200,7 @@ describe("player data", () => {
     const { data, fake, ledger } = setup({ budget: 0 });
 
     const heroes = await data.get("heroes", {});
-    expect(heroes.data.heroes).toHaveLength(56);
+    expect(heroes.data.heroes).toHaveLength(57);
     expect(fake.calls).toHaveLength(0);
     expect(await ledger.summary(0)).toMatchObject({ spent: 0, pending: 0 });
   });

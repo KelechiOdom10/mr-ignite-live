@@ -1,13 +1,20 @@
 import { z } from "zod";
 
-export const HeroSchema = z.object({
+import { resolveHero } from "./heroRoster";
+
+const RawHeroSchema = z.object({
   id: z.string(),
   name: z.string(),
   role: z.string().nullable(),
   portraitUrl: z.string().nullable(),
 });
 
-export type Hero = z.infer<typeof HeroSchema>;
+/** `unknown` marks a hero mrvl sent only as a placeholder; its name, role and art are not real. */
+export interface Hero extends z.infer<typeof RawHeroSchema> {
+  unknown?: true;
+}
+
+export const HeroSchema = RawHeroSchema.transform(resolveHero);
 
 /** One hero's share of a player's map: mrvl splits a player's stats by hero. */
 export const HeroLineSchema = z.object({
@@ -23,11 +30,11 @@ export const HeroLineSchema = z.object({
 
 export type HeroLine = z.infer<typeof HeroLineSchema>;
 
-export const HeroUsageSchema = HeroSchema.extend({
+export const HeroUsageSchema = RawHeroSchema.extend({
   playSeconds: z.number(),
   // Copies stored before per-hero lines were kept have none; they read as unknown, not zero.
   line: HeroLineSchema.nullish(),
-});
+}).transform((usage) => ({ ...usage, ...resolveHero(usage) }));
 
 export type HeroUsage = z.infer<typeof HeroUsageSchema>;
 

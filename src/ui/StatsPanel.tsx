@@ -74,6 +74,17 @@ export function HeroPortrait({
       loading="lazy"
       className={cn("shrink-0 rounded-md bg-muted object-cover", className)}
     />
+  ) : hero.unknown ? (
+    <span
+      title={hero.name}
+      style={{ ...box, fontSize: size * 0.55 }}
+      className={cn(
+        "inline-flex shrink-0 items-center justify-center rounded-md bg-muted leading-none text-muted-foreground ring-1 ring-border",
+        className,
+      )}
+    >
+      <span aria-hidden="true">?</span>
+    </span>
   ) : (
     <span
       title={hero.name}

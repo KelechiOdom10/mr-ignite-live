@@ -35,6 +35,81 @@ describe("MatchStatsSchema", () => {
   });
 });
 
+describe("a hero mrvl sent only as a placeholder", () => {
+  const placeholder = (n: number) => ({
+    id: `hero-${n}`,
+    name: `Hero ${n}`,
+    role: "Duelist",
+    portraitUrl: "",
+  });
+
+  const usage = (n: number) => ({ ...placeholder(n), playSeconds: 120 });
+
+  const stored = {
+    matchId: "m1",
+    source: "mrvl",
+    sourceMatchId: "s1",
+    sourceUpdatedAt: "1",
+    fetchedAt: "2026-11-24T00:01:26.204Z",
+    maps: [
+      {
+        index: 1,
+        map: "Krakoa",
+        durationSeconds: 600,
+        draft: null,
+        teams: ["A", "B"].map((name) => ({
+          name,
+          won: name === "A",
+          score: 1,
+          bans: [placeholder(1068), placeholder(1099)],
+          players: [
+            {
+              name: `${name} one`,
+              nationality: null,
+              hero: placeholder(1068),
+              heroes: [usage(1068), usage(1099)],
+              kills: 0,
+              deaths: 0,
+              assists: 0,
+              finalHits: 0,
+              damage: 0,
+              damageTaken: 0,
+              healing: 0,
+              accuracy: null,
+              isMvp: false,
+              isSvp: false,
+            },
+          ],
+        })),
+      },
+    ],
+  };
+
+  it("reads as Nightcrawler in a stored series, where mrvl's placeholder for him was kept", () => {
+    const team = MatchStatsSchema.parse(stored).maps[0]?.teams[0];
+    const player = team?.players[0];
+
+    expect(team?.bans[0]).toMatchObject({ id: "nightcrawler", name: "Nightcrawler" });
+    expect(player?.hero).toMatchObject({ id: "nightcrawler", role: "Strategist" });
+    expect(player?.heroes[0]).toMatchObject({ id: "nightcrawler", playSeconds: 120 });
+  });
+
+  it("reads as a typed unknown, without failing the parse or showing its id", () => {
+    const team = MatchStatsSchema.parse(stored).maps[0]?.teams[0];
+    const unknowns = [team?.bans[1], team?.players[0]?.heroes[1]];
+
+    expect(unknowns).toEqual([
+      expect.objectContaining({ id: "hero-1099", name: "New hero", role: null, unknown: true }),
+      expect.objectContaining({
+        id: "hero-1099",
+        name: "New hero",
+        playSeconds: 120,
+        unknown: true,
+      }),
+    ]);
+  });
+});
+
 describe("hero lines", () => {
   const line = (kills: number, accuracy: number | null): HeroLine => ({
     kills,
