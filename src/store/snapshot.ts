@@ -74,12 +74,11 @@ async function fetchPages(
     const groups = parseGroups(title, text);
     const listed = findTemplates(text, "GroupStandings").length;
 
-    if (groups.length < listed)
-      console.warn("Dropping group standings the page lists but we could not read", {
+    if (listed > 0 && groups.length === 0)
+      console.warn("Dropping all the group standings the page lists, none could be read", {
         title,
         revid: rev.revid,
         listed,
-        read: groups.length,
       });
 
     if (event && known?.iconUrl && known.iconFile === event.iconFile) event.iconUrl = known.iconUrl;

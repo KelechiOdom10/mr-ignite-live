@@ -224,7 +224,7 @@ describe("syncOnce when Liquipedia changes how it lists a group's matches", () =
       return {
         stored: await readStored(store),
         warnings: warn.mock.calls.filter(([message]) =>
-          String(message).startsWith("Dropping group standings"),
+          String(message).startsWith("Dropping all the group standings"),
         ),
       };
     } finally {
@@ -236,14 +236,12 @@ describe("syncOnce when Liquipedia changes how it lists a group's matches", () =
     ["the single list day 1 used", "grand-finals-matches.json", 62972],
     ["the per-day lists from day 2", "group-stage-day2.json", 63030],
   ])(
-    "logs the page, its revision and how many groups it could not read when %s is renamed",
+    "logs the page, its revision and how many groups it listed when %s is renamed",
     async (_layout, file, revid) => {
       const { stored, warnings } = await syncGroupPage(file, revid, true);
 
       expect(stored?.pages[groups]?.groups).toEqual([]);
-      expect(warnings).toEqual([
-        [expect.any(String), { title: groups, revid, listed: 2, read: 0 }],
-      ]);
+      expect(warnings).toEqual([[expect.any(String), { title: groups, revid, listed: 2 }]]);
     },
   );
 
